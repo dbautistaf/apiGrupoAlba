@@ -1,0 +1,99 @@
+<?php
+
+namespace App\Exports\Facturas;
+
+use DateTime;
+use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Concerns\Exportable;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithStyles;
+
+class FacturaProveedorExport implements FromCollection, WithHeadings, ShouldAutoSize, WithStyles
+{
+    /**
+     * @return \Illuminate\Support\Collection
+     */
+    use Exportable;
+    protected $params;
+
+    public function __construct($param)
+    {
+        $this->params = $param;
+    }
+
+    public function collection()
+    {
+        //
+        $sql = "SELECT vwm.cuit, vwm.razon_social, vwm.comprobante, vwm.delegacion, vwm.periodo, 
+               ma.articulo, tfd.cantidad, tfd.precio_neto, vwm.subtotal, vwm.total_iva, vwm.total_neto,
+               vwm.fecha_comprobante, vwm.fecha_vencimiento, vwm.total_aprobado, vwm.total_facturado,
+               vwm.total_debitado_liquidacion, vwm.locatario 
+        FROM vw_matriz_facturas_proveedor AS vwm 
+        LEFT JOIN tb_facturacion_detalle tfd ON tfd.id_factura = vwm.id_factura
+        LEFT JOIN tb_facturacion_detalle_impuesto tfdi ON tfdi.id_factura = vwm.id_factura
+        LEFT JOIN tb_facturacion_detalle_descuento tfdd ON tfdd.id_factura = vwm.id_factura
+        LEFT JOIN vw_matriz_articulos ma ON ma.id_articulo = tfd.id_articulo";
+
+        $params = [];
+        $where = [];
+
+        if (!empty($this->params->desde) && !empty($this->params->hasta)) {
+
+            /* $desdeObj = DateTime::createFromFormat('Y-m', $this->params->desde);
+            $desde = $desdeObj->format('m/Y'); 
+
+            $hastaObj = DateTime::createFromFormat('Y-m', $this->params->hasta);
+            $hasta = $hastaObj->format('m/Y'); */
+            
+            $where[] = " vwm.fecha_registra between  ? and ?";
+            $params[] = $this->params->desde;
+            $params[] = $this->params->hasta;
+        }
+
+        if (!empty($this->params->locatario)) {
+            $where[] = "vwm.id_locatorio = ?";
+            $params[] = $this->params->locatario;
+        }
+
+        if (count($where)) {
+            $sql .= " WHERE " . implode(" AND ", $where);
+        }
+
+        $sql .= " ORDER BY vwm.id_factura";
+
+        $data = DB::select($sql, $params);
+        return collect($data);
+    }
+
+    public function headings(): array
+    {
+        return [
+            'CUIT',
+            'RAZON SOCIAL',
+            'COMPROBANTE',
+            'DELEGACION',
+            'PERIODO',
+            'ARTICULO',
+            'CANTIDAD',
+            'PRECIO NETO',
+            'SUBTOTAL',
+            'TOTAL IVA',
+            'TOTAL NETO',
+            'FECHA COMPROBANTE',
+            'FECHA VENCIMIENTO',
+            'TOTAL APROBADO',
+            'TOTAL FACTURADO',
+            'TOTAL DEBITADO',
+            'LOCATARIO'
+        ];
+    }
+
+    public function styles($excel)
+    {
+        return [
+            'A1:BB1' => ['font' => ['bold' => true]],
+        ];
+    }
+}
