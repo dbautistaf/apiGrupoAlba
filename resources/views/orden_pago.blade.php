@@ -81,8 +81,7 @@
                     </div>
                 </td>
                 <td style="padding: 0px; width: 14%">
-                    <div
-                        style="
+                    <div style="
                                 border: 2px solid #333;
                                 text-align: center;
                                 margin-top: -1px;
@@ -91,8 +90,7 @@
                         <h1>O</h1>
                         <p style="font-size: 11px;">Cod. {{ $comprobante_nro }}</p>
                     </div>
-                    <div
-                        style="
+                    <div style="
                                 text-align: center;
                                 padding: 0;
                                 margin: 0;
@@ -101,8 +99,7 @@
                         |<br />|<br />|<br />
                     </div>
                 </td>
-                <td width="43%"
-                    style="
+                <td width="43%" style="
               font-size: 11px;
               padding: 10px 10px 0px 20px;
             ">
@@ -195,18 +192,16 @@
                             @endwhile
                         </tbody>
                     </table>
-                    <div
-                        style="
+                    <div style="
                 border: 2px solid #333;
                 margin-top: 4px;
                 padding: 5px;
                 text-align: right;
                 font-size: 12px;
               ">
-                        Débito: &nbsp; &nbsp; &nbsp; ${{ $debito ?? 0, 2, ',', '.' }}
+                        Débito: &nbsp; &nbsp; &nbsp; ${{ number_format($debito ?? 0, 2, ',', '.') }}
                     </div>
-                    <div
-                        style="
+                    <div style="
                 border: 2px solid #333;
                 margin-top: 4px;
                 padding: 8px;
@@ -227,8 +222,7 @@
                       padding: 15px 0px;
                       text-align: center;
                       font-size: 11px;
-                    "
-                                    width="70%">
+                    " width="70%">
                                     Descripción
                                 </th>
                                 <th style="
@@ -236,17 +230,7 @@
                       padding: 15px 0px;
                       text-align: center;
                       font-size: 11px;
-                    "
-                                    width="30%">
-                                    Importe descontando el débito
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @php
-                                $contador2 = 1;
-                                $contadorfinal2 = 14;
-                      font-size: 11px;" width="30%">
+                    " width="30%">
                                     Importe descontando el débito
                                 </th>
                             </tr>
@@ -330,18 +314,16 @@
                             @endwhile
                         </tbody>
                     </table>
-                    <div
-                        style="
+                    <div style="
                 border: 2px solid #333;
                 margin-top: 4px;
                 padding: 5px;
                 text-align: right;
                 font-size: 12px;
               ">
-                        Débito: &nbsp; &nbsp; &nbsp; ${{ $debito ?? 0, 2, ',', '.' }}
+                        Débito: &nbsp; &nbsp; &nbsp; ${{ number_format($debito ?? 0, 2, ',', '.') }}
                     </div>
-                    <div
-                        style="
+                    <div style="
                 border: 2px solid #333;.
                 margin-top: 10px;
                 padding: 8px;

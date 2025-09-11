@@ -497,7 +497,7 @@ Route::group([
 
     Route::get('listDiagnostico', [App\Http\Controllers\PrestacionesMedicas\Services\DiagnosticoController::class, 'getListarData']);
     Route::post('saveDiagnostico', [App\Http\Controllers\PrestacionesMedicas\Services\DiagnosticoController::class, 'postSaveDiagnostico']);
-    
+
 });
 
 
@@ -804,7 +804,6 @@ Route::group([
     Route::delete('del-tipo-letra-factura', [App\Http\Controllers\facturacion\FacturacionTipoLetraController::class, 'getEliminarTipoLetraFactura']);
 
     Route::get('imprimir-comprobante-facturacion', [App\Http\Controllers\facturacion\FacturacionProcesosController::class, 'printComprobanteFacturacion']);
-    Route::get('enviar-comprobante-email', [App\Http\Controllers\facturacion\FacturacionProcesosController::class, 'sendMailComprobanteFacturacion']);
     Route::get('exportarFactura', [App\Http\Controllers\facturacion\FacturasPrestadoresController::class, 'getExportFacturaPrestador']);
     Route::get('exportarFacturaProveedor', [App\Http\Controllers\facturacion\FacturasPrestadoresController::class, 'getExportFacturaProveedor']);
 });
@@ -937,7 +936,7 @@ Route::group([
 ], function () {
     Route::post('enviar-debito-email', [App\Http\Controllers\Emails\EmailLiquidacionesDebitosController::class, 'getEnviarDebitoProveedor']);
     Route::post('enviar-opa-email', [App\Http\Controllers\Emails\EmailOpaController::class, 'sendEmailOpaProveedor']);
-    Route::post('enviar-comprobante-email', [App\Http\Controllers\Emails\EmailfacturacionController::class, 'sendEmailFacturacion']);
+    Route::post('enviar-comprobante-email', [App\Http\Controllers\Emails\EmailFacturacionController::class, 'sendEmailFacturacion']);
     Route::post('enviar-pago-email', [App\Http\Controllers\Emails\EmailPagoController::class, 'sendEmailPagoProveedor']);
 });
 
