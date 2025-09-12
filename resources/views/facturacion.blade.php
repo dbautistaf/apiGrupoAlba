@@ -7,7 +7,7 @@
 </head>
 
 <body>
-    <h2>Facturació periodo #{{ $datos['periodo'] }}</h2>
+    <h2>Facturación periodo #{{ $datos['periodo'] }}</h2>
     <p><strong>Fecha de Emisión:</strong> {{ $datos['fecha_emision'] }}</p>
     <p><strong>Fecha de Vencimiento:</strong> {{ $datos['fecha_vencimiento'] }}</p>
     <p><strong>Nombre / Razón Social:</strong> {{ $datos['nombre_proveedor'] }} - {{ $datos['cuit_proveedor'] }}</p>

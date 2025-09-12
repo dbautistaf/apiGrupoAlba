@@ -23,7 +23,7 @@ class FacturacionMail extends Mailable
         $pdf = Pdf::loadView('comprobante-facturacion', $this->datos)->setPaper('A4');
 
         return $this->subject('Facturación')
-            ->view('Facturacion', $this->datos) // Crea una vista para el correo
+            ->view('facturacion', $this->datos) // Crea una vista para el correo
             ->attachData($pdf->output(), 'facturación.pdf', [
                 'mime' => 'application/pdf',
             ]);
