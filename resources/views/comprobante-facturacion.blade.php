@@ -55,22 +55,22 @@
     <table>
         <tbody>
             <tr style="border: 2px solid #333">
-                <td
-                    width="43%"
-                    style="font-size: 11px; padding-left: 10px">
+                <td width="43%" style="font-size: 11px; padding-left: 10px">
+
+
                     <div style="text-align: center; margin-bottom: 10px">
                         @if ($locatario == 1)
-                        <img src="{{ storage_path('app/public/images/bon_baja.jpeg') }}" width="120px">
+                            <img src="{{ storage_path('app/public/images/bon_baja.jpeg') }}" width="120px">
                         @elseif ($locatario == 2)
-                        <img src="{{ storage_path('app/public/images/sembrar_baja.jpeg') }}" width="90px">
+                            <img src="{{ storage_path('app/public/images/sembrar_baja.jpeg') }}" width="90px">
                         @elseif ($locatario == 3)
-                        <img src="{{ storage_path('app/public/images/bene_baja.jpeg') }}" width="120px">
+                            <img src="{{ storage_path('app/public/images/bene_baja.jpeg') }}" width="120px">
                         @elseif ($locatario == 5)
-                        <img src="{{ storage_path('app/public/images/alba.png') }}" width="120px">
+                            <img src="{{ storage_path('app/public/images/alba.png') }}" width="120px">
                         @elseif ($locatario == 6)
-                        <img src="{{ storage_path('app/public/images/alba.png') }}" width="120px">
+                            <img src="{{ storage_path('app/public/images/alba.png') }}" width="120px">
                         @else
-                        <img src="{{ storage_path('app/public/images/alba.png') }}" width="120px">
+                            <img src="{{ storage_path('app/public/images/alba.png') }}" width="120px">
                         @endif
                     </div>
                     <div>
@@ -84,8 +84,8 @@
                     </div>
                 </td>
                 <td style="padding: 0px; width: 14%">
-                    <div
-                        style="
+                    <div style="
+
                                 border: 2px solid #333;
                                 text-align: center;
                                 margin-top: -1px;
@@ -94,8 +94,8 @@
                         <h1>O</h1>
                         <p style="font-size: 11px;">Cod. {{ $codigo_opa }}</p>
                     </div>
-                    <div
-                        style="
+                    <div style="
+
                                 text-align: center;
                                 padding: 0;
                                 margin: 0;
@@ -104,8 +104,8 @@
                         |<br />|<br />|<br />
                     </div>
                 </td>
-                <td
-                    style="
+                <td style="
+
                             font-size: 11px;
                             padding: 10px 10px 0px 20px;
                             width: 43%;
@@ -117,7 +117,7 @@
                         <strong>Fecha de Emisión:</strong> {{ $fecha_emision
                             }}
                     </div>
-                    <div><strong>CUIT:</strong> {{ $razon_social->cuit }}</div>
+                    <div><strong>CUIT:</strong> {{ $cuit_proveedor }}</div>
                     <div><strong>Ingresos Brutos:</strong> Exento</div>
                     <div>
                         <strong>Fecha de inicio de Actividades:</strong>
@@ -128,8 +128,8 @@
         </tbody>
     </table>
 
-    <div
-        style="
+    <div style="
+
                 border: 2px solid #333;
                 margin-top: -1.5px;
                 padding: 10px 10px;
@@ -139,7 +139,7 @@
         <div>
             <span> CUIT: &nbsp; {{ $cuit_proveedor }} </span>
             <span style="margin-left: 40px;">Apellido y Nombre / Razón Social: &nbsp; {{
-                    $nombre_proveedor }}</span>
+    $nombre_proveedor }}</span>
         </div>
         <div>
             <span>Periodo: &nbsp; {{ $periodo }}</span>
@@ -183,47 +183,47 @@
         </thead>
         <tbody>
             @foreach($detalle as $item)
-            <tr
-                style="
-                        border: 2px solid #333;
-                        font-size: 11px;
-                        padding: 5px;
-                    ">
-                <td style="height: 25px">{{ $item->id_articulo }}</td>
-                <td style="height: 25px">
-                    {{ $item->articulo->descripcion_articulo }}
-                </td>
-                <td style="height: 25px; text-align: center">{{ $item->cantidad }}</td>
-                <td style="text-align: center; height: 25px">
-                    {{ number_format($item->precio_neto, 2, ',', '.') }}
-                </td>
-                <td style="text-align: center; height: 25px">
-                    {{ number_format($item->iva, 2, ',', '.') }}
-                </td>
-                <td style="text-align: center; height: 25px">
-                    {{ number_format($item->subtotal, 2, ',', '.') }}
-                </td>
-                <td style="text-align: center; height: 25px">
-                    {{ number_format($item->monto_iva, 2, ',', '.') }}
-                </td>
-                <td style="text-align: center; height: 25px">
-                    {{ number_format($item->total_importe, 2, ',', '.') }}
-                </td>
-            </tr>
+                <tr style="
+                                border: 2px solid #333;
+                                font-size: 11px;
+                                padding: 5px;
+                            ">
+                    <td style="height: 25px">{{ $item->id_articulo }}</td>
+                    <td style="height: 25px">
+                        {{ $item->articulo->descripcion_articulo }}
+                    </td>
+                    <td style="height: 25px; text-align: center">{{ $item->cantidad }}</td>
+                    <td style="text-align: center; height: 25px">
+                        {{ number_format($item->precio_neto, 2, ',', '.') }}
+                    </td>
+                    <td style="text-align: center; height: 25px">
+                        {{ number_format($item->iva, 2, ',', '.') }}
+                    </td>
+                    <td style="text-align: center; height: 25px">
+                        {{ number_format($item->subtotal, 2, ',', '.') }}
+                    </td>
+                    <td style="text-align: center; height: 25px">
+                        {{ number_format($item->monto_iva, 2, ',', '.') }}
+                    </td>
+                    <td style="text-align: center; height: 25px">
+                        {{ number_format($item->total_importe, 2, ',', '.') }}
+                    </td>
+                </tr>
+
             @endforeach
 
             @php
-            $contador = 1;
+                $contador = 1;
             @endphp
             @while ($contador <= 4)
                 <tr style="border: 2px solid #333">
-                <td
-                    style="height: 25px;" colspan="8"></td>
+                    <td style="height: 25px;" colspan="8"></td>
+
                 </tr>
                 @php
-                $contador++;
+                    $contador++;
                 @endphp
-                @endwhile
+            @endwhile
         </tbody>
     </table>
 
@@ -246,18 +246,18 @@
         </thead>
         <tbody>
             @foreach($impuesto as $item)
-            <tr
-                style="
-                        border: 2px solid #333;
-                        font-size: 11px;
-                        padding: 5px;
-                    ">
-                <td style="height: 25px">{{ $item->impuesto }}</td>
-                <td style="height: 25px">{{ $item->porcentaje }}</td>
-                <td style="text-align: center; height: 25px">
-                    {{ number_format($item->importe, 2, ',', '.') }}
-                </td>
-            </tr>
+                <tr style="
+                                border: 2px solid #333;
+                                font-size: 11px;
+                                padding: 5px;
+                            ">
+                    <td style="height: 25px">{{ $item->impuesto }}</td>
+                    <td style="height: 25px">{{ $item->porcentaje }}</td>
+                    <td style="text-align: center; height: 25px">
+                        {{ number_format($item->importe, 2, ',', '.') }}
+                    </td>
+                </tr>
+
             @endforeach
         </tbody>
     </table>
@@ -267,8 +267,8 @@
     <table style="width: 100%; border-collapse: collapse">
         <tbody>
             <tr>
-                <td
-                    style="
+                <td style="
+
                             font-size: 14px;
                             padding: 5px;
                             font-weight: bold;
@@ -277,8 +277,8 @@
                         ">
                     Neto:
                 </td>
-                <td
-                    style="
+                <td style="
+
                             font-size: 14px;
                             padding: 5px;
                             font-weight: bold;
@@ -288,8 +288,8 @@
                 </td>
             </tr>
             <tr>
-                <td
-                    style="
+                <td style="
+
                             font-size: 14px;
                             padding: 5px;
                             font-weight: bold;
@@ -298,8 +298,8 @@
                         ">
                     Impuestos:
                 </td>
-                <td
-                    style="
+                <td style="
+
                             font-size: 14px;
                             padding: 5px;
                             font-weight: bold;
@@ -309,8 +309,8 @@
                 </td>
             </tr>
             <tr>
-                <td
-                    style="
+                <td style="
+
                             font-size: 14px;
                             padding: 5px;
                             font-weight: bold;
@@ -319,8 +319,8 @@
                         ">
                     Débitos:
                 </td>
-                <td
-                    style="
+                <td style="
+
                             font-size: 14px;
                             padding: 5px;
                             font-weight: bold;
@@ -330,8 +330,8 @@
                 </td>
             </tr>
             <tr>
-                <td
-                    style="
+                <td style="
+
                             font-size: 14px;
                             padding: 5px;
                             font-weight: bold;
@@ -340,14 +340,14 @@
                         ">
                     Total:
                 </td>
-                <td
-                    style="
+                <td style="
+
                             font-size: 18px;
                             padding: 5px;
                             font-weight: bold;
                             text-align: center;
                         ">
-                    ${{ number_format(($total ?? 0) - ($descuentos ?? 0), 2, ',', '.') }}
+                    ${{ number_format($total, 2, ',', '.') }}
                 </td>
             </tr>
         </tbody>
