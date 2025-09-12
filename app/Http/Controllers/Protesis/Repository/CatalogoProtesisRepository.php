@@ -70,6 +70,11 @@ class CatalogoProtesisRepository
             ->limit($limit)->get();
     }
 
+    public function findByTipoDiagnosticoId($id_diagnostico)
+    {
+        return TipoDiagnosticoInternacionEntity::where('cod_tipo_diagnostico', $id_diagnostico)->first();
+    }
+
     public function findBySaveTipoDiagnostico($request)
     {
         if ($request->cod_tipo_diagnostico) {

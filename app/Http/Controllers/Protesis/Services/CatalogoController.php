@@ -48,6 +48,12 @@ class CatalogoController extends Controller
         return response()->json($data, 200);
     }
 
+    public function getTipoDiagnosticoId(CatalogoProtesisRepository $repo, Request $request)
+    {
+        $data = $repo->findByTipoDiagnosticoId($request->id_diagnostico);
+        return response()->json($data, 200);
+    }
+
     public function getsaveTipoDiagnostico(CatalogoProtesisRepository $repo,   Request $request)
     {
         DB::beginTransaction();
