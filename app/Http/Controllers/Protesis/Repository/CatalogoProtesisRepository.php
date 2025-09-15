@@ -86,13 +86,16 @@ class CatalogoProtesisRepository
             $query->id3 =  $request->id3;
             $query->save();
         } else {
-            return TipoDiagnosticoInternacionEntity::create([
-                'descripcion' => $request->descripcion,
-                'vigente' => $request->vigente,
-                'codigo_diagnostico' => $request->codigo_diagnostico,
-                'id2' => $request->id2,
-                'id3' => $request->id3,
-            ]);
+            $query = TipoDiagnosticoInternacionEntity::where('descripcion', $request->descripcion)->first();
+            if (!$query) {
+                return TipoDiagnosticoInternacionEntity::create([
+                    'descripcion' => $request->descripcion,
+                    'vigente' => $request->vigente,
+                    'codigo_diagnostico' => $request->codigo_diagnostico,
+                    'id2' => $request->id2,
+                    'id3' => $request->id3,
+                ]);
+            }
         }
     }
 }

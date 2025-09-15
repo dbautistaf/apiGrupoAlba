@@ -182,6 +182,10 @@ class FacturasPrestadoresRepository
             $query->where('estado', $params->estado);
         }
 
+        if (!is_null($params->estado_pago) && $params->estado_pago != '') {
+            $query->where('estado_pago', $params->estado_pago);
+        }
+
         $query->orderByDesc('id_factura');
         $facturas = $query->get();
 

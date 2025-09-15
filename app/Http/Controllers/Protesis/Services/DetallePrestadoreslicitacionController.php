@@ -37,7 +37,7 @@ class DetallePrestadoreslicitacionController extends Controller
             foreach ($detalleCotizacion as $value) {
                 if ($key->id_solicitud === $value->id_solicitud) {
                     $detalleProducto[] = $value;
-                    break;
+                    //break;
                 }
             }
             $key->detalle = $detalleProducto;
