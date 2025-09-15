@@ -103,6 +103,10 @@ class FacturasProveedoresController extends Controller
             $query->where('estado', $request->estado);
         }
 
+        if (!is_null($request->estado_pago)) {
+            $query->where('estado_pago', $request->estado_pago);
+        }
+
         $query->orderByDesc('id_factura');
         $facturas = $query->get();
 
