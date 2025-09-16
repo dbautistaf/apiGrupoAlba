@@ -33,6 +33,7 @@ class PrestacionesPracticaLaboratorioEntity extends Model
         'estado_impresion',
         'cod_tipo_estado',
         'diagnostico',
+        'id_diagnostico',
         'domicilio_prestador',
         'domicilio_profesional',
         'edad_afiliado',

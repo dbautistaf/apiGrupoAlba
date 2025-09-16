@@ -899,6 +899,7 @@ Route::group([
 ], function () {
     Route::get('tipo-autorizacion', [App\Http\Controllers\Protesis\Services\TipoAutorizacionController::class, 'getListarVigentes']);
     Route::get('listar-matriz-diagnostico', [App\Http\Controllers\Protesis\Services\CatalogoController::class, 'getListarTipoDiagnostico']);
+    Route::get('id-matriz-diagnostico', [App\Http\Controllers\Protesis\Services\CatalogoController::class, 'getTipoDiagnosticoId']);
     Route::get('listar-matriz-productos', [App\Http\Controllers\Protesis\Services\MatrizProductoController::class, 'getListarProductos']);
     Route::get('listar-categorias-productos', [App\Http\Controllers\Protesis\Services\MatrizProductoController::class, 'getListarCategoriasProductos']);
     Route::get('obtener-protesis-id', [App\Http\Controllers\Protesis\Services\ProtesisController::class, 'getBuscarId']);
