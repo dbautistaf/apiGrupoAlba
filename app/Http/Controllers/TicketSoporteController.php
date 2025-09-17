@@ -113,6 +113,14 @@ class TicketSoporteController extends Controller
             $query->where('id_categoria', $request->categoria);
         }
 
+        if (!is_null($request->estado)) {
+            $query->where('id_estado', $request->estado);
+        }
+
+        if (!is_null($request->numero)) {
+            $query->where('id_ticket', $request->numero);
+        }
+
         if ($request->desde && $request->hasta) {
             $query->whereBetween('fecha_apertura', [$request->desde, $request->hasta]);
         }

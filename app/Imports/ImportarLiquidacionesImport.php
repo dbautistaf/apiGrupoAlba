@@ -60,6 +60,8 @@ class ImportarLiquidacionesImport implements ToCollection, WithStartRow
             $practica = $practicas[$row[2]] ?? null;
             $debito   = $debitos[$row[7]] ?? $debitos[$row[6]] ?? null;
             $afiliado = $afiliados[$row[0]] ?? null;
+            $costo = str_replace(['$', ','], '', $row[4]);
+            $monto = str_replace(['$', ','], '', $row[5]);
 
             if (!is_null($row[2]) && !is_null($row[0])) {
                 if ($practica && $afiliado) {
@@ -67,12 +69,12 @@ class ImportarLiquidacionesImport implements ToCollection, WithStartRow
                         'id_liquidacion'           => $this->id_liquidacion,
                         'fecha_prestacion'         => $this->parseFecha($row[1]),
                         'id_identificador_practica' => $practica->id_identificador_practica,
-                        'costo_practica'           => $row[4],
+                        'costo_practica'           => $costo,
                         'cantidad'                 => $row[3],
                         'porcentaje_hon'           => 100,
                         'porcentaje_gast'          => 100,
-                        'monto_facturado'          => $row[4],
-                        'monto_aprobado'           => $row[5],
+                        'monto_facturado'          => $costo,
+                        'monto_aprobado'           => $monto,
                         'coseguro'                 => $row[9] ?? '0',
                         'debita_coseguro'          => '0',
                         'debita_iva'               => '0',
