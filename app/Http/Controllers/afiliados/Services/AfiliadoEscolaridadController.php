@@ -27,14 +27,20 @@ class AfiliadoEscolaridadController extends Controller
         return response()->json($escolaridad, 200);
     }
 
-    public function saveEscolaridad(Request $request)
+    public function saveEscolaridad(ManejadorDeArchivosUtils $storageFile, Request $request)
     {
-        if ($request->id != '') {
-            $query = AfiliadoEscolaridadEntity::where('id', $request->id)->first();
-            $query->nivel_estudio = $request->nivel_estudio;
-            $query->fecha_presentacion = $request->fecha_presentacion;
-            $query->fecha_vencimiento = $request->fecha_vencimiento;
-            $query->id_padron = $request->id_padron;
+        $nombre_archivo = null;
+        $model = json_decode($request->data);
+        $nombre_archivo = $storageFile->findBycargarArchivo("ESCOLARIDAD_" . $model->id_padron, 'afiliados/escolaridad', $request);
+        if ($model->id != '') {
+            $query = AfiliadoEscolaridadEntity::where('id', $model->id)->first();
+            if ($nombre_archivo != null) {
+                $query->url_adjunto = $nombre_archivo;
+            }
+            $query->nivel_estudio = $model->nivel_estudio;
+            $query->fecha_presentacion = $model->fecha_presentacion;
+            $query->fecha_vencimiento = $model->fecha_vencimiento;
+            $query->id_padron = $model->id_padron;
             $query->fecha_modifica = $this->fechaActual;
             $query->cod_usuario_modifica = $this->user->cod_usuario;
             $query->save();
@@ -45,10 +51,11 @@ class AfiliadoEscolaridadController extends Controller
                 return response()->json(['message' => 'El afiliado ya tiene un registro de escolaridad'], 500);
             } else {
                 AfiliadoEscolaridadEntity::create([
-                    'nivel_estudio' => $request->nivel_estudio,
-                    'fecha_presentacion' => $request->fecha_presentacion,
-                    'fecha_vencimiento' => $request->fecha_vencimiento,
-                    'id_padron' => $request->id_padron,
+                    'nivel_estudio' => $model->nivel_estudio,
+                    'fecha_presentacion' => $model->fecha_presentacion,
+                    'fecha_vencimiento' => $model->fecha_vencimiento,
+                    'id_padron' => $model->id_padron,
+                    'url_adjunto' => $nombre_archivo,
                     'fecha_registra' => $this->fechaActual,
                     'cod_usuario_registra' => $this->user->cod_usuario
                 ]);
@@ -89,7 +96,7 @@ class AfiliadoEscolaridadController extends Controller
 
     public function getVerAdjunto(ManejadorDeArchivosUtils $storageFile, Request $request)
     {
-        $path = "afiliados/discapacidad/";
+        $path = "afiliados/escolaridad/";
         $data = AfiliadoEscolaridadEntity::find($request->id);
         $anioTrabaja = Carbon::parse($data->fecha_registra)->year;
         $path .= "{$anioTrabaja}/$data->url_adjunto";

@@ -20,8 +20,8 @@ class DiscapacidadController extends Controller
     public function saveDiscapacidad(Request $request)
     {
         $nombre_archivo = null;
-        $anioActual = Carbon::now('America/Lima')->year;
-        $horaCarga = Carbon::now('America/Lima')->format('H-i-s');
+        $anioActual = Carbon::now('America/Argentina/Buenos_Aires')->year;
+        $horaCarga = Carbon::now('America/Argentina/Buenos_Aires')->format('H-i-s');
         $model = json_decode($request->data);
         if ($request->hasFile('archivo')) {
             $fileStorage = $request->file('archivo');
@@ -30,15 +30,17 @@ class DiscapacidadController extends Controller
             Storage::putFileAs($destinationPath, $fileStorage, $nombre_archivo);
         }
         $msg = null;
-        if ($model->id!='') {
+        if ($model->id != '') {
             $query = AfiliadoCertificadoEntity::where('id', $model->id)->first();
+            if ($nombre_archivo != null) {
+                $query->url_adjunto = $nombre_archivo;
+            }
             $query->id_tipo_discapacidad = $model->id_tipo_discapacidad;
             $query->diagnostico = $model->diagnostico;
             $query->fecha_certificado = $model->fecha_certificado;
             $query->fecha_vto = $model->fecha_vto;
             $query->id_padron = $model->id_padron;
             $query->certificado = $model->certificado;
-            $query->url_adjunto = $nombre_archivo;
             $query->save();
             $msg = 'Datos actualizados correctamente';
         } else {

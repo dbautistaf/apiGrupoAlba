@@ -27,6 +27,6 @@ class AfiliadoEscolaridadEntity extends Model
 
     public function afiliado()
     {
-        return $this->hasOne(AfiliadoPadronEntity::class, 'id', 'id_padron');
+        return $this->hasOne(AfiliadoPadronEntity::class, 'dni', 'id_padron');
     }
 }
