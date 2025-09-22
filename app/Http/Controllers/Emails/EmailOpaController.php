@@ -14,10 +14,15 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use App\Http\Controllers\Tesoreria\Services\TesPagosController;
+use App\Http\Controllers\Contabilidad\Repository\PeriodosContablesRepository;
+use App\Http\Controllers\Contabilidad\Repository\ProveedorPlanesCuentaRepository;
+use App\Http\Controllers\Contabilidad\Repository\FormaPagoCuentaContableRepository;
+use App\Http\Controllers\Utils\CorrelativosOspfRepository;
+use Illuminate\Support\Facades\App;
 
 class EmailOpaController extends Controller
 {
-
     public function sendEmailOpaProveedor(Request $request)
     {
         $query = TesOrdenPagoEntity::with(['estado', 'proveedor', 'factura', 'factura.detalle', 'factura.detalle.articulo', 'prestador', 'proveedor.tipoIva', 'prestador.tipoIva', 'pagos', 'pagos.formaPago', 'pagos.cuenta', 'pagos.cuenta.entidadBancaria'])
@@ -53,8 +58,25 @@ class EmailOpaController extends Controller
             "pagos" => $query->pagos ?? [],
         ];
 
+        // Resolver TesPagosController desde el contenedor de servicios
+        $tesPagosController = App::make(TesPagosController::class);
 
-        Mail::to($request->email)->send(new OrdenPagoMail($datos));
+        // Obtener el PDF usando los datos del comprobante
+        $pdfRequest = new Request([
+            'fecha_registra' => $request->comprobante['fecha_comprobante'],
+            'nombre_archivo' => $request->comprobante['nombre_archivo']
+        ]);
+        $pdfResponse = $tesPagosController->getVerAdjunto(app('App\Http\Controllers\Utils\ManejadorDeArchivosUtils'), $pdfRequest);
+
+        // Adjuntar el PDF al correo
+        $email = new OrdenPagoMail($datos);
+        if ($pdfResponse->getStatusCode() === 200) {
+            $email->attachData($pdfResponse->getContent(), $request->comprobante['nombre_archivo'], [
+                'mime' => 'application/pdf',
+            ]);
+        }
+
+        Mail::to($request->email)->send($email);
 
         return response()->json(['message' => 'Correo enviado con éxito']);
     }

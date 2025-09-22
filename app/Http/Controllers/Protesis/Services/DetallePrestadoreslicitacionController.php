@@ -37,13 +37,13 @@ class DetallePrestadoreslicitacionController extends Controller
             foreach ($detalleCotizacion as $value) {
                 if ($key->id_solicitud === $value->id_solicitud) {
                     $detalleProducto[] = $value;
-                    break;
+                    //break;
                 }
             }
             $key->detalle = $detalleProducto;
         }
 
-        return response()->json(["participantes" => $participantes]);
+        return response()->json(["participantes" => $$participantes]);
     }
 
     public function getCargarPropuesta(DetallePrestadoresLicitacionRepository $repo, ManejadorDeArchivosUtils $storageFile, Request $request)

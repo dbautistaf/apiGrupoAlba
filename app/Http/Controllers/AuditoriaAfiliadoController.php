@@ -12,7 +12,7 @@ class AuditoriaAfiliadoController extends Controller
     function getListIDAuditoria($id)
     {
         $datos=[];
-        $auditoria = AuditoriaPadronModelo::with('Usuario')->where('dni', $id)->get();
+        $auditoria = AuditoriaPadronModelo::with('Usuario')->where('id_padron', $id)->get();
         /* foreach ($auditoria as $array) {
             $array->antes=json_decode($array->antes, true);
             $array->ahora=json_decode($array->ahora, true);
