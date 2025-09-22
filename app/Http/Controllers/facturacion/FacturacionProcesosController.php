@@ -68,20 +68,24 @@ class FacturacionProcesosController extends Controller
                 }
                 /* || $facturacion->id_tipo_factura == 17 */
                 if (!is_null($facturacion->id_proveedor)) {
-                    $tesoreria->findByCreate(new TesOrdenPagoEntity([
-                        "id_proveedor" => $facturacion->id_tipo_factura == 16 ? $facturacion->id_proveedor : null,
+                    $opaData = (object) [
+
+                        // $tesoreria->findByCreate(new TesOrdenPagoEntity([
+                        "id_proveedor" => $facturacion->id_tipo_factura == 16 || $facturacion->id_tipo_factura == 20 ? $facturacion->id_proveedor : null,
                         "id_prestador" => $facturacion->id_tipo_factura == 17 ? $facturacion->id_prestador : null,
                         "monto_orden_pago" => $facturacion->total_neto,
                         "id_moneda" => '1',
                         "fecha_emision" => $facturacion->fecha_comprobante,
                         "fecha_vencimiento" => $facturacion->fecha_vencimiento,
                         "fecha_probable_pago" => null,
-                        "id_estado_orden_pago" => 1,
+                        "id_estado_orden_pago" => $facturacion->id_tipo_factura == 20 ? 2 : 1,
                         "monto_anticipado" => 0.00,
                         "observaciones" => '',
                         "id_factura" => $facturacion->id_factura,
                         "tipo_factura" => $facturacion->id_tipo_factura == 17 ? 'PRESTADOR' : 'PROVEEDOR'
-                    ]));
+                        // ]));
+                    ];
+                    $tesoreria->findByCreate($opaData);
                 }
             } else {
 
@@ -197,12 +201,12 @@ class FacturacionProcesosController extends Controller
             "impuesto" => $factura->impuesto,
             "neto" => $neto,
             "impuestos" => $impuestos,
-            "descuentos" =>$factura->total_debitado_liquidacion,
+            "descuentos" => $factura->total_debitado_liquidacion,
             "total" => $neto + $impuestos,
             "locatario" => $factura->cod_sindicato,
             'razon_social' => $factura->razonSocial,
             'id_factura' => $factura->id_factura,
-            'fecha_confirma_pago'=>$factura->opa?->fechapagos?->fecha_probable_pago,
+            'fecha_confirma_pago' => $factura->opa?->fechapagos?->fecha_probable_pago,
             "codigo_opa" => !empty($factura->opa) > 0 ? $factura->opa->num_orden_pago : '000',
         ];
 
