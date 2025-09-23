@@ -24,6 +24,7 @@ class FacturacionDatosEntity extends Model
         'id_tipo_comprobante',
         'fecha_comprobante',
         'id_proveedor',
+        'id_prestador',
         'periodo',
         'tipo_letra',
         'fecha_vencimiento',
@@ -37,7 +38,6 @@ class FacturacionDatosEntity extends Model
         'id_tipo_imputacion_sintetizada',
         'archivo',
         'total_debitado_liquidacion',
-        'id_prestador',
         'subtotal',
         'total_iva',
         'total_neto',
@@ -61,14 +61,15 @@ class FacturacionDatosEntity extends Model
         return $this->hasMany(FacturacionDetalleEntity::class, 'id_factura', 'id_factura');
     }
 
+    // Fix relationship name to match repository usage
     public function impuesto()
     {
-        return $this->hasMany(FacturacionDetalleImpuestoEntity::class, 'id_factura', 'id_factura');
+        return $this->hasMany(FacturacionImpuestosEntity::class, 'id_factura', 'id_factura');
     }
 
     public function descuentos()
     {
-        return $this->hasMany(FacturacionDetalleDescuentoEntity::class, 'id_factura', 'id_factura');
+        return $this->hasMany(FacturacionDescuentosEntity::class, 'id_factura', 'id_factura');
     }
 
     public function tipoFactura()
@@ -85,6 +86,7 @@ class FacturacionDatosEntity extends Model
     {
         return $this->hasOne(TipoComprobanteFacturacionEntity::class, 'id_tipo_comprobante', 'id_tipo_comprobante');
     }
+
     public function tipoImputacion()
     {
         return $this->hasOne(FacturacionTipoImputacionSintetizadaEntity::class, 'id_tipo_imputacion_sintetizada', 'id_tipo_imputacion_sintetizada');
@@ -99,9 +101,10 @@ class FacturacionDatosEntity extends Model
     {
         return $this->hasOne(PrestadorEntity::class, 'cod_prestador', 'id_prestador');
     }
+
     public function comprobantes()
     {
-        return $this->hasMany(FacturacionDetalleComprobantesEntity::class, 'id_factura', 'id_factura');
+        return $this->hasMany(FacturacionComprobantesEntity::class, 'id_factura', 'id_factura');
     }
 
     public function razonSocial()
