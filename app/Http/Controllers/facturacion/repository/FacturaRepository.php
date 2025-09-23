@@ -48,7 +48,7 @@ class FacturaRepository
             'archivo' => $nombre_archivo,
             'refacturacion' => $params->refacturacion,
             'id_locatorio' => $params->id_locatorio,
-            'estado' => ($params->id_tipo_factura == 16 ? '1' : ($params->id_tipo_factura == 17 ? '0' : '0')),
+            'estado' => ($params->id_tipo_factura == 16 ? '1' : ($params->id_tipo_factura == 17 || $params->id_tipo_factura == 20 ? '0' : '0')),
             'observaciones_resumen' => $params->observaciones_resumen,
             'comprobante_relacionado' => $params->comprobante_relacionado
         ]);
