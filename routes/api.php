@@ -126,7 +126,7 @@ Route::group([
     'middleware' => ['jwt.verify'],
     'prefix' => '/v1/escolaridad'
 ], function () {
-    Route::post('saveEscolaridad', [App\Http\Controllers\EscolaridadController::class, 'saveEscolaridad']);
+    Route::post('saveEscolaridad', [App\Http\Controllers\afiliados\Services\AfiliadoEscolaridadController::class, 'saveEscolaridad']);
 
     Route::get('ver-adjunto-escolaridad', [App\Http\Controllers\afiliados\Services\AfiliadoEscolaridadController::class, 'getVerAdjunto']);
     Route::get('listaEscolaridad/{id}', [App\Http\Controllers\afiliados\Services\AfiliadoEscolaridadController::class, 'getEscolaridad']);
@@ -140,11 +140,11 @@ Route::group([
 ], function () {
     Route::get('cs-discapacidad-afiliado', [App\Http\Controllers\afiliados\Services\AfiliadoDiscapacidadController::class, 'getListarDiscapacidad']);
     Route::get('ver-adjunto-disca', [App\Http\Controllers\afiliados\Services\AfiliadoDiscapacidadController::class, 'getVerAdjunto']);
-    Route::get('obtener-discapacidad-afiliado', [App\Http\Controllers\Afiliados\Services\AfiliadoDiscapacidadController::class, 'getBuscarId']);
+    Route::get('obtener-discapacidad-afiliado', [App\Http\Controllers\afiliados\Services\AfiliadoDiscapacidadController::class, 'getBuscarId']);
     Route::get('consultar-legajo', [App\Http\Controllers\Discapacidad\LegajoAfiliadoController::class, 'getListarLegajo']);
     Route::get('obtener-legajo', [App\Http\Controllers\Discapacidad\LegajoAfiliadoController::class, 'getObtenerLegajoId']);
 
-    Route::post('saveDiscapacidad', [App\Http\Controllers\DiscapacidadController::class, 'saveDiscapacidad']);
+    Route::post('saveDiscapacidad', [App\Http\Controllers\afiliados\Services\AfiliadoDiscapacidadController::class, 'saveDiscapacidad']);
     Route::delete('eliminar-legajo', [App\Http\Controllers\Discapacidad\LegajoAfiliadoController::class, 'getEliminarLegajoId']);
     Route::get('getDiscapacidadPadron/{id}', [App\Http\Controllers\DiscapacidadController::class, 'getDiscapacidadIdPadron']);
     Route::get('filterDataCertificadoDiscapacidad', [App\Http\Controllers\DiscapacidadController::class, 'srvFilterData']);

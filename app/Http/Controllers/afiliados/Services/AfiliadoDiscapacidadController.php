@@ -33,19 +33,21 @@ class AfiliadoDiscapacidadController extends Controller
         $msg = null;
         if (!is_null($model->id)) {
             $query = AfiliadoCertificadoEntity::where('id', $model->id)->first();
+            if ($nombre_archivo != null) {
+                $query->url_adjunto = $nombre_archivo;
+            }
             $query->id_tipo_discapacidad = $model->id_tipo_discapacidad;
             $query->diagnostico = $model->diagnostico;
             $query->fecha_certificado = $model->fecha_certificado;
             $query->fecha_vto = $model->fecha_vto;
             $query->id_padron = $model->id_padron;
             $query->certificado = $model->certificado;
-            $query->url_adjunto = $nombre_archivo;
             $query->fecha_modifica = $this->fechaActual;
             $query->cod_usuario_modifica = $this->user->cod_usuario;
             $query->save();
             $msg = 'Datos actualizados correctamente';
         } else {
-            if (AfiliadoCertificadoEntity::where('id_padron', $model->id_padron)->exists()) {
+            if (AfiliadoCertificadoEntity::where('dni', $model->id_padron)->exists()) {
                 return response()->json(['message' => 'El afiliado ya cuentacon un registro de discapacidad'], 500);
             } else {
                 AfiliadoCertificadoEntity::create([

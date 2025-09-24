@@ -177,9 +177,10 @@
                         <th width="160px">PRACTICA</th>
                         <th width="70px">IMPORTE FACTURADO</th>
                         <th width="70px">IMPORTE APROBADO</th>
-                        <th width="70px">IMPORTE DÉBITO</th>
-                        <th width="120px">MOTIVO DEBITO</th>
+                        <th width="40px">IMPORTE DÉBITO</th>
+                        <th width="100px">MOTIVO DEBITO</th>
                         <th width="120px">OBSERVACIONES DÉBITO</th>
+                        <th width="60px">FECHA PRESTACIÓN</th>
                         <th width="70px">DNI</th>
                         <th width="150px">AFILIADO</th>
                     </tr>
@@ -206,6 +207,9 @@
                         </td>
                         <td>
                             {{ $row->observacion_debito }}
+                        </td>
+                        <td>
+                            {{ date('d/m/Y', strtotime($row->fecha_prestacion)) }}
                         </td>
                         <td>
                             {{ $row->dni_afiliado}}

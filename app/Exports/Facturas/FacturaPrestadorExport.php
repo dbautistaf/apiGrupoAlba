@@ -27,8 +27,9 @@ class FacturaPrestadorExport implements FromCollection, WithHeadings, ShouldAuto
         //
         $sql = "SELECT vwm.cuit, vwm.razon_social, vwm.comprobante, vwm.refacturacion, vwm.delegacion, vwm.periodo, 
                ma.articulo, tfd.cantidad, tfd.precio_neto, vwm.subtotal, vwm.total_iva, vwm.total_neto,
-               vwm.fecha_comprobante, vwm.fecha_vencimiento, vwm.total_aprobado, vwm.total_facturado,
-               vwm.total_debitado, vwm.locatario 
+               vwm.fecha_comprobante,  vwm.fecha_registra, vwm.total_aprobado, vwm.total_facturado,
+               vwm.total_debitado, vwm.locatario, vwm.tipo_comprobante,
+               vwm.observaciones
         FROM vw_matriz_facturas_prestador AS vwm 
         LEFT JOIN tb_facturacion_detalle tfd ON tfd.id_factura = vwm.id_factura
         LEFT JOIN tb_facturacion_detalle_impuesto tfdi ON tfdi.id_factura = vwm.id_factura
@@ -42,6 +43,11 @@ class FacturaPrestadorExport implements FromCollection, WithHeadings, ShouldAuto
             $where[] = " vwm.fecha_registra between  ? and ?";
             $params[] = $this->params->desde;
             $params[] = $this->params->hasta;
+        }
+
+        if (!empty($this->params->id_tipo_comprobante)) {
+            $where[] = "vwm.id_tipo_comprobante = ?";
+            $params[] = $this->params->id_tipo_comprobante;
         }
 
         if (!empty($this->params->locatario)) {
@@ -75,11 +81,13 @@ class FacturaPrestadorExport implements FromCollection, WithHeadings, ShouldAuto
             'TOTAL IVA',
             'TOTAL NETO',
             'FECHA COMPROBANTE',
-            'FECHA VENCIMIENTO',
+            'FECHA REGISTRA',
             'TOTAL APROBADO',
             'TOTAL FACTURADO',
             'TOTAL DEBITADO',
-            'LOCATARIO'
+            'LOCATARIO',
+            'TIPO COMPROBANTE',
+            'OBSERVACIONES'
         ];
     }
 

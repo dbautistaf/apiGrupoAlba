@@ -95,12 +95,12 @@ class LiqMedicamentosRepository
     public function findByDetalleFacturaId($id_factura, $tipo)
     {
         return DB::select("SELECT  codigo_practica,practica,monto_facturado,monto_aprobado,monto_debitado,debita_iva,coseguro,debita_coseguro,motivo_debito,observacion_debito,costo_practica,
-                            afiliado,edad_afiliado,dni_afiliado,tipo,id_factura,observacion_debito
+                            afiliado,edad_afiliado,dni_afiliado,tipo,id_factura,observacion_debito,fecha_prestacion
                             FROM vw_detalle_liquidaciones WHERE id_factura =  $id_factura  AND tipo =  '$tipo'
                             UNION ALL
                             SELECT id_medicamento as codigo_practica, medicamento as practica,monto_facturado,0 as monto_aprobado,0 as monto_debitado,
                             debita_iva,0 as coseguro,0 as debita_coseguro,motivo_debito, '' as  observacion_debito,precio_unitario as costo_practica,
-                            '' as afiliado,'' as edad_afiliado,'' as dni_afiliado,tipo, id_factura,'' as observacion_debito
+                            '' as afiliado,'' as edad_afiliado,'' as dni_afiliado,tipo, id_factura,'' as observacion_debito,'' as fecha_prestacion
                             FROM vw_detalle_medicamentos WHERE id_factura =   $id_factura  AND tipo =  '$tipo'
                             ORDER BY motivo_debito ASC");
     }

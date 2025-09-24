@@ -43,7 +43,7 @@ class DetallePrestadoreslicitacionController extends Controller
             $key->detalle = $detalleProducto;
         }
 
-        return response()->json(["participantes" => $participantes]);
+        return response()->json(["participantes" => $$participantes]);
     }
 
     public function getCargarPropuesta(DetallePrestadoresLicitacionRepository $repo, ManejadorDeArchivosUtils $storageFile, Request $request)
