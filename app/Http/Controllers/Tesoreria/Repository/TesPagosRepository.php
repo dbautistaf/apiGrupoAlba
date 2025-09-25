@@ -62,7 +62,7 @@ class TesPagosRepository
     {
         $jquery = "";
         if ($params->tipo === 'PROVEEDOR') {
-            $jquery =  TesPagoEntity::with([
+            $jquery = TesPagoEntity::with([
                 'estado',
                 'cuenta',
                 'formaPago',
@@ -75,7 +75,7 @@ class TesPagosRepository
             ]);
             $jquery->where('tipo_factura', 'PROVEEDOR');
         } else {
-            $jquery =  TesPagoEntity::with([
+            $jquery = TesPagoEntity::with([
                 'estado',
                 'cuenta',
                 'formaPago',
@@ -121,6 +121,12 @@ class TesPagosRepository
         if (!is_null($params->numero)) {
             $jquery->whereHas('opa.factura', function ($query) use ($params) {
                 $query->where('numero', $params->numero);
+            });
+        }
+
+        if (!is_null($params->id_tipo) && $params->id_tipo !== '') {
+            $jquery->whereHas('opa.factura', function ($query) use ($params) {
+                $query->where('id_tipo_factura', '=', (int) $params->id_tipo);
             });
         }
 
@@ -225,6 +231,6 @@ class TesPagosRepository
 
             return true;
         }
-        return  false;
+        return false;
     }
 }

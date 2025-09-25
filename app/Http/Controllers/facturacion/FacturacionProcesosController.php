@@ -6,6 +6,7 @@ use App\Http\Controllers\facturacion\repository\FacturaRepository;
 use App\Http\Controllers\Tesoreria\Repository\TesPagosRepository;
 use App\Http\Controllers\Tesoreria\Repository\TestOrdenPagoRepository;
 use App\Http\Controllers\Utils\ManejadorDeArchivosUtils;
+use App\Http\Controllers\Utils\GeneradorCodigosUtils;
 use App\Models\facturacion\FacturacionDatosEntity;
 use App\Models\Tesoreria\TesOrdenPagoEntity;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -23,6 +24,7 @@ class FacturacionProcesosController extends Controller
         TestOrdenPagoRepository $tesoreria,
         TesPagosRepository $tesPagosRepository,
         ManejadorDeArchivosUtils $storageFile,
+        GeneradorCodigosUtils $generadorCodigos,
         Request $request
     ) {
         DB::beginTransaction();
@@ -68,20 +70,51 @@ class FacturacionProcesosController extends Controller
                 }
                 /* || $facturacion->id_tipo_factura == 17 */
                 if (!is_null($facturacion->id_proveedor)) {
-                    $tesoreria->findByCreate(new TesOrdenPagoEntity([
-                        "id_proveedor" => $facturacion->id_tipo_factura == 16 ? $facturacion->id_proveedor : null,
+                    $opaData = (object) [
+
+                        // $tesoreria->findByCreate(new TesOrdenPagoEntity([
+                        "id_proveedor" => $facturacion->id_tipo_factura == 16 || $facturacion->id_tipo_factura == 20 ? $facturacion->id_proveedor : null,
                         "id_prestador" => $facturacion->id_tipo_factura == 17 ? $facturacion->id_prestador : null,
                         "monto_orden_pago" => $facturacion->total_neto,
                         "id_moneda" => '1',
                         "fecha_emision" => $facturacion->fecha_comprobante,
                         "fecha_vencimiento" => $facturacion->fecha_vencimiento,
                         "fecha_probable_pago" => null,
-                        "id_estado_orden_pago" => 1,
+                        "id_estado_orden_pago" => $facturacion->id_tipo_factura == 20 ? 2 : 1,
                         "monto_anticipado" => 0.00,
                         "observaciones" => '',
                         "id_factura" => $facturacion->id_factura,
                         "tipo_factura" => $facturacion->id_tipo_factura == 17 ? 'PRESTADOR' : 'PROVEEDOR'
-                    ]));
+                        // ]));
+                    ];
+                    $opaCreada = $tesoreria->findByCreate($opaData);
+
+                    // Auto-crear pago para facturas tipo 20
+                    if ($facturacion->id_tipo_factura == 20) {
+                        $pagoData = [
+                            'id_orden_pago' => $opaCreada->id_orden_pago,
+                            'id_cuenta_bancaria' => 1, // Usar cuenta bancaria por defecto o configurar según necesidad
+                            'fecha_confirma_pago' => $fechaActual,
+                            'anticipo' => '0',
+                            'comprobante' => null,
+                            'id_forma_pago' => 1, // Usar forma de pago por defecto o configurar según necesidad
+                            'monto_pago' => $facturacion->total_neto,
+                            'observaciones' => 'Pago automático para factura tipo 20',
+                            'id_estado_orden_pago' => 1, //debe ser el estado de pago
+                            'monto_opa' => $facturacion->total_neto,
+                            'recursor' => '0',
+                            'fecha_probable_pago' => $fechaActual,
+                            'tipo_factura' => 'PROVEEDOR',
+                            'pago_emergencia' => '0'
+                        ];
+
+                        $boletaPago = $tesPagosRepository->findByCrearPago($pagoData);
+                        $codigoVerificado = $generadorCodigos->getGenerarCodigoUnico($boletaPago->id_pago);
+                        $tesPagosRepository->findByAsignarCodigoVerificacion($boletaPago->id_pago, $codigoVerificado);
+
+                        // Actualizar estado de la OPA a "En proceso"
+                        $tesoreria->findByUpdateEstado($opaCreada->id_orden_pago, 4);
+                    }
                 }
             } else {
 
@@ -197,12 +230,12 @@ class FacturacionProcesosController extends Controller
             "impuesto" => $factura->impuesto,
             "neto" => $neto,
             "impuestos" => $impuestos,
-            "descuentos" =>$factura->total_debitado_liquidacion,
+            "descuentos" => $factura->total_debitado_liquidacion,
             "total" => $neto + $impuestos,
             "locatario" => $factura->cod_sindicato,
             'razon_social' => $factura->razonSocial,
             'id_factura' => $factura->id_factura,
-            'fecha_confirma_pago'=>$factura->opa?->fechapagos?->fecha_probable_pago,
+            'fecha_confirma_pago' => $factura->opa?->fechapagos?->fecha_probable_pago,
             "codigo_opa" => !empty($factura->opa) > 0 ? $factura->opa->num_orden_pago : '000',
         ];
 
