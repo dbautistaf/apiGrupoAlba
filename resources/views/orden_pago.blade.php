@@ -265,7 +265,7 @@
                                 </tr>
                                 <tr style="border: 2px solid #333; font-size: 11px">
                                     <td colspan="2" style="height: 25px;">
-                                        Fecha de Pago: {{ $item->fecha_confirma_pago }}
+                                        Fecha probable de Pago: {{ $item->fecha_probable_pago }}  |  Fecha de Pago: {{ $item->fecha_confirma_pago }}
                                     </td>
                                 </tr>
                                 @if ($item->id_forma_pago == 1)
