@@ -78,7 +78,7 @@ class TesOrdenPagoController extends Controller
             ->first();
 
         Carbon::setLocale('es');
-        $fecha = Carbon::parse($query?->fecha_emision);
+        $fecha = Carbon::parse($query?->factura?->periodo);
 
         $datos = [
             "comprobante_nro" => $query?->num_orden_pago,
@@ -99,7 +99,7 @@ class TesOrdenPagoController extends Controller
                 ? number_format((float) $query?->monto_orden_pago, 2, '.', '')
                 : '0.00',
             "razon_social" => $query?->factura->razonSocial,
-            "observaciones" => 'PRESTACION ' . strtoupper($fecha->translatedFormat('F')) . ' ' . $fecha->year,
+            "observaciones" => 'PRESTACIÓN ' . strtoupper($fecha->translatedFormat('F')) . ' ' . $fecha->year,
         ];
 
         $pdf = PDF::loadView('orden_pago', $datos);
