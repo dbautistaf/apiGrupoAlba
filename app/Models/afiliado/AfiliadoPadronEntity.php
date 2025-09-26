@@ -8,6 +8,7 @@ use App\Models\ComercialOrigenModel;
 use App\Models\DetalleTipoDocAfiliadoModelo;
 use App\Models\LocalidadModelo;
 use App\Models\LocatorioModelos;
+use App\Models\MotivosBajaModel;
 use App\Models\TransaccionesModel;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -122,5 +123,10 @@ class AfiliadoPadronEntity extends Model
     public function documentos()
     {
         return $this->hasMany(DetalleTipoDocAfiliadoModelo::class, 'id_padron', 'id');
+    }
+
+    public function baja()
+    {
+        return $this->hasMany(MotivosBajaModel::class, 'id_baja_motivos', 'id_baja_motivos');
     }
 }

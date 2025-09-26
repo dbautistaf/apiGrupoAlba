@@ -8,9 +8,11 @@ use App\Mail\NotificarUsuario;
 use App\Models\afiliado\AfiliadoCertificadoEntity;
 use App\Models\AuditoriaPadronModelo;
 use App\Models\afiliado\AfiliadoDetalleTipoPlanEntity;
-use App\Models\Afiliado\AfiliadoEscolaridadEntity;
+use App\Models\afiliado\AfiliadoEscolaridadEntity;
 use App\Models\DetalleTipoDocAfiliadoModelo;
 use App\Models\afiliado\AfiliadoPadronEntity;
+use App\Models\Afip\DeclaracionesJuradasModelo;
+use App\Models\Afip\TransferenciasModelo;
 use App\Models\BajasAfiliadosModel;
 use App\Models\Internaciones\InternacionesNotasEntity;
 use App\Models\RelacionLaboralModelo;
@@ -501,7 +503,7 @@ class PadronController extends Controller
 
                 if ($request->hasFile('files')) {
                     foreach ($request->file('files') as $index => $file) {
-                        $fileName = time() . '.' . $file->extension();
+                        $fileName = time() . $index . '.' . $file->extension();
                         $file->storeAs('images', $fileName, 'public');
                         DetalleTipoDocAfiliadoModelo::create([
                             'nombre_archivo' => $fileName,
@@ -612,7 +614,7 @@ class PadronController extends Controller
 
                     if ($request->hasFile('files')) {
                         foreach ($request->file('files') as $index => $file) {
-                            $fileName = time() . '.' . $file->extension();
+                            $fileName = time() . $index . '.' . $file->extension();
                             $file->storeAs('images', $fileName, 'public');
                             DetalleTipoDocAfiliadoModelo::create([
                                 'nombre_archivo' => $fileName,
@@ -866,11 +868,11 @@ class PadronController extends Controller
     public function getDatosUserDashboar(Request $request)
     {
         $files = [];
-        $titular = AfiliadoPadronEntity::with(['tipoParentesco', 'origen', 'obrasocial', 'caja'])->where('dni', $request->dni)->first();
+        $titular = AfiliadoPadronEntity::with(['tipoParentesco', 'origen', 'obrasocial', 'caja', 'baja'])->where('dni', $request->dni)->first();
         if (!$titular) {
             return response()->json(['message' => 'Datos no encontrados'], 500);
         }
-        $query = AfiliadoPadronEntity::with(['tipoParentesco', 'origen', 'obrasocial', 'caja'])->where('cuil_tit', $titular->cuil_tit)->get();
+        $query = AfiliadoPadronEntity::with(['tipoParentesco', 'origen', 'obrasocial', 'caja', 'baja'])->where('cuil_tit', $titular->cuil_tit)->get();
         $notas = InternacionesNotasEntity::where('dni_afiliado', $titular->dni)->get();
         $prestaciones = PrestacionesPracticaLaboratorioEntity::with(["detalle", "detalle.practica", "estadoPrestacion", "afiliado", "afiliado.obrasocial", "usuario", "prestador", "profesional", "datosTramite", "datosTramite.tramite", "datosTramite.prioridad", "datosTramite.obrasocial"])
             ->where('dni_afiliado', $request->dni)->orderByDesc('fecha_registra')->get();
@@ -878,6 +880,8 @@ class PadronController extends Controller
             $plan = AfiliadoDetalleTipoPlanEntity::with('TipoPlan')->where('id_padron', $file->dni)->get();
             $escolaridad = AfiliadoEscolaridadEntity::where('id_padron', $file->dni)->first();
             $discapacidad = AfiliadoCertificadoEntity::where('id_padron', $file->dni)->first();
+            $ddjj = DeclaracionesJuradasModelo::where('cuil', $query->cuil_benef)->orderBy('fecpresent', 'desc')->first();
+            $tranf = TransferenciasModelo::where('cuitapo', $query->cuil_benef)->orderBy('periodo', 'desc')->first();
             $fechaNacimiento = Carbon::parse($file->fe_nac);
             $fechaActual = Carbon::now();
             $diferencia = $fechaNacimiento->diff($fechaActual);
@@ -887,6 +891,8 @@ class PadronController extends Controller
             $file['notas'] = $notas;
             $file['escolaridad'] = $escolaridad;
             $file['discapacidad'] = $discapacidad;
+            $file['ddjj'] = $ddjj;
+            $file['tranf'] = $tranf;
             array_push($files, $file);
         }
         return response()->json($files, 200);
@@ -992,7 +998,7 @@ class PadronController extends Controller
     {
         if ($request->hasFile('files')) {
             foreach ($request->file('files') as $index => $file) {
-                $fileName = time() . '.' . $file->extension();
+                $fileName = time() . $index . '.' . $file->extension();
                 $file->storeAs('images', $fileName, 'public');
                 DetalleTipoDocAfiliadoModelo::create([
                     'nombre_archivo' => $fileName,
