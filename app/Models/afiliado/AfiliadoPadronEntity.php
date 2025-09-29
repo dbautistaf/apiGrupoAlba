@@ -127,6 +127,6 @@ class AfiliadoPadronEntity extends Model
 
     public function baja()
     {
-        return $this->hasMany(MotivosBajaModel::class, 'id_baja_motivos', 'id_baja_motivos');
+        return $this->hasOne(MotivosBajaModel::class, 'id_baja_motivos', 'id_baja_motivos');
     }
 }

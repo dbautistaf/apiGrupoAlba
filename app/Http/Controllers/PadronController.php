@@ -408,6 +408,28 @@ class PadronController extends Controller
                 $nombresDeColumnas = Schema::getColumnListing($nombreTabla);
 
                 $query = AfiliadoPadronEntity::where('id', $titular->id)->first();
+                if ($query->id_parentesco == '00') {
+                    $select_familiar = AfiliadoPadronEntity::where('cuil_tit', $query->cuil_tit)->get();
+                    foreach ($select_familiar as $familia) {
+                        $familia->domicilio_postal = $titular->domicilio_postal;
+                        $familia->domicilio_laboral = $titular->domicilio_laboral;
+                        $familia->telefono = $titular->telefono;
+                        $familia->celular = $titular->celular;
+                        $familia->save();
+                        if (count($titular->plan) > 0) {
+                            AfiliadoDetalleTipoPlanEntity::where('id_padron', $familia->dni)->delete();
+                            foreach ($titular->plan as $plan) {
+                                AfiliadoDetalleTipoPlanEntity::create([
+                                    'fecha_alta' => $plan->fecha_alta,
+                                    'fecha_baja' => $plan->fecha_baja,
+                                    'id_tipo_plan' => $plan->id_tipo_plan,
+                                    'id_padron' => $titular->dni
+                                ]);
+                            }
+                        }
+                    }
+                }
+
                 foreach ($nombresDeColumnas as $nombreColumna) {
                     if ($query->$nombreColumna != $titular->$nombreColumna) {
                         // Guardar solo el campo si ha cambiado
