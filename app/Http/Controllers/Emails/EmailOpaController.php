@@ -25,6 +25,7 @@ class EmailOpaController extends Controller
 {
     public function sendEmailOpaProveedor(Request $request)
     {
+        return response()->json($request);
         $query = TesOrdenPagoEntity::with(['estado', 'proveedor', 'factura', 'factura.detalle', 'factura.detalle.articulo', 'prestador', 'proveedor.tipoIva', 'prestador.tipoIva', 'pagos', 'pagos.formaPago', 'pagos.cuenta', 'pagos.cuenta.entidadBancaria'])
             ->where('id_orden_pago', $request->id_orden_pago)
             ->first();

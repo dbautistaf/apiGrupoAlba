@@ -75,8 +75,9 @@ class CredencialController extends Controller
         $datos = AfiliadoPadronEntity::with('detalleplan.addplan', 'tipoParentesco', 'origen')->where('dni', $request->dni)->first();
         if ($datos->activo != 0) {
             $now = new \DateTime('now', new \DateTimeZone('America/Argentina/Buenos_Aires'));
-            $grupal = AfiliadoPadronEntity::with('detalleplan.addplan', 'tipoParentesco', 'origen')->where('cuil_tit', $datos->cuil_tit)->get();
-
+            $grupal = AfiliadoPadronEntity::with('detalleplan.addplan', 'tipoParentesco', 'origen')->where('cuil_tit', $datos->cuil_tit)->where('activo','1')->get();
+            $fecha_inicio = $now->format('Y-m-d');
+            $fecha_final = $now->modify('last day of this month')->format('Y-m-d');
             $carnet = AfiliadoCredencialEntity::where('dni', $datos->dni)->first();
             if ($datos) {
                 foreach ($grupal as $afiliado) {
@@ -87,7 +88,7 @@ class CredencialController extends Controller
                         ]);
                     }
                 }
-                $pdf = Pdf::loadView('carnet_afiliado', ["data" => $grupal, "f_inicio" => $carnet->fecha_emision, "f_fin" => $carnet->fecha_vencimiento, "plan" => $grupal]);
+                $pdf = Pdf::loadView('carnet_afiliado', ["data" => $grupal, "f_inicio" => $fecha_inicio, "f_fin" => $fecha_final, "plan" => $grupal]);
                 $pdf->setPaper('A5', 'landscape');
                 return $pdf->download('carnet.pdf');
             }
@@ -100,7 +101,10 @@ class CredencialController extends Controller
     public function printCarnetPersonal(Request $request)
     {
 
-        $datos = AfiliadoPadronEntity::with('detalleplan.addplan', 'tipoParentesco', 'origen')->where('dni', $request->dni)->get();
+        $now = new \DateTime('now', new \DateTimeZone('America/Argentina/Buenos_Aires'));
+        $fecha_inicio = $now->format('Y-m-d');
+        $fecha_final = $now->modify('last day of this month')->format('Y-m-d');
+        $datos = AfiliadoPadronEntity::with('detalleplan.addplan', 'tipoParentesco', 'origen')->where('dni', $request->dni)->where('activo','1')->get();
         if ($datos[0]->activo != 0) {
             $now = new \DateTime('now', new \DateTimeZone('America/Argentina/Buenos_Aires'));
             $datos = AfiliadoPadronEntity::with('detalleplan.addplan', 'tipoParentesco', 'origen')->where('dni', $request->dni)->get();
@@ -115,7 +119,7 @@ class CredencialController extends Controller
                         ]);
                     }
                 }
-                $pdf = Pdf::loadView('carnet_afiliado', ["data" => $datos, "f_inicio" => $carnet->fecha_emision, "f_fin" => $carnet->fecha_vencimiento, "plan" => $grupal]);
+                $pdf = Pdf::loadView('carnet_afiliado', ["data" => $datos, "f_inicio" => $fecha_inicio, "f_fin" => $fecha_final, "plan" => $grupal]);
                 $pdf->setPaper('A5', 'landscape');
                 return $pdf->download('carnet.pdf');
             }
@@ -131,7 +135,7 @@ class CredencialController extends Controller
         $now = new \DateTime('now', new \DateTimeZone('America/Argentina/Buenos_Aires'));
         $datos = AfiliadoPadronEntity::with('detalleplan.addplan', 'tipoParentesco', 'origen')->where('dni', $user->documento)->first();
         if ($request->id == '0') {
-            $grupal = AfiliadoPadronEntity::with('detalleplan.addplan', 'tipoParentesco', 'origen')->where('cuil_tit', $datos->cuil_tit)->get();
+            $grupal = AfiliadoPadronEntity::with('detalleplan.addplan', 'tipoParentesco', 'origen')->where('cuil_tit', $datos->cuil_tit)->where('activo','1')->get();
         } else {
             $grupal = AfiliadoPadronEntity::with('detalleplan.addplan', 'tipoParentesco', 'origen')->where('dni', $user->documento)->get();
         }
