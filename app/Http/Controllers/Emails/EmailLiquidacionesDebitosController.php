@@ -21,7 +21,7 @@ class EmailLiquidacionesDebitosController extends Controller
     public function getEnviarDebitoProveedor(LiqMedicamentosRepository $factura, LiquidacionesFacturaRepository $repo, LiqDebitoInternoRepository $repoDebito, Request $request)
     {
         $data = json_decode($request->data);
-        
+
         $datos = $factura->findByFacturaId($data->idfactura);
 
         if ($datos) {
@@ -30,7 +30,7 @@ class EmailLiquidacionesDebitosController extends Controller
             $pdf->setPaper('A4', 'landscape');
 
 
-           $pdfContent = $pdf->output();
+            $pdfContent = $pdf->output();
 
             $nombreBoleta = 'BOLETA_DEBITO_' . $data->idfactura . '.pdf';
             $urlFileBoleta = 'public/liquidaciones/archivos_mails_debito/' . $nombreBoleta;
@@ -93,7 +93,11 @@ class EmailLiquidacionesDebitosController extends Controller
                 }
             }
 
-            Mail::to($data->mailPrestador)->cc('debitos@grupoalba.com.ar')->send(new EnviarPDFMail($archivos, $factura, $data->asunto, $data->observaciones));
+            if ($data->debito) {
+                Mail::to($data->mailPrestador)->cc('debitos@grupoalba.com.ar')->send(new EnviarPDFMail([$archivos[0]], $factura, $data->asunto, $data->observaciones));
+            } else {
+                Mail::to($data->mailPrestador)->cc('debitos@grupoalba.com.ar')->send(new EnviarPDFMail($archivos, $factura, $data->asunto, $data->observaciones));
+            }
 
             return response()->json([
                 'success' => true,

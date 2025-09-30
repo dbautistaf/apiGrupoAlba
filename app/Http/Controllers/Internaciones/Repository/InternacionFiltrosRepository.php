@@ -24,7 +24,8 @@ class InternacionFiltrosRepository
             "tipoEgreso",
             "tipoDiagnostico",
             "usuario",
-            "estadoPrestacion"
+            "estadoPrestacion",
+            "internacion"
         ];
     }
 
