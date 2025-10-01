@@ -96,31 +96,36 @@ class TicketSoporteController extends Controller
 
     public function getLitsTicketGeneral(Request $request)
     {
-        $query = SoporteTicketsModelo::with('Estado')
-            ->with('Prioridad')
-            ->with('Instancia')
-            ->with('Categoria')
-            ->with('Asignados')
-            ->with('Archivo')
+        $query = SoporteTicketsModelo::with([
+            'Estado',
+            'Prioridad',
+            'Instancia',
+            'Categoria',
+            'Asignados',
+            'Archivo'
+        ])
             ->where('cliente', 'ALBA')
-            ->orderBy('fecha_apertura', 'desc');
+            ->orderByDesc('fecha_apertura');
+            
 
-        if (!is_null($request->prioridad)) {
+        if ($request->filled('prioridad')) {
             $query->where('id_prioridad', $request->prioridad);
         }
+        
 
-        if (!is_null($request->categoria)) {
+        if ($request->filled('categoria')) {
             $query->where('id_categoria', $request->categoria);
         }
+        
 
-        if (!is_null($request->estado)) {
+        if ($request->filled('estado')) {
             $query->where('id_estado', $request->estado);
         }
-
-        if (!is_null($request->numero)) {
+        
+        if ($request->filled('numero')) {
             $query->where('id_ticket', $request->numero);
         }
-
+        
         if ($request->desde && $request->hasta) {
             $query->whereBetween('fecha_apertura', [$request->desde, $request->hasta]);
         }
