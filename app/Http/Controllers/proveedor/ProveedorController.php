@@ -54,7 +54,14 @@ class ProveedorController extends Controller
                 if (is_numeric($datosBancarios['cod_dato_bancario'])) {
                     $repo->findByUpdateDatosBancarios($datosBancarios);
                 } else {
-                    $repo->findBySaveDatosBancarios($datosBancarios, $request->cod_proveedor);
+                    if (!empty($datosBancarios) && array_filter($datosBancarios, fn($value) => !empty($value))) {
+                        $response = $repo->findBySaveDatosBancarios($datosBancarios, $request->cod_proveedor);
+
+                        if ($response instanceof \Illuminate\Http\JsonResponse && $response->getStatusCode() === 400) {
+                            DB::rollBack();
+                            return $response; // Propagar el error al frontend
+                        }
+                    }
                 }
 
                 if (is_numeric($metodoPago['id_pago_proveedor'])) {
@@ -143,6 +150,9 @@ class ProveedorController extends Controller
                 ->limit(100)
                 ->get();
         }
+
+        // Ordenar por fecha_alta descendente (más reciente primero)
+        $data = $data->sortByDesc('fecha_alta');
 
         return response()->json($data, 200);
     }

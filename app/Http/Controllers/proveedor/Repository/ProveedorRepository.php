@@ -58,21 +58,48 @@ class ProveedorRepository
 
     public function findBySaveDatosBancarios($params, $cod_proveedor)
     {
-        if (
-            !is_null($params['numero_cuenta'])
-            && !is_null($params['titular_cuenta'])
-            && !is_null($params['tipo_cuenta'])
-            && !is_null($params['cbu_cuenta'])
-        ) {
-            return DatosBancariosEntity::create([
-                'numero_cuenta' => $params['numero_cuenta'],
-                'titular_cuenta' => $params['titular_cuenta'],
-                'tipo_cuenta' => $params['tipo_cuenta'],
-                'cbu_cuenta' => $params['cbu_cuenta'],
-                'vigente' => $params['vigente'],
-                'cod_proveedor' => $cod_proveedor
-            ]);
+        // Verificar si todos los campos están vacíos
+        $camposBancarios = ['numero_cuenta', 'titular_cuenta', 'tipo_cuenta', 'cbu_cuenta'];
+        $todosVacios = true;
+        $algunoPresente = false;
+
+        foreach ($camposBancarios as $campo) {
+            if (!empty($params[$campo])) {
+                $todosVacios = false;
+                $algunoPresente = true;
+            }
         }
+
+        // Si todos los campos están vacíos, devolver mensaje de éxito sin procesar datos bancarios
+        if ($todosVacios) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Registro actualizado correctamente. No se procesaron datos bancarios porque no se enviaron.'
+            ], 200); // Código 200: OK
+        }
+
+        // Si alguno de los campos está presente pero no todos, devolver error
+        if ($algunoPresente && (
+            empty($params['numero_cuenta']) ||
+            empty($params['titular_cuenta']) ||
+            empty($params['tipo_cuenta']) ||
+            empty($params['cbu_cuenta'])
+        )) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Si desea actualizar los datos bancarios, debe completar todos los campos: numero_cuenta, titular_cuenta, tipo_cuenta, cbu_cuenta.'
+            ], 400); // Código 400: Bad Request
+        }
+
+        // Si los campos están completos, guardar los datos
+        return DatosBancariosEntity::create([
+            'numero_cuenta' => $params['numero_cuenta'],
+            'titular_cuenta' => $params['titular_cuenta'],
+            'tipo_cuenta' => $params['tipo_cuenta'],
+            'cbu_cuenta' => $params['cbu_cuenta'],
+            'vigente' => $params['vigente'],
+            'cod_proveedor' => $cod_proveedor
+        ]);
     }
 
     public function findByMetodoPago($params, $cod_proveedor)

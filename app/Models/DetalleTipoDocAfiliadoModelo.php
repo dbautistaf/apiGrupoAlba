@@ -17,4 +17,9 @@ class DetalleTipoDocAfiliadoModelo extends Model
         'id_padron',
         'id_tipo_documentacion'
     ];
+
+    public function tipoDocumentacion()
+    {
+        return $this->belongsTo(TipoDocumentacionAfiliadoModelo::class, 'id_tipo_documentacion', 'id_tipo_documentacion');
+    }
 }
