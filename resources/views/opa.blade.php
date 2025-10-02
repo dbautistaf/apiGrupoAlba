@@ -11,7 +11,7 @@
     <p><strong>Fecha de Emisión:</strong> {{ $datos['fecha_emision'] }}</p>
     <p><strong>Proveedor:</strong> {{ $datos['nombre_proveedor'] }}</p>
     <p><strong>Total:</strong> ${{ number_format($datos['total'], 2) }}</p>
-    <p><strong>Observaciones:</strong> {{ $datos['observaciones'] }}</p>
+    {{-- <p><strong>Observaciones:</strong> {{ $datos['observaciones'] }}</p> --}}
     <p>Adjunto encontrarás el comprobante en formato PDF.</p>
 </body>
 

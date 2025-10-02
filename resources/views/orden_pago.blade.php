@@ -256,7 +256,7 @@
                                         @else
                                             {{ $item->formaPago->tipo_pago }} - {{ $item->cuenta->nombre_cuenta }}
                                             {{ $item->cuenta->entidadBancaria->descripcion_banco }}
-                                            {{ $item->observaciones }}
+                                            {{-- $item->observaciones --}}
                                         @endif
                                     </td>
                                     <td style="height: 25px; text-align: center;">
@@ -337,12 +337,12 @@
         </tbody>
     </table>
 
-    <div>
+    {{-- <div>
         <p>
             <span style="font-size: 12px; text-decoration: underline">Observaciones:</span>
             {{ $observaciones }}
         </p>
-    </div>
+    </div> --}}
 </body>
 
 </html>
