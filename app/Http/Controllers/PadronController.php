@@ -60,7 +60,7 @@ class PadronController extends Controller
                         'id_detalle' => $doc->id_detalle,
                         'nombre_archivo' => $doc->nombre_archivo,
                         'url_archivo' => url('/storage/images/' . $doc->nombre_archivo),
-                        'id_tipo_documentacion' => $doc->id_tipo_documentacion,
+                        'tipo_documentacion' => $doc->tipoDocumentacion->tipo_documentacion ?? null, // Enviar el nombre del tipo de documentación
                     ];
                 });
 
@@ -175,7 +175,7 @@ class PadronController extends Controller
             'user',
             'tipoParentesco',
             'detalleplan.tipoPlan',
-            'documentos'
+            'documentos.tipoDocumentacion' // Relación para obtener la descripción del tipo de documentación
         ])
             ->where('dni', 'LIKE', "$dni%")
             ->orWhere('cuil_tit', 'LIKE', "%$dni%")
@@ -199,7 +199,7 @@ class PadronController extends Controller
                         'id_detalle' => $doc->id_detalle,
                         'nombre_archivo' => $doc->nombre_archivo,
                         'url_archivo' => url('/storage/images/' . $doc->nombre_archivo),
-                        'id_tipo_documentacion' => $doc->id_tipo_documentacion,
+                        'tipo_documentacion' => $doc->tipoDocumentacion->tipo_documentacion ?? null, // Enviar el nombre del tipo de documentación
                     ];
                 });
 
@@ -783,7 +783,7 @@ class PadronController extends Controller
                 $user = Auth::user();
                 User::where('cod_usuario', $user->cod_usuario)->update(['actualizo_datos' => 1]);
             }
-            return response()->json(['message' => 'Muchas gracias por la actualización de sus datos. 
+            return response()->json(['message' => 'Muchas gracias por la actualización de sus datos.
             Se ha generado una solicitud para la emisión de su credencial, en el lapso de 24 a 48 hs será habilitada su credencial.'], 200);
         } else {
             return response()->json(['message' => 'Datos no encontrados'], 500);
@@ -980,7 +980,7 @@ class PadronController extends Controller
                 'file_dni' => '',
                 'id_comercial_origen' => $titular->id_comercial_origen,
                 'id_comercial_caja' => $titular->id_comercial_caja,
-                'discapaciodad' => $request->discapacidad,
+                'discapacidad' => $request->discapacidad,
             ]);
             AuditoriaPadronModelo::create([
                 'fecha' => $now->format('Y-m-d H:i:s'),
