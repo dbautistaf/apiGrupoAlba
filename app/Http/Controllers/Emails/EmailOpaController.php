@@ -53,7 +53,7 @@ class EmailOpaController extends Controller
             "detalle" => $query->factura?->detalle,
             "total" => $query->monto_orden_pago,
             "debito" => $query->factura->total_debitado_liquidacion,
-            "observaciones" => 'PRESTACION ' . strtoupper($fecha->translatedFormat('F')) . ' ' . $fecha->year,
+            // "observaciones" => 'PRESTACION ' . strtoupper($fecha->translatedFormat('F')) . ' ' . $fecha->year,
             "razon_social" => $razon_social,
             "facturas" => $query->factura ? [$query->factura] : [],
             "pagos" => $query->pagos ?? [],
