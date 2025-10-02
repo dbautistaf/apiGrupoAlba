@@ -67,4 +67,9 @@ class HistoriaClinicaEntity extends Model
         return $this->hasOne(PrestadorEspecialidadesMedicasEntity::class,'cod_especialidad', 'cod_especialidad');
     }
 
+    public function filehistoriaclinica()
+    {
+        return $this->hasMany(HistorialClinicaFileModel::class,'id_historia_clinica', 'id_historia_clinica');
+    }
+
 }

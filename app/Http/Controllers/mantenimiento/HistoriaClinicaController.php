@@ -52,10 +52,10 @@ class HistoriaClinicaController extends Controller
 
             if ($request->hasFile('files')) {
                 foreach ($request->file('files') as $index => $file) {
-                    $fileName = time() . $index . '.' . $file->extension();
+                    $nombreArchivo = time() . $index . '.' . $file->extension();
                     $file->storeAs('historialclinico', $nombreArchivo, 'public');
                     HistorialClinicaFileModel::create([
-                        'url_file' => $fileName,
+                        'url_file' => $nombreArchivo,
                         'id_historia_clinica' => $newHistorial->id_historia_clinica,
                         'fecha_carga' =>  $fechaActual
 

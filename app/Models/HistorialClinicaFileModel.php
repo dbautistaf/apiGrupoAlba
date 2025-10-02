@@ -17,4 +17,17 @@ class HistorialClinicaFileModel extends Model
         'id_historia_clinica',
         'fecha_carga'
     ];
+
+    protected $appends = ['url'];
+    
+    public function getUrlAttribute()
+    {
+        
+        return asset('storage/historialclinico/' . $this->url_file);
+    }
+
+    public function historiaClinica()
+    {
+        return $this->belongsTo(HistoriaClinicaEntity::class, 'id_historia_clinica');
+    }
 }
