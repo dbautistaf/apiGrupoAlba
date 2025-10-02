@@ -3,6 +3,7 @@
 namespace  App\Models\Internaciones;
 
 use App\Models\afiliado\AfiliadoPadronEntity;
+use App\Models\PrestacionesMedicas\PrestacionesPracticaLaboratorioEntity;
 use App\Models\PrestacionesMedicas\TipoEstadoPrestacionEntity;
 use App\Models\prestadores\PrestadorEntity;
 use App\Models\prestadores\PrestadorEspecialidadesMedicasEntity;
@@ -102,5 +103,10 @@ class InternacionesEntity extends Model
     public function estadoPrestacion()
     {
         return $this->hasOne(TipoEstadoPrestacionEntity::class, 'cod_tipo_estado', 'cod_tipo_estado');
+    }
+
+    public function internacion()
+    {
+        return $this->hasOne(PrestacionesPracticaLaboratorioEntity::class, 'cod_internacion', 'cod_internacion');
     }
 }

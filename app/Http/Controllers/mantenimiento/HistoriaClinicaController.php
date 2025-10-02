@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\mantenimiento;
 
 use App\Models\HistoriaClinicaEntity;
+use App\Models\HistorialClinicaFileModel;
 use App\Models\RecetasModelo;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -20,15 +21,10 @@ class HistoriaClinicaController extends Controller
         $datos = json_decode($request->input('datos'));
         //return response()->json($datos, 500);
         $nombreArchivo = '';
-        if ($request->hasFile('file')) {
-            $archivo = $request->file('file');
-            $nombreArchivo = $archivo->getClientOriginalName();
-            $archivo->storeAs('historialclinico', $nombreArchivo, 'public');
-        }
 
         try {
 
-            HistoriaClinicaEntity::create([
+            $newHistorial = HistoriaClinicaEntity::create([
                 'dni_afiliado' => $datos->dni_afiliado->dni,
                 'peso' => $datos->peso,
                 'talla' => $datos->talla,
@@ -53,6 +49,19 @@ class HistoriaClinicaController extends Controller
                 'cod_especialidad' => $datos->cod_especialidad,
                 'url_file' => $nombreArchivo
             ]);
+
+            if ($request->hasFile('files')) {
+                foreach ($request->file('files') as $index => $file) {
+                    $nombreArchivo = time() . $index . '.' . $file->extension();
+                    $file->storeAs('historialclinico', $nombreArchivo, 'public');
+                    HistorialClinicaFileModel::create([
+                        'url_file' => $nombreArchivo,
+                        'id_historia_clinica' => $newHistorial->id_historia_clinica,
+                        'fecha_carga' =>  $fechaActual
+
+                    ]);
+                }
+            }
 
             DB::commit();
             return response()->json(["message" => "La Historia clinica se registro correctamente."], 200);
