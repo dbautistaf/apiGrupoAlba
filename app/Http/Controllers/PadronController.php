@@ -902,8 +902,8 @@ class PadronController extends Controller
             $plan = AfiliadoDetalleTipoPlanEntity::with('TipoPlan')->where('id_padron', $file->dni)->get();
             $escolaridad = AfiliadoEscolaridadEntity::where('id_padron', $file->dni)->first();
             $discapacidad = AfiliadoCertificadoEntity::where('id_padron', $file->dni)->first();
-            $ddjj = DeclaracionesJuradasModelo::where('cuil', $query->cuil_benef)->orderBy('fecpresent', 'desc')->first();
-            $tranf = TransferenciasModelo::where('cuitapo', $query->cuil_benef)->orderBy('periodo', 'desc')->first();
+            $ddjj = DeclaracionesJuradasModelo::where('cuil', $file->cuil_benef)->orderBy('fecpresent', 'desc')->first();
+            $tranf = TransferenciasModelo::where('cuitapo', $file->cuil_benef)->orderBy('periodo', 'desc')->first();
             $fechaNacimiento = Carbon::parse($file->fe_nac);
             $fechaActual = Carbon::now();
             $diferencia = $fechaNacimiento->diff($fechaActual);

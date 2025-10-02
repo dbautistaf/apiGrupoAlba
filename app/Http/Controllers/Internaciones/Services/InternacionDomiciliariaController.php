@@ -32,7 +32,7 @@ class InternacionDomiciliariaController extends Controller
         try {
             DB::beginTransaction();
             $internacion = json_decode($request->datos);
-            if (!is_null($internacion->id_internacion_domiciliaria)) {
+            if (!empty($internacion->id_internacion_domiciliaria)) {
                 $inter = $repo->findByUpdateInternacionDomiciliaria($internacion);
                 $repo->findByInternacionDomiciliariaDetalle($internacion->detalle, $inter);
             } else {
