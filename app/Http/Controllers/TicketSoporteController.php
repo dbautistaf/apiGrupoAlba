@@ -17,7 +17,7 @@ class TicketSoporteController extends Controller
     //
     public function postSaveTicketsSoporte(Request $request, ManejadorDeArchivosUtils $storageFile)
     {
-        $now = new \DateTime();
+        $now = new \DateTime('now', new \DateTimeZone('America/Argentina/Buenos_Aires'));
         $msg = '';
 
         if ($request->id_ticket == '') {
@@ -27,7 +27,7 @@ class TicketSoporteController extends Controller
                 // 'titulo' => $request->titulo,
                 'observaciones' => $request->observaciones,
                 'asignado_por' => $request->asignado_por,
-                'fecha_apertura' => $now->format('Y-m-d'),
+                'fecha_apertura' => $now->format('Y-m-d H:i:s'),
                 'fecha_respuesta' => null,
                 'cliente' => $request->cliente,
                 'id_prioridad' => $request->id_prioridad,
