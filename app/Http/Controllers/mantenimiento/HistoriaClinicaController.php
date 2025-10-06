@@ -77,13 +77,10 @@ class HistoriaClinicaController extends Controller
     public function putUpdateHistoriaClinica(Request $request)
     {
         DB::beginTransaction();
+        $fechaActual = Carbon::now('America/Argentina/Buenos_Aires');
         $datos = json_decode($request->input('datos'));
-        if ($request->hasFile('file')) {
-            $archivo = $request->file('file');
-            $nombreArchivo = $archivo->getClientOriginalName();
-            $archivo->storeAs('historialclinico', $nombreArchivo, 'public');
-            $datos->url_file = $nombreArchivo;
-        }
+        //return response()->json($datos, 500);
+        $nombreArchivo = '';
         try {
 
             $historia = HistoriaClinicaEntity::find($datos->id_historia_clinica);
@@ -95,7 +92,7 @@ class HistoriaClinicaController extends Controller
             $historia->frecuencia_cardiaca = $datos->frecuencia_cardiaca;
             $historia->presion_arterial = $datos->presion_arterial;
             $historia->discapacida = $datos->discapacida;
-            $historia->alergia = $datos->alergia;
+            $historia->alergia = $datos->alergia ?? 0;
             $historia->diagnostico = $datos->diagnostico;
             $historia->estudios_previos = $datos->estudios_previos;
             $historia->antecedentes = $datos->antecedentes;
@@ -104,11 +101,28 @@ class HistoriaClinicaController extends Controller
             $historia->observaciones = $datos->observaciones;
             $historia->medicacion_solicitada = $datos->medicacion_solicitada;
             $historia->vigente = $datos->vigente;
-            $historia->cod_tipo_alergia = $datos->cod_tipo_alergia;
-            $historia->id_tipo_discapacidad = $datos->id_tipo_discapacidad;
+            $historia->cod_tipo_alergia = (!isset($datos->cod_tipo_alergia) || $datos->cod_tipo_alergia === '')
+                ? 0
+                : $datos->cod_tipo_alergia;
+            $historia->id_tipo_discapacidad =  (!isset($datos->id_tipo_discapacidad) || $datos->id_tipo_discapacidad === '')
+                ? 0
+                : $datos->id_tipo_discapacidad;
             $historia->cod_profesional = $datos->cod_profesional;
             $historia->cod_especialidad = $datos->cod_especialidad;
-            $historia->url_file = $datos->url_file;
+            $historia->save();
+
+            if ($request->hasFile('files')) {
+                foreach ($request->file('files') as $index => $file) {
+                    $nombreArchivo = time() . $index . '.' . $file->extension();
+                    $file->storeAs('historialclinico', $nombreArchivo, 'public');
+                    HistorialClinicaFileModel::create([
+                        'url_file' => $nombreArchivo,
+                        'id_historia_clinica' => $historia->id_historia_clinica,
+                        'fecha_carga' =>  $fechaActual
+
+                    ]);
+                }
+            }
 
             DB::commit();
             return response()->json(["message" => "La Historia clinica se actualizo correctamente."], 200);
