@@ -154,12 +154,12 @@ class HistoriaClinicaController extends Controller
 
         if (!empty($request->search)) {
             if (is_numeric($request->search)) {
-                $data =  HistoriaClinicaEntity::with(['afiliado', 'tipoAlergia', 'tipoDiscapacidad', 'profesional', 'especialidad'])
+                $data =  HistoriaClinicaEntity::with(['afiliado', 'tipoAlergia', 'tipoDiscapacidad', 'profesional', 'especialidad','filehistoriaclinica'])
                     ->where('dni_afiliado', 'like', '%' . $request->search . '%')
                     ->whereBetween('fecha_registra', [$request->desde, $request->hasta])
                     ->get();
             } else {
-                $data =  HistoriaClinicaEntity::with(['afiliado', 'tipoAlergia', 'tipoDiscapacidad', 'profesional', 'especialidad'])
+                $data =  HistoriaClinicaEntity::with(['afiliado', 'tipoAlergia', 'tipoDiscapacidad', 'profesional', 'especialidad','filehistoriaclinica'])
                     ->whereHas('afiliado', function ($query) use ($request) {
                         $query->where('apellidos', 'like', '%' . $request->search . '%');
                     })
@@ -167,7 +167,7 @@ class HistoriaClinicaController extends Controller
                     ->get();
             }
         } else {
-            $data =  HistoriaClinicaEntity::with(['afiliado', 'tipoAlergia', 'tipoDiscapacidad', 'profesional', 'especialidad'])
+            $data =  HistoriaClinicaEntity::with(['afiliado', 'tipoAlergia', 'tipoDiscapacidad', 'profesional', 'especialidad','filehistoriaclinica'])
                 ->whereBetween('fecha_registra', [$request->desde, $request->hasta])
                 ->get();
         }
@@ -185,7 +185,7 @@ class HistoriaClinicaController extends Controller
                 $q->where('dni', $dni);
             });
 
-        $data = HistoriaClinicaEntity::with(['afiliado', 'tipoAlergia', 'tipoDiscapacidad', 'profesional', 'especialidad'])
+        $data = HistoriaClinicaEntity::with(['afiliado', 'tipoAlergia', 'tipoDiscapacidad', 'profesional', 'especialidad','filehistoriaclinica'])
             ->where('dni_afiliado', $request->dni)
             ->orderByDesc('id_historia_clinica')
             ->get();
