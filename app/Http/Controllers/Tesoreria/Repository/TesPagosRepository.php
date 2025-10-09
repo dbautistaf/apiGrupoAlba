@@ -69,9 +69,7 @@ class TesPagosRepository
                 'opa.proveedor',
                 'opa.proveedor.datosBancarios',
                 'opa.factura.razonSocial',
-                'comprobantes' => function ($query) {
-                    $query->where('estado', 1);
-                }
+                'comprobantes'
             ]);
             $jquery->where('tipo_factura', 'PROVEEDOR');
         } else {
@@ -82,9 +80,7 @@ class TesPagosRepository
                 'opa.prestador',
                 'opa.prestador.datosBancarios',
                 'opa.factura.razonSocial',
-                'comprobantes' => function ($query) {
-                    $query->where('estado', 1);
-                }
+                'comprobantes'
             ]);
             $jquery->where('tipo_factura', 'PRESTADOR');
         }

@@ -123,7 +123,14 @@ class TestOrdenPagoRepository
 
     public function getFiltroDinamico($params)
     {
-        $query = TesOrdenPagoEntity::with(['estado', 'factura', 'factura.razonSocial', 'proveedor', 'prestador']);
+        $query = TesOrdenPagoEntity::with([
+            'estado',
+            'factura',
+            'factura.razonSocial',
+            'factura.comprobantes', // <-- corregido aquí
+            'proveedor',
+            'prestador'
+        ]);
 
         if (!is_null($params->tipo)) {
             $query->where('tipo_factura', $params->tipo);
