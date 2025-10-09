@@ -93,10 +93,12 @@ class EmailLiquidacionesDebitosController extends Controller
                 }
             }
 
+            $destinatarios = array_map('trim', explode(',', $data->mailPrestador));
+
             if ($data->debito) {
-                Mail::to($data->mailPrestador)->cc('debitos@grupoalba.com.ar')->send(new EnviarPDFMail([$archivos[0]], $factura, $data->asunto, $data->observaciones));
+                Mail::to($destinatarios)->cc('debitos@grupoalba.com.ar')->send(new EnviarPDFMail([$archivos[0]], $factura, $data->asunto, $data->observaciones));
             } else {
-                Mail::to($data->mailPrestador)->cc('debitos@grupoalba.com.ar')->send(new EnviarPDFMail($archivos, $factura, $data->asunto, $data->observaciones));
+                Mail::to($destinatarios)->cc('debitos@grupoalba.com.ar')->send(new EnviarPDFMail($archivos, $factura, $data->asunto, $data->observaciones));
             }
 
             return response()->json([

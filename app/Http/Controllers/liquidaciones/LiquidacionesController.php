@@ -198,7 +198,8 @@ class LiquidacionesController extends Controller
                                 ld.debita_coseguro AS debita_coseguro,
                                 ld.coseguro AS total_coseguro,
                                 usu.nombre_apellidos AS usuario,
-                                ld.estado AS estado
+                                ld.estado AS estado,
+                                ld.costo_practica
                             FROM tb_liquidaciones_detalle ld
                             JOIN tb_liquidaciones l ON ld.id_liquidacion = l.id_liquidacion
                             JOIN tb_facturacion_datos fa ON l.id_factura = fa.id_factura
