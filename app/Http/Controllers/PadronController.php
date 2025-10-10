@@ -895,7 +895,7 @@ class PadronController extends Controller
             return response()->json(['message' => 'Datos no encontrados'], 500);
         }
         $query = AfiliadoPadronEntity::with(['tipoParentesco', 'origen', 'obrasocial', 'caja', 'baja'])->where('cuil_tit', $titular->cuil_tit)->get();
-        $notas = InternacionesNotasEntity::where('dni_afiliado', $titular->dni)->get();
+        $notas = InternacionesNotasEntity::with(['usuario'])->where('dni_afiliado', $titular->dni)->get();
         $prestaciones = PrestacionesPracticaLaboratorioEntity::with(["detalle", "detalle.practica", "estadoPrestacion", "afiliado", "afiliado.obrasocial", "usuario", "prestador", "profesional", "datosTramite", "datosTramite.tramite", "datosTramite.prioridad", "datosTramite.obrasocial"])
             ->where('dni_afiliado', $request->dni)->orderByDesc('fecha_registra')->get();
         foreach ($query as $file) {

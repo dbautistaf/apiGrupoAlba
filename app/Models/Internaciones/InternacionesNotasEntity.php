@@ -2,6 +2,7 @@
 
 namespace App\Models\Internaciones;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -18,4 +19,9 @@ class InternacionesNotasEntity extends Model
         'fecha_registra',
         'descripcion'
     ];
+
+    public function usuario()
+    {
+        return $this->hasOne(User::class, 'cod_usuario', 'cod_usuario');
+    }
 }
