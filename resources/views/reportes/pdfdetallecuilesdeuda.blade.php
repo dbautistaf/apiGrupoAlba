@@ -59,13 +59,13 @@
 
     <table style='width: 30%;' class="fm">
         <tr class="text-center">
-            <td class="text-center"> <img style='' src='{{ storage_path('app/public/images/ospf.png')  }}' alt='no_image' width='70px'
-                    height='60px'></td>
+            <td class="text-center"> <img style='' src='{{ storage_path('app/public/images/alba.png')  }}' alt='no_image' width='160px'
+                    height='80px'></td>
         </tr>
         <tr>
 
             <td class="text-center">
-                <h2 class="fm text-center" style='color:#28A745;font-size:28px;'>O.S.P.F</h2>
+               {{-- <h2 class="fm text-center" style='color:#28A745;font-size:28px;'>O.S.P.F</h2> --}}
                 <span class="fm text-center" style='font-size:11px'>OBRA SOCIAL DEL PERSONAL DE FARMACIA</span><br>
                 <span class="fm text-center" style='font-size:11px'>R.N.O.S 1-0740</span><br>
                 <span class="fm text-center" style='font-size:11px'>CUIT 33-64810438-9</span>
