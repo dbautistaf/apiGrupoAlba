@@ -1262,6 +1262,7 @@ Route::group(
         Route::get('buscarDeudasEmpresa/{id}', [App\Http\Controllers\Fiscalizacion\DeudaAporteEmpresaController::class, 'buscarPorEmpresa']);
         Route::get('getListDeudas', [App\Http\Controllers\Fiscalizacion\DeudaAporteEmpresaController::class, 'getListDeudas']);
         Route::get('detalleDeuda', [App\Http\Controllers\Fiscalizacion\DeudaAporteEmpresaController::class, 'detalleDeuda']);
+        Route::get('deuda-empresa', [App\Http\Controllers\Fiscalizacion\DeudaAporteEmpresaController::class, 'pdfDeudaEmpresa']);
 
 
         // Rutas para tb_fisca_cobranzas
@@ -1281,7 +1282,6 @@ Route::group(
         Route::get('getListAcuerdosPago', [App\Http\Controllers\Fiscalizacion\AcuerdoPagoController::class, 'getListAcuerdosPago']);
         Route::delete('eliminarAcuerdo/{id}', [App\Http\Controllers\Fiscalizacion\AcuerdoPagoController::class, 'eliminarAcuerdo']);
         // Route::get('acuerdo-pago/{id}', [App\Http\Controllers\Fiscalizacion\AcuerdoPagoController::class, 'getAcuerdoPagoById']);
-    
 
         // Rutas para tb_fisca_cobranza_periodo
         Route::get('cobranzas-periodo', [App\Http\Controllers\Fiscalizacion\CobranzaPeriodoController::class, 'getListCobranzasPeriodo']);
@@ -1307,7 +1307,6 @@ Route::group(
         Route::get('buscarIntimacionId', [App\Http\Controllers\Fiscalizacion\IntimacionController::class, 'getIntimacionById']);
         Route::delete('eliminarIntimacion/{id}', [App\Http\Controllers\Fiscalizacion\IntimacionController::class, 'eliminarIntimacion']);
 
-
         // Rutas para tb_fisca_movimientos
         Route::get('obtenerTipoMovimiento', [App\Http\Controllers\Fiscalizacion\MovimientoController::class, 'getListMovimientos']);
         Route::get('movimiento/{id}', [App\Http\Controllers\Fiscalizacion\MovimientoController::class, 'getMovimientoById']);
@@ -1330,3 +1329,4 @@ Route::group(
         Route::get('getFormasPago', [App\Http\Controllers\Fiscalizacion\FormasPagoController::class, 'getListFormasPago']);
     }
 );
+
