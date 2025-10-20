@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Mpdf\Mpdf;
 
 class EmailLiquidacionesDebitosController extends Controller
 {
@@ -25,16 +26,34 @@ class EmailLiquidacionesDebitosController extends Controller
         $datos = $factura->findByFacturaId($data->idfactura);
 
         if ($datos) {
+
             $detalle = $factura->findByDetalleFacturaId($datos->id_factura, $datos->tipo_detalle);
-            $pdf = Pdf::loadView('rpt_debito_liquidacion', ["factura" => $datos, "detalle" => $detalle]);
-            $pdf->setPaper('A4', 'landscape');
 
 
-            $pdfContent = $pdf->output();
+            ini_set('memory_limit', '1024M');
+            ini_set('pcre.backtrack_limit', '10000000');
+            ini_set('pcre.recursion_limit', '10000000');
 
-            $nombreBoleta = 'BOLETA_DEBITO_' . $data->idfactura . '.pdf';
+            $mpdf = new Mpdf(['format' => 'A4-L']);
+
+            // Escribimos encabezado
+            $mpdf->WriteHTML(view('debito.rpt_debito_liquidacion_header', ['factura' => $datos])->render());
+
+            // Dividimos el detalle en partes
+            foreach (array_chunk($detalle, 2000) as $chunk) {
+                $htmlChunk = view('debito.rpt_debito_liquidacion_detalle', ['detalle' => $chunk])->render();
+                $mpdf->WriteHTML($htmlChunk);
+            }
+
+            // Pie de página
+            $html = view('debito.rpt_debito_liquidacion_footer', ['factura' => $datos])->render();
+            $mpdf->WriteHTML($html);
+
+            // Generar y guardar
+            $nombreBoleta = 'BOLETA_DEBITO_' . $datos->id_factura . '.pdf';
             $urlFileBoleta = 'public/liquidaciones/archivos_mails_debito/' . $nombreBoleta;
-            Storage::put($urlFileBoleta, $pdfContent);
+
+            Storage::put($urlFileBoleta, $mpdf->Output('', 'S'));
 
             $pdfPath = storage_path('app/' . $urlFileBoleta);
 
