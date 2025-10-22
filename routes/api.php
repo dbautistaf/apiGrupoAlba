@@ -286,6 +286,8 @@ Route::group([
     Route::get('getlistTicket/{sistema}', [App\Http\Controllers\TicketSoporteController::class, 'getListTickets']);
     Route::get('getlistTicketgeneral', [App\Http\Controllers\TicketSoporteController::class, 'getLitsTicketGeneral']);
     Route::get('getIdTicket/{id}', [App\Http\Controllers\TicketSoporteController::class, 'getIdticket']);
+
+    Route::get('notificaciones', [App\Http\Controllers\Notificaciones\Services\NotificacionesController::class, 'listar']);
     //tickets
     Route::get('getArchivosPorTicket/{id}', [App\Http\Controllers\TicketSoporteController::class, 'getArchivosPorTicket']);
     Route::get('getArchivoAdjunto', [App\Http\Controllers\TicketSoporteController::class, 'getArchivoAdjunto']);
@@ -497,7 +499,6 @@ Route::group([
 
     Route::get('listDiagnostico', [App\Http\Controllers\PrestacionesMedicas\Services\DiagnosticoController::class, 'getListarData']);
     Route::post('saveDiagnostico', [App\Http\Controllers\PrestacionesMedicas\Services\DiagnosticoController::class, 'postSaveDiagnostico']);
-
 });
 
 
@@ -1329,4 +1330,3 @@ Route::group(
         Route::get('getFormasPago', [App\Http\Controllers\Fiscalizacion\FormasPagoController::class, 'getListFormasPago']);
     }
 );
-
