@@ -55,13 +55,13 @@ class TesPagosController extends Controller
             DB::beginTransaction();
             foreach ($data as $param) {
                 //@SI LA CUENTA ESTA INACTIVA NOTIFICAMOS
-                if ($cuenta->findByVerificarEstadoCuenta($param->id_cuenta_bancaria, '0')) {
+                if ($cuenta->findByVerificarEstadoCuenta($param['id_cuenta_bancaria'], '0')) {
                     DB::rollBack();
                     return response()->json(['message' => 'La cuenta seleccionada se encuentra <b>BLOQUEADA</b>'], 409);
                 }
 
                 //@VALIDAMOS QUE LA OPA ESTE EN ESTADO PENDIENTE
-                if (!$opa->findByExistsOpaEstado($param->id_orden_pago, '1')) {
+                if (!$opa->findByExistsOpaEstado($param['id_orden_pago'], '1')) {
                     DB::rollBack();
                     return response()->json(['message' => 'La OPA se encuentra bloqueado.'], 409);
                 }
@@ -71,9 +71,9 @@ class TesPagosController extends Controller
                 $codigoVerificado = $generadorCodigos->getGenerarCodigoUnico($boletaPago->id_pago);
                 $pago->findByAsignarCodigoVerificacion($boletaPago->id_pago, $codigoVerificado);
                 //@ACTUALIZAMOS ESTADO DE LA OPA *[4] EN PROCESO*
-                $opa->findByUpdateEstado($param->id_orden_pago, 4);
-                $opa->findByConfirmarFechaProbablePago($param->id_orden_pago, $param->fecha_probable_pago, $param->cuotas);
-                $opa->findByConfirmarPagoEmergencia($param->id_orden_pago, $param->pago_emergencia);
+                $opa->findByUpdateEstado($param['id_orden_pago'], 4);
+                $opa->findByConfirmarFechaProbablePago($param['id_orden_pago'], $param['fecha_probable_pago'], $param['cuotas']);
+                $opa->findByConfirmarPagoEmergencia($param['id_orden_pago'], $param['pago_emergencia']);
             };
             DB::commit();
             return response()->json(['message' => 'Opa confirmada correctamente, enviada a Pagos']);
