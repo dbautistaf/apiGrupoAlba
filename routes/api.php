@@ -807,6 +807,8 @@ Route::group([
     Route::get('imprimir-comprobante-facturacion', [App\Http\Controllers\facturacion\FacturacionProcesosController::class, 'printComprobanteFacturacion']);
     Route::get('exportarFactura', [App\Http\Controllers\facturacion\FacturasPrestadoresController::class, 'getExportFacturaPrestador']);
     Route::get('exportarFacturaProveedor', [App\Http\Controllers\facturacion\FacturasPrestadoresController::class, 'getExportFacturaProveedor']);
+
+    Route::get('comprobante_relacionado', [App\Http\Controllers\facturacion\FacturacionProcesosController::class, 'selectComprobanteRelacionado']);
 });
 
 Route::group([

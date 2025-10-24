@@ -29,7 +29,7 @@
         atención.</p>
     <p>Si necesitás ayuda o tenés alguna duda, nuestro equipo de soporte está para asistirte:</p>
     <p>Email: <b>soporte@oridhean.com</b></p>
-    <p>Whatsapp: <b>+54 911 5113-7385</b></p>
+    <!-- <p>Whatsapp: <b>+54 911 5113-7385</b></p> -->
     <br>
     <p>Gracias por confiar en nosotros.</p>
     <p>Saludos cordiales.</p>
