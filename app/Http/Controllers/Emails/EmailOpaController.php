@@ -25,7 +25,7 @@ class EmailOpaController extends Controller
 {
     public function sendEmailOpaProveedor(Request $request)
     {
-        
+
         $query = TesOrdenPagoEntity::with(['estado', 'proveedor', 'factura', 'factura.detalle', 'factura.detalle.articulo', 'prestador', 'proveedor.tipoIva', 'prestador.tipoIva', 'pagos', 'pagos.formaPago', 'pagos.cuenta', 'pagos.cuenta.entidadBancaria'])
             ->where('id_orden_pago', $request->id_orden_pago)
             ->first();
@@ -57,6 +57,9 @@ class EmailOpaController extends Controller
             "razon_social" => $razon_social,
             "facturas" => $query->factura ? [$query->factura] : [],
             "pagos" => $query->pagos ?? [],
+            "totalPagos" => !empty($query?->pagos) && count($query?->pagos) > 0
+                ? number_format((float) $query?->monto_orden_pago, 2, '.', '')
+                : '0.00',
         ];
 
         // Resolver TesPagosController desde el contenedor de servicios
