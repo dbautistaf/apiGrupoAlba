@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\PrestacionesMedicas\Services;
 
+use App\Exports\PrestacionMedicaExport;
 use App\Http\Controllers\PrestacionesMedicas\Repository\PrestacionesmedicasFiltrosRepository;
 use App\Http\Controllers\PrestacionesMedicas\Repository\PrestacionMedicaRepository;
 use App\Http\Controllers\Utils\ManejadorDeArchivosUtils;
@@ -9,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
 
 class PrestacionMedicaController  extends Controller
 {
@@ -166,5 +168,10 @@ class PrestacionMedicaController  extends Controller
         $repoFiltro->findByEliminarAdjunto($request->id);
 
         return response()->json(["success" => true, "message" => "Archivo eliminado correctamente"]);
+    }
+
+    public function getExportPrestacion(Request $request)
+    {        
+        return Excel::download(new PrestacionMedicaExport($request), 'padron.xlsx');
     }
 }

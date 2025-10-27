@@ -262,6 +262,7 @@ Route::group([
     'prefix' => '/v1/filters'
 ], function () {
     Route::get('mesaEntrada', [App\Http\Controllers\MesaEntradaController::class, 'filtersMesaentrada']);
+    Route::get('consultar-usuarios-mesa-entrada', [App\Http\Controllers\MesaEntradaController::class, 'getListarUsuariosMesaEntrada']);
     Route::get('reportMesaEntrada', [App\Http\Controllers\MesaEntradaController::class, 'srvRptMesaEntrada']);
     Route::get('buscarafiliado', [App\Http\Controllers\FiltersController::class, 'srvFilterPadron']);
     Route::get('tipocomprobantes', [App\Http\Controllers\FiltersController::class, 'srvFilterTipoComprobantes']);
@@ -485,6 +486,7 @@ Route::group([
     Route::get('historial-autorizaciones-afiliado', [App\Http\Controllers\PrestacionesMedicas\Services\AuditarPrestacionesMedicasController::class, 'getListarHistorialAutorizacionesAfiliado']);
     Route::get('adjunto-prestacion-medica', [App\Http\Controllers\PrestacionesMedicas\Services\PrestacionMedicaController::class, 'getVerAdjunto']);
     Route::delete('eliminar-item-file', [App\Http\Controllers\PrestacionesMedicas\Services\PrestacionMedicaController::class, 'getEliminarAdjunto']);
+    Route::get('export-prestacion-medica', [App\Http\Controllers\PrestacionesMedicas\Services\PrestacionMedicaController::class, 'getExportPrestacion']);
 
     Route::post('obtenerCostoPractica', [App\Http\Controllers\procesos\ProcesosPrestacionesPracticaLaboratorioController::class, 'postObtenerCostoPractica']);
     Route::post('crear-tipo-prioridad', [App\Http\Controllers\PrestacionesMedicas\Services\CatalogoPrestacionesMedicasController::class, 'getCrearTipoPrioridad']);
