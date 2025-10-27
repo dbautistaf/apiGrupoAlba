@@ -562,6 +562,8 @@ Route::group([
     Route::post('update-estado-internacion', [App\Http\Controllers\Internaciones\Services\InternacionesController::class, 'postUpdateEstado']);
     Route::get('validar-internacion', [App\Http\Controllers\Internaciones\Services\InternacionesController::class, 'validarInternacion']);
     Route::post('save-notas-internacion', [App\Http\Controllers\Internaciones\Services\InternacionesController::class, 'postSaveNotasInternacion']);
+    
+    Route::get('export-internacion', [App\Http\Controllers\Internaciones\Services\InternacionesController::class, 'getExportInternacion']);
 });
 
 Route::group([

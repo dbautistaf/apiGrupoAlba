@@ -172,6 +172,6 @@ class PrestacionMedicaController  extends Controller
 
     public function getExportPrestacion(Request $request)
     {        
-        return Excel::download(new PrestacionMedicaExport($request), 'padron.xlsx');
+        return Excel::download(new PrestacionMedicaExport($request), 'Prestaciones.xlsx');
     }
 }

@@ -2,6 +2,7 @@
 
 namespace  App\Http\Controllers\Internaciones\Services;
 
+use App\Exports\Internacion\InternacionExport;
 use App\Http\Controllers\Internaciones\Repository\InternacionesRepository;
 use App\Http\Controllers\Internaciones\Repository\InternacionFiltrosRepository;
 use App\Models\Internaciones\InternacionesEntity;
@@ -11,6 +12,7 @@ use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
 
 class InternacionesController  extends Controller
 {
@@ -129,5 +131,10 @@ class InternacionesController  extends Controller
             'descripcion' => $request->descripcion,
         ]);
         return response()->json(['message' => 'Nota Registrado Correctamente'], 200);
+    }
+
+    public function getExportInternacion(Request $request)
+    {        
+        return Excel::download(new InternacionExport($request), 'Internacion.xlsx');
     }
 }

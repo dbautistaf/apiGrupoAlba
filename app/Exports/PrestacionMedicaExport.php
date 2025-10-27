@@ -39,7 +39,7 @@ class PrestacionMedicaExport implements FromCollection, WithHeadings, ShouldAuto
                 "documentacion"
             ]
         )
-            //->whereBetween('fecha_registra', [$this->params->desde, $this->params->hasta])
+            ->whereBetween('fecha_registra', [$this->params->desde, $this->params->hasta])
             //->orderByRaw("COALESCE(NULLIF(fecha_modifica, ''), fecha_registra) DESC")
             ->orderByDesc('cod_prestacion')
             ->get();
