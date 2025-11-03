@@ -32,7 +32,7 @@
 
         .datos {
             position: absolute;
-            margin-top: 3.5cm;
+            margin-top: 3cm;
             float: left;
             padding-left: 5cm;
             width: 800px;
@@ -47,7 +47,7 @@
             font-size: 20px;
             text-transform: uppercase;
             text-align: left;
-            margin-top: 0.7cm;
+            margin-top: 0.5cm;
             margin-left: -4cm;
         }
 
@@ -70,8 +70,14 @@
 <body>
     @php
         $tipoPrincipal = $plan[0]->detalleplan[0]->addplan->tipo ?? null;
+        $dniTitular=null;
     @endphp
     @foreach ($data as $padron)
+        @if ($padron->id_parentesco == '00')
+            @php
+                $dniTitular = $padron->dni;
+            @endphp
+        @endif
         <div class="contenedor">
             <div class="img">
                 @if ($padron->id_locatario == 1)
@@ -87,8 +93,9 @@
                     <p class="nombre">APELLIDOS Y NOMBRES:<b> {{ $padron->apellidos . ' ' . $padron->nombre }} </b></p>
                     <p class="filial">FILIACIÓN:<b class="parentezco">
                             {{ $padron['tipoParentesco']['parentesco'] ?? 'Titular' }} </b></p>
-                    <p class="cuil">N° DE AFILIADO:<b> {{ $padron->dni }} </b></p>
+                    <p class="cuil">N° DE AFILIADO:<b> {{ $dniTitular . ' /0' . $loop->iteration -1 }} </b></p>
                     <!-- <p class="plan">TIPO PLAN:<b> {{ $padron->detalleplan[0]->addplan->tipo ?? $tipoPrincipal }} </b>  -->
+                    <p class="cuil">DNI:<b> {{ $padron->dni }} </b></p>
                     <p class="plan">TIPO PLAN:<b> PLAN ÚNICO </b>
                     <p class="plan">OBRA SOCIAL:<b> {{ $padron->origen->detalle_comercial_origen ?? '' }} </b>
                     </p>
