@@ -15,7 +15,9 @@ class DetalleTipoDocAfiliadoModelo extends Model
     protected $fillable = [
         'nombre_archivo',
         'id_padron',
-        'id_tipo_documentacion'
+        'id_tipo_documentacion',
+        'fecha_carga',
+        'observacion'
     ];
 
     public function tipoDocumentacion()
