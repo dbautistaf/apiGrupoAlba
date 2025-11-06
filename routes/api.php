@@ -1335,4 +1335,14 @@ Route::group(
         //Rutas de Formas de pago
         Route::get('getFormasPago', [App\Http\Controllers\Fiscalizacion\FormasPagoController::class, 'getListFormasPago']);
     }
+
+    
 );
+
+Route::group([
+    'middleware' => ['jwt.verify'],
+    'prefix' => '/v1/coseguros'
+], function () {
+    Route::get('consultar', [App\Http\Controllers\Coseguros\Services\CosegurosController::class, 'consultarCoseguros']);
+    Route::post('actualizar-matriz', [App\Http\Controllers\Coseguros\Services\CosegurosController::class, 'actualizarCostos']);
+});
