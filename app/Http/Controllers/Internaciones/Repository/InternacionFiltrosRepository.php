@@ -1,6 +1,6 @@
 <?php
 
-namespace   App\Http\Controllers\Internaciones\Repository;
+namespace App\Http\Controllers\Internaciones\Repository;
 
 use App\Models\Internaciones\InternacionesEntity;
 use App\Models\PrestacionesMedicas\DetallePrestacionesPracticaLaboratorioEntity;
@@ -11,10 +11,8 @@ class InternacionFiltrosRepository
     private $relaciones;
     public function __construct()
     {
-        //"profesional", "facturacion",
         $this->relaciones = [
             "prestador",
-
             "tipoPrestacion",
             "tipoInternacion",
             "tipoHabitacion",
@@ -29,7 +27,9 @@ class InternacionFiltrosRepository
         ];
     }
 
-
+    // ======================================================
+    // FUNCIONES ORIGINALES CON LÍMITE
+    // ======================================================
 
     public function findByListDniLikeAndLimit($dni, $limit)
     {
@@ -39,7 +39,6 @@ class InternacionFiltrosRepository
             ->limit($limit)
             ->get();
     }
-
 
     public function findByListNombresLikeAndLimit($search, $limit)
     {
@@ -78,6 +77,56 @@ class InternacionFiltrosRepository
             ->limit($limit)
             ->get();
     }
+
+    // ======================================================
+    // NUEVAS FUNCIONES SIN LÍMITE (AGREGADAS)
+    // ======================================================
+
+    public function findByListDniLike($dni)
+    {
+        return InternacionesEntity::with($this->relaciones)
+            ->where('dni_afiliado', 'like',  $dni . '%')
+            ->orderBy('fecha_internacion', 'desc')
+            ->get();
+    }
+
+    public function findByListNombresLike($search)
+    {
+        return InternacionesEntity::with($this->relaciones)
+            ->whereHas('afiliado', function ($query) use ($search) {
+                $query->where('nombre', 'like',  $search . '%');
+                $query->orWhere('apellidos', 'like',  $search . '%');
+            })
+            ->orderBy('fecha_internacion', 'desc')
+            ->get();
+    }
+
+    public function findByListEstado($estado)
+    {
+        return InternacionesEntity::with($this->relaciones)
+            ->where('cod_tipo_estado',  $estado)
+            ->orderBy('fecha_internacion', 'desc')
+            ->get();
+    }
+
+    public function findByListNewEstado($estado)
+    {
+        return InternacionesEntity::with($this->relaciones)
+            ->where('estado',  $estado)
+            ->orderBy('fecha_internacion', 'desc')
+            ->get();
+    }
+
+    public function findByList()
+    {
+        return InternacionesEntity::with($this->relaciones)
+            ->orderBy('fecha_internacion', 'desc')
+            ->get();
+    }
+
+    // ======================================================
+    // RESTO DEL ARCHIVO (SIN CAMBIOS)
+    // ======================================================
 
     public function findById($id)
     {
