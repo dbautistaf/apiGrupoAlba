@@ -124,10 +124,7 @@ class InternacionFiltrosRepository
             ->get();
     }
 
-    // ======================================================
-    // RESTO DEL ARCHIVO (SIN CAMBIOS)
-    // ======================================================
-
+   
     public function findById($id)
     {
         return InternacionesEntity::with($this->relaciones)
