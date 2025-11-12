@@ -174,4 +174,9 @@ class PrestacionMedicaController  extends Controller
     {        
         return Excel::download(new PrestacionMedicaExport($request), 'Prestaciones.xlsx');
     }
+
+    public function getListPrestacion(PrestacionesmedicasFiltrosRepository $repoFiltro, Request $request)
+    {
+        return response()->json($repoFiltro->findByListAutorizacionLimit($request->shared));
+    }
 }

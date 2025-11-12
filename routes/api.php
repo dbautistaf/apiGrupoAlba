@@ -501,6 +501,7 @@ Route::group([
 
     Route::get('listDiagnostico', [App\Http\Controllers\PrestacionesMedicas\Services\DiagnosticoController::class, 'getListarData']);
     Route::post('saveDiagnostico', [App\Http\Controllers\PrestacionesMedicas\Services\DiagnosticoController::class, 'postSaveDiagnostico']);
+    Route::get('getListPrestacion', [App\Http\Controllers\PrestacionesMedicas\Services\PrestacionMedicaController::class, 'getListPrestacion']);
 });
 
 

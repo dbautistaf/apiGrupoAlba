@@ -143,4 +143,17 @@ class PrestacionesmedicasFiltrosRepository
             ->orderByDesc('cod_prestacion')
             ->get();
     }
+
+    public function findByListAutorizacionLimit($shared)
+    {
+        $query = PrestacionesPracticaLaboratorioEntity::orderBy('cod_prestacion', 'desc');
+
+        if (!empty($shared)) {
+            $query->where('numero_tramite', 'like', "%{$shared}%");
+        } else {
+            $query->limit(20);
+        }
+
+        return $query->get();
+    }
 }

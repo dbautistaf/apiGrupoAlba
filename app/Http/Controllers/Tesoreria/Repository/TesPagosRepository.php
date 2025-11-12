@@ -22,22 +22,22 @@ class TesPagosRepository
     public function findByCrearPago($params)
     {
         return TesPagoEntity::create([
-            'id_orden_pago'         => $params['id_orden_pago'],
-            'id_cuenta_bancaria'    => $params['id_cuenta_bancaria'],
+            'id_orden_pago'         => $params->id_orden_pago,
+            'id_cuenta_bancaria'    => $params->id_cuenta_bancaria,
             'fecha_registra'        => $this->fechaActual,
-            'fecha_confirma_pago'   => $params['fecha_confirma_pago'],
-            'anticipo'              => $params['anticipo'],
-            'comprobante'           => $params['comprobante'],
-            'id_forma_pago'         => $params['id_forma_pago'],
-            'monto_pago'            => $params['monto_pago'],
-            'observaciones'         => $params['observaciones'],
-            'id_estado_orden_pago'  => $params['id_estado_orden_pago'],
+            'fecha_confirma_pago'   => $params->fecha_confirma_pago,
+            'anticipo'              => $params->anticipo,
+            'comprobante'           => $params->comprobante,
+            'id_forma_pago'         => $params->id_forma_pago,
+            'monto_pago'            => $params->monto_pago,
+            'observaciones'         => $params->observaciones,
+            'id_estado_orden_pago'  => $params->id_estado_orden_pago,
             'id_usuario'            => $this->user->cod_usuario,
-            'monto_opa'             => $params['monto_opa'],
-            'recursor'              => $params['recursor'],
-            'fecha_probable_pago'   => $params['fecha_probable_pago'],
-            'tipo_factura'          => $params['tipo_factura'],
-            'pago_emergencia'       => $params['pago_emergencia'],
+            'monto_opa'             => $params->monto_opa,
+            'recursor'              => $params->recursor,
+            'fecha_probable_pago'   => $params->fecha_probable_pago,
+            'tipo_factura'          => $params->tipo_factura,
+            'pago_emergencia'       => $params->pago_emergencia,
         ]);
     }
 

@@ -25,7 +25,8 @@ class InternacionFiltrosRepository
             "tipoDiagnostico",
             "usuario",
             "estadoPrestacion",
-            "internacion"
+            "internacion",
+            "autorizacion"
         ];
     }
 
