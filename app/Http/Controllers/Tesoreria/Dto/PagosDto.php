@@ -34,6 +34,6 @@ class PagosDto
         $this->recursor = $recursor;
         $this->fecha_confirma_pago = $fecha_confirma_pago;
         $this->tipo_factura = 'PROVEEDOR';
-         $this->pago_emergencia = 0;
+        $this->pago_emergencia = 0;
     }
 }

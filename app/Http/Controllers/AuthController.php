@@ -116,14 +116,14 @@ class AuthController extends Controller
     {
         try {
             $menu = DB::select(
-                "SELECT * FROM vw_menu_acceso_usuario WHERE menu_estado = 1 AND  menu_principal = ? AND cod_perfil = ? AND estado_acceso = ? ORDER BY  menu_orden ASC",
+                "SELECT * FROM vw_menu_acceso_usuario WHERE menu_estado = 1 AND  menu_principal = ? AND cod_perfil = ? AND estado_acceso = ? ORDER BY  menu_descripcion	ASC",
                 [1, $id_tipo_usuario, 1]
             );
 
             $jsonarray =  array();
             foreach ($menu as $key) {
                 $submenu = DB::select(
-                    "SELECT * FROM vw_menu_acceso_usuario WHERE menu_estado = 1 AND menu_principal IN ('0','2') AND cod_perfil = ? AND menu_grupo = ? AND estado_acceso = ? ORDER BY  menu_orden ASC",
+                    "SELECT * FROM vw_menu_acceso_usuario WHERE menu_estado = 1 AND menu_principal IN ('0','2') AND cod_perfil = ? AND menu_grupo = ? AND estado_acceso = ? ORDER BY  menu_descripcion ASC",
                     [$id_tipo_usuario, $key->menu_grupo, 1]
                 );
 
@@ -133,7 +133,7 @@ class AuthController extends Controller
                     $subItems = array();
                     if ($value->menu_principal == '2') {
                         $treeMenu = DB::select(
-                            "SELECT * FROM vw_menu_acceso_usuario WHERE menu_estado = 1 AND menu_principal = '-' AND tipo_ruta = ? AND cod_perfil = ? AND menu_grupo = ? AND estado_acceso = ? ORDER BY  menu_orden ASC",
+                            "SELECT * FROM vw_menu_acceso_usuario WHERE menu_estado = 1 AND menu_principal = '-' AND tipo_ruta = ? AND cod_perfil = ? AND menu_grupo = ? AND estado_acceso = ? ORDER BY  menu_descripcion ASC",
                             [$value->tipo_ruta, $id_tipo_usuario, $key->menu_grupo, 1]
                         );
 

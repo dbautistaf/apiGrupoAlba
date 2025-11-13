@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Internaciones\Services;
 
 use App\Exports\Internacion\InternacionExport;
+use App\Http\Controllers\Internaciones\Repository\InternacionesAutorizacionRepository;
 use App\Http\Controllers\Internaciones\Repository\InternacionesRepository;
 use App\Http\Controllers\Internaciones\Repository\InternacionFiltrosRepository;
 use App\Models\Internaciones\InternacionesEntity;
@@ -51,16 +52,21 @@ class InternacionesController  extends Controller
         return response()->json($data, 200);
     }
 
-    public function getProcesarInternacion(InternacionesRepository $repoInternacion, Request $request)
-    {
+    public function getProcesarInternacion(
+        InternacionesRepository $repoInternacion,
+        InternacionesAutorizacionRepository $repoInterAut,
+        Request $request
+    ) {
         try {
             DB::beginTransaction();
             $message = "Internación registrado correctamente.";
             if (!is_null($request->cod_internacion)) {
                 $repoInternacion->findByUpdate($request);
+                $repoInterAut->findByUpdate($request->id_internacion_autorizacion, $request->cod_internacion);
                 $message = "Internación actualizado correctamente.";
             } else {
                 $repoInternacion->findBySave($request);
+                $repoInterAut->findByUpdate($request->id_internacion_autorizacion, $repoInternacion['cod_internacion']);
             }
             DB::commit();
             return response()->json(["message" => $message], 200);
