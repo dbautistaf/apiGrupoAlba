@@ -9,7 +9,7 @@ use App\Models\EmpresaModelo;
 class DeudaAporteEmpresa extends Model
 {
     use HasFactory;
-    
+
     protected $table = 'tb_fisca_deudas_aportes_empresa';
     protected $primaryKey = 'id_deuda';
     public $timestamps = false; // Porque tu tabla no tiene created_at ni updated_at
@@ -30,6 +30,11 @@ class DeudaAporteEmpresa extends Model
         'monto_gestion_morosidad',
         'tipo_deuda',
         'estado',
+        'fecha_creacion',
+        'monto_transferido',
+        'monto_revertido',
+        'monto_retenido'
+
     ];
 
     // Relación con la empresa
