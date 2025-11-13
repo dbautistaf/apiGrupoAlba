@@ -28,7 +28,7 @@ class FacturaPrestadorExport implements FromCollection, WithHeadings, ShouldAuto
         $sql = "SELECT vwm.cuit, vwm.razon_social, vwm.comprobante, vwm.refacturacion, vwm.delegacion, vwm.periodo, 
                ma.articulo, tfd.cantidad, tfd.precio_neto, vwm.subtotal, vwm.total_iva, vwm.total_neto,
                vwm.fecha_comprobante,  vwm.fecha_registra, vwm.total_aprobado, vwm.total_facturado,
-               vwm.total_debitado, vwm.locatario, vwm.tipo_comprobante,
+               vwm.total_debitado, vwm.r_social, vwm.tipo_comprobante,
                vwm.observaciones
         FROM vw_matriz_facturas_prestador AS vwm 
         LEFT JOIN tb_facturacion_detalle tfd ON tfd.id_factura = vwm.id_factura
@@ -51,7 +51,7 @@ class FacturaPrestadorExport implements FromCollection, WithHeadings, ShouldAuto
         }
 
         if (!empty($this->params->locatario)) {
-            $where[] = "vwm.id_locatorio = ?";
+            $where[] = "vwm.id_razon = ?";
             $params[] = $this->params->locatario;
         }
 
@@ -69,7 +69,7 @@ class FacturaPrestadorExport implements FromCollection, WithHeadings, ShouldAuto
     {
         return [
             'CUIT',
-            'RAZON SOCIAL',
+            'PRESTADOR',
             'COMPROBANTE',
             'REFACTURACION',
             'DELEGACION',
@@ -85,7 +85,7 @@ class FacturaPrestadorExport implements FromCollection, WithHeadings, ShouldAuto
             'TOTAL APROBADO',
             'TOTAL FACTURADO',
             'TOTAL DEBITADO',
-            'LOCATARIO',
+            'RAZON SOCIAL',
             'TIPO COMPROBANTE',
             'OBSERVACIONES'
         ];

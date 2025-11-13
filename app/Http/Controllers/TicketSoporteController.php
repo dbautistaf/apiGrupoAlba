@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Notificaciones\Dtos\NotificarDataDto;
+use App\Http\Controllers\Notificaciones\Repository\NotificacionesRepository;
 use App\Http\Controllers\Utils\ManejadorDeArchivosUtils;
 use App\Models\Soporte\SoporteArchivoModelo;
 use App\Models\Soporte\SoporteHistorialTicketModelo;
@@ -15,6 +17,13 @@ use App\Models\User;
 class TicketSoporteController extends Controller
 {
     //
+
+    protected $repoNotificacion;
+    public function __construct(NotificacionesRepository $repoNotificacion)
+    {
+        $this->repoNotificacion = $repoNotificacion;
+    }
+
     public function postSaveTicketsSoporte(Request $request, ManejadorDeArchivosUtils $storageFile)
     {
         $now = new \DateTime('now', new \DateTimeZone('America/Argentina/Buenos_Aires'));
@@ -106,26 +115,26 @@ class TicketSoporteController extends Controller
         ])
             ->where('cliente', 'ALBA')
             ->orderByDesc('fecha_apertura');
-            
+
 
         if ($request->filled('prioridad')) {
             $query->where('id_prioridad', $request->prioridad);
         }
-        
+
 
         if ($request->filled('categoria')) {
             $query->where('id_categoria', $request->categoria);
         }
-        
+
 
         if ($request->filled('estado')) {
             $query->where('id_estado', $request->estado);
         }
-        
+
         if ($request->filled('numero')) {
             $query->where('id_ticket', $request->numero);
         }
-        
+
         if ($request->desde && $request->hasta) {
             $query->whereBetween('fecha_apertura', [$request->desde, $request->hasta]);
         }
@@ -159,7 +168,7 @@ class TicketSoporteController extends Controller
         }
 
         // Registrar el cambio en el historial
-        SoporteHistorialTicketModelo::create([
+        $historico = SoporteHistorialTicketModelo::create([
             'id_ticket' => $request->id_ticket,
             'estado_anterior' => $ticket->id_estado, // Estado anterior
             'estado_nuevo' => $request->id_estado ?? $ticket->id_estado, // Estado nuevo (si se proporciona)
@@ -168,6 +177,21 @@ class TicketSoporteController extends Controller
             'id_encargado_nuevo' => $request->id_encargado,   // Encargado nuevo
             'comentario' => $request->comentario ?? 'Sin comentario' // Guardar el comentario
         ]);
+
+        if (!is_null($request->id_estado)) {
+            if ($request->id_estado !== $ticket->id_estado) {
+                $refreshTiket = SoporteHistorialTicketModelo::with(['estadoNuevo'])
+                    ->find($historico->id_historial);
+                $this->repoNotificacion->findByCreate(new NotificarDataDto(
+                    'TICKET',
+                    'NORMAL',
+                    'El Ticket fue ' . $refreshTiket->estadoNuevo->estado_tipo,
+                    $ticket->id_Usuario,
+                    'NO DEFINIDO',
+                    $request->comentario
+                ));
+            }
+        }
 
         // Actualizar el ticket
         $ticket->update([

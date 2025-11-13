@@ -109,4 +109,9 @@ class InternacionesEntity extends Model
     {
         return $this->hasOne(PrestacionesPracticaLaboratorioEntity::class, 'cod_internacion', 'cod_internacion');
     }
+
+    public function autorizacion()
+    {
+        return $this->hasMany(InternacionAutorizacionEntity::class, 'cod_internacion', 'cod_internacion');
+    }
 }

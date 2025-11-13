@@ -93,7 +93,14 @@ class PrestacionesmedicasFiltrosRepository
         if (!is_null($tramite)) {
             $query->where('numero_tramite', 'like', $tramite . '%');
         }
-        $results = $query->orderBy('fecha_registra', 'desc')
+        $results = $query
+            ->orderByRaw("
+                CASE 
+                    WHEN fecha_modifica IS NULL OR fecha_modifica = '' 
+                    THEN fecha_registra 
+                    ELSE fecha_modifica 
+                    END DESC
+                ")
             ->orderBy('cod_prestacion', 'desc')
             ->limit($limit)
             ->get();
@@ -119,7 +126,14 @@ class PrestacionesmedicasFiltrosRepository
 
     public function findByDeleteId($id)
     {
-        return PrestacionesPracticaLaboratorioEntity::find($id)->delete();
+        //return PrestacionesPracticaLaboratorioEntity::find($id)->delete();
+
+        $registro = PrestacionesPracticaLaboratorioEntity::find($id);
+
+        if ($registro) {
+            $registro->cod_tipo_estado = 7;
+            $registro->save();
+        }
     }
 
     public function findByListDniAfiliado($dni)
@@ -128,5 +142,18 @@ class PrestacionesmedicasFiltrosRepository
             ->where('dni_afiliado', $dni)
             ->orderByDesc('cod_prestacion')
             ->get();
+    }
+
+    public function findByListAutorizacionLimit($shared)
+    {
+        $query = PrestacionesPracticaLaboratorioEntity::orderBy('cod_prestacion', 'desc');
+
+        if (!empty($shared)) {
+            $query->where('numero_tramite', 'like', "%{$shared}%");
+        } else {
+            $query->limit(20);
+        }
+
+        return $query->get();
     }
 }

@@ -74,8 +74,7 @@ class TesPagosController extends Controller
                 $opa->findByUpdateEstado($param['id_orden_pago'], 4);
                 $opa->findByConfirmarFechaProbablePago($param['id_orden_pago'], $param['fecha_probable_pago'], $param['cuotas']);
                 $opa->findByConfirmarPagoEmergencia($param['id_orden_pago'], $param['pago_emergencia']);
-            }
-            ;
+            };
             DB::commit();
             return response()->json(['message' => 'Opa confirmada correctamente, enviada a Pagos']);
         } catch (\Throwable $th) {

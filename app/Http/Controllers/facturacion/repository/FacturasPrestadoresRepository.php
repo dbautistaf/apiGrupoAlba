@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\facturacion\repository;
 
+use App\Models\facturacion\FacturacionDetalleComprobantesEntity;
 use App\Models\Tesoreria\TesPagoEntity;
 use Illuminate\Support\Facades\DB;
 
@@ -181,7 +182,7 @@ class FacturasPrestadoresRepository
         if (!is_null($params->estado) && $params->estado != '9') {
             $query->where('estado', $params->estado);
         }
-      
+
         if (!is_null($params->estado_pago) && $params->estado_pago != '') {
             $query->where('estado_pago', $params->estado_pago);
         }
@@ -193,6 +194,10 @@ class FacturasPrestadoresRepository
         $facturasWithComprobantes = [];
         foreach ($facturas as $factura) {
             $facturaArray = (array) $factura;
+
+            $archivo_comprobantes = FacturacionDetalleComprobantesEntity::where('id_factura', $factura->id_factura)->get();
+
+            $facturaArray['archivos_comprobante'] = $archivo_comprobantes;
 
             // Buscar pagos relacionados con esta factura y sus comprobantes
             $pagos = TesPagoEntity::with([

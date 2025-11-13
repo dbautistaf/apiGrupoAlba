@@ -15,12 +15,14 @@
         "laravel/tinker": "^2.7",
         "lavela/phpjasper": "^3.0",
         "maatwebsite/excel": "^3.1",
+        "mpdf/mpdf": "^8.2",
         "owen-it/laravel-auditing": "^13.6",
         "php-open-source-saver/jwt-auth": "^2.2",
         "spatie/pdf-to-text": "^1.53",
         "thiagoalessio/tesseract_ocr": "^2.13"
     },
     "require-dev": {
+        "barryvdh/laravel-ide-helper": "2.13",
         "fakerphp/faker": "^1.9.1",
         "laravel/sail": "^1.0.1",
         "mockery/mockery": "^1.4.4",

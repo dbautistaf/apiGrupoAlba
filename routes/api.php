@@ -262,6 +262,7 @@ Route::group([
     'prefix' => '/v1/filters'
 ], function () {
     Route::get('mesaEntrada', [App\Http\Controllers\MesaEntradaController::class, 'filtersMesaentrada']);
+    Route::get('consultar-usuarios-mesa-entrada', [App\Http\Controllers\MesaEntradaController::class, 'getListarUsuariosMesaEntrada']);
     Route::get('reportMesaEntrada', [App\Http\Controllers\MesaEntradaController::class, 'srvRptMesaEntrada']);
     Route::get('buscarafiliado', [App\Http\Controllers\FiltersController::class, 'srvFilterPadron']);
     Route::get('tipocomprobantes', [App\Http\Controllers\FiltersController::class, 'srvFilterTipoComprobantes']);
@@ -286,6 +287,8 @@ Route::group([
     Route::get('getlistTicket/{sistema}', [App\Http\Controllers\TicketSoporteController::class, 'getListTickets']);
     Route::get('getlistTicketgeneral', [App\Http\Controllers\TicketSoporteController::class, 'getLitsTicketGeneral']);
     Route::get('getIdTicket/{id}', [App\Http\Controllers\TicketSoporteController::class, 'getIdticket']);
+
+    Route::get('notificaciones', [App\Http\Controllers\Notificaciones\Services\NotificacionesController::class, 'listar']);
     //tickets
     Route::get('getArchivosPorTicket/{id}', [App\Http\Controllers\TicketSoporteController::class, 'getArchivosPorTicket']);
     Route::get('getArchivoAdjunto', [App\Http\Controllers\TicketSoporteController::class, 'getArchivoAdjunto']);
@@ -483,6 +486,7 @@ Route::group([
     Route::get('historial-autorizaciones-afiliado', [App\Http\Controllers\PrestacionesMedicas\Services\AuditarPrestacionesMedicasController::class, 'getListarHistorialAutorizacionesAfiliado']);
     Route::get('adjunto-prestacion-medica', [App\Http\Controllers\PrestacionesMedicas\Services\PrestacionMedicaController::class, 'getVerAdjunto']);
     Route::delete('eliminar-item-file', [App\Http\Controllers\PrestacionesMedicas\Services\PrestacionMedicaController::class, 'getEliminarAdjunto']);
+    Route::get('export-prestacion-medica', [App\Http\Controllers\PrestacionesMedicas\Services\PrestacionMedicaController::class, 'getExportPrestacion']);
 
     Route::post('obtenerCostoPractica', [App\Http\Controllers\procesos\ProcesosPrestacionesPracticaLaboratorioController::class, 'postObtenerCostoPractica']);
     Route::post('crear-tipo-prioridad', [App\Http\Controllers\PrestacionesMedicas\Services\CatalogoPrestacionesMedicasController::class, 'getCrearTipoPrioridad']);
@@ -497,7 +501,7 @@ Route::group([
 
     Route::get('listDiagnostico', [App\Http\Controllers\PrestacionesMedicas\Services\DiagnosticoController::class, 'getListarData']);
     Route::post('saveDiagnostico', [App\Http\Controllers\PrestacionesMedicas\Services\DiagnosticoController::class, 'postSaveDiagnostico']);
-
+    Route::get('getListPrestacion', [App\Http\Controllers\PrestacionesMedicas\Services\PrestacionMedicaController::class, 'getListPrestacion']);
 });
 
 
@@ -559,6 +563,8 @@ Route::group([
     Route::post('update-estado-internacion', [App\Http\Controllers\Internaciones\Services\InternacionesController::class, 'postUpdateEstado']);
     Route::get('validar-internacion', [App\Http\Controllers\Internaciones\Services\InternacionesController::class, 'validarInternacion']);
     Route::post('save-notas-internacion', [App\Http\Controllers\Internaciones\Services\InternacionesController::class, 'postSaveNotasInternacion']);
+    
+    Route::get('export-internacion', [App\Http\Controllers\Internaciones\Services\InternacionesController::class, 'getExportInternacion']);
 });
 
 Route::group([
@@ -806,6 +812,8 @@ Route::group([
     Route::get('imprimir-comprobante-facturacion', [App\Http\Controllers\facturacion\FacturacionProcesosController::class, 'printComprobanteFacturacion']);
     Route::get('exportarFactura', [App\Http\Controllers\facturacion\FacturasPrestadoresController::class, 'getExportFacturaPrestador']);
     Route::get('exportarFacturaProveedor', [App\Http\Controllers\facturacion\FacturasPrestadoresController::class, 'getExportFacturaProveedor']);
+
+    Route::get('comprobante_relacionado', [App\Http\Controllers\facturacion\FacturacionProcesosController::class, 'selectComprobanteRelacionado']);
 });
 
 Route::group([
@@ -1262,6 +1270,7 @@ Route::group(
         Route::get('buscarDeudasEmpresa/{id}', [App\Http\Controllers\Fiscalizacion\DeudaAporteEmpresaController::class, 'buscarPorEmpresa']);
         Route::get('getListDeudas', [App\Http\Controllers\Fiscalizacion\DeudaAporteEmpresaController::class, 'getListDeudas']);
         Route::get('detalleDeuda', [App\Http\Controllers\Fiscalizacion\DeudaAporteEmpresaController::class, 'detalleDeuda']);
+        Route::get('deuda-empresa', [App\Http\Controllers\Fiscalizacion\DeudaAporteEmpresaController::class, 'pdfDeudaEmpresa']);
 
 
         // Rutas para tb_fisca_cobranzas
@@ -1281,7 +1290,6 @@ Route::group(
         Route::get('getListAcuerdosPago', [App\Http\Controllers\Fiscalizacion\AcuerdoPagoController::class, 'getListAcuerdosPago']);
         Route::delete('eliminarAcuerdo/{id}', [App\Http\Controllers\Fiscalizacion\AcuerdoPagoController::class, 'eliminarAcuerdo']);
         // Route::get('acuerdo-pago/{id}', [App\Http\Controllers\Fiscalizacion\AcuerdoPagoController::class, 'getAcuerdoPagoById']);
-    
 
         // Rutas para tb_fisca_cobranza_periodo
         Route::get('cobranzas-periodo', [App\Http\Controllers\Fiscalizacion\CobranzaPeriodoController::class, 'getListCobranzasPeriodo']);
@@ -1307,7 +1315,6 @@ Route::group(
         Route::get('buscarIntimacionId', [App\Http\Controllers\Fiscalizacion\IntimacionController::class, 'getIntimacionById']);
         Route::delete('eliminarIntimacion/{id}', [App\Http\Controllers\Fiscalizacion\IntimacionController::class, 'eliminarIntimacion']);
 
-
         // Rutas para tb_fisca_movimientos
         Route::get('obtenerTipoMovimiento', [App\Http\Controllers\Fiscalizacion\MovimientoController::class, 'getListMovimientos']);
         Route::get('movimiento/{id}', [App\Http\Controllers\Fiscalizacion\MovimientoController::class, 'getMovimientoById']);
@@ -1329,4 +1336,14 @@ Route::group(
         //Rutas de Formas de pago
         Route::get('getFormasPago', [App\Http\Controllers\Fiscalizacion\FormasPagoController::class, 'getListFormasPago']);
     }
+
+    
 );
+
+Route::group([
+    'middleware' => ['jwt.verify'],
+    'prefix' => '/v1/coseguros'
+], function () {
+    Route::get('consultar', [App\Http\Controllers\Coseguros\Services\CosegurosController::class, 'consultarCoseguros']);
+    Route::post('actualizar-matriz', [App\Http\Controllers\Coseguros\Services\CosegurosController::class, 'actualizarCostos']);
+});

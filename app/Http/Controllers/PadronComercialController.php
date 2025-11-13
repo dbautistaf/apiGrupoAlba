@@ -174,13 +174,12 @@ class PadronComercialController extends Controller
                 $nombreTabla = (new PadronComercialModelo)->getTable();
                 $nombresDeColumnas = Schema::getColumnListing($nombreTabla);
                 foreach ($nombresDeColumnas as $nombreColumna) {
-                    if ($query->$nombreColumna != $titular->$nombreColumna) {
-                        // Guardar solo el campo si ha cambiado
+                    // Evitar error si alguna columna no existe en $titular
+                    if (isset($titular->$nombreColumna) && $query->$nombreColumna != $titular->$nombreColumna) {
 
-                        //array con los nuevos datos
-                        $arrayUpdate[] = array($nombreColumna => $titular->$nombreColumna);
-                        //array con los datos anteriores
-                        $arrayAntes[] = array($nombreColumna => $titular->$nombreColumna);
+                        // Guardar solo los campos que cambiaron
+                        $arrayUpdate[$nombreColumna] = $titular->$nombreColumna; // nuevo valor
+                        $arrayAntes[$nombreColumna] = $query->$nombreColumna;     // valor anterior
                     }
                 }
                 $user = Auth::user();

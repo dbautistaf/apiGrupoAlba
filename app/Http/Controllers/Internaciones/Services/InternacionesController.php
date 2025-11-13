@@ -1,7 +1,9 @@
 <?php
 
-namespace  App\Http\Controllers\Internaciones\Services;
+namespace App\Http\Controllers\Internaciones\Services;
 
+use App\Exports\Internacion\InternacionExport;
+use App\Http\Controllers\Internaciones\Repository\InternacionesAutorizacionRepository;
 use App\Http\Controllers\Internaciones\Repository\InternacionesRepository;
 use App\Http\Controllers\Internaciones\Repository\InternacionFiltrosRepository;
 use App\Models\Internaciones\InternacionesEntity;
@@ -11,6 +13,7 @@ use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
 
 class InternacionesController  extends Controller
 {
@@ -21,23 +24,23 @@ class InternacionesController  extends Controller
         return response()->json($data);
     }
 
-
+    // ESTA ES LA API DE LA GRILLA (LA QUE FUNCIONA)
     public function getConsultarInternaciones(InternacionFiltrosRepository $repoInternacionFiltro, Request $request)
     {
         $data = [];
 
         if (!empty($request->search)) {
             if (is_numeric($request->search)) {
-                $data = $repoInternacionFiltro->findByListDniLikeAndLimit($request->search, 20);
+                $data = $repoInternacionFiltro->findByListDniLike($request->search);
             } else {
-                $data = $repoInternacionFiltro->findByListNombresLikeAndLimit($request->search, 20);
+                $data = $repoInternacionFiltro->findByListNombresLike($request->search);
             }
         } elseif (!empty($request->estado)) {
-            $data = $repoInternacionFiltro->findByListEstadoLimit($request->estado, 20);
+            $data = $repoInternacionFiltro->findByListEstado($request->estado);
         } elseif (!empty($request->interestado)) {
-            $data = $repoInternacionFiltro->findByListNewEstadoLimit($request->interestado, 20);
+            $data = $repoInternacionFiltro->findByListNewEstado($request->interestado);
         } else {
-            $data = $repoInternacionFiltro->findByListLimit(20);
+            $data = $repoInternacionFiltro->findByList();
         }
 
         foreach ($data as $key) {
@@ -49,16 +52,21 @@ class InternacionesController  extends Controller
         return response()->json($data, 200);
     }
 
-    public function getProcesarInternacion(InternacionesRepository $repoInternacion, Request $request)
-    {
+    public function getProcesarInternacion(
+        InternacionesRepository $repoInternacion,
+        InternacionesAutorizacionRepository $repoInterAut,
+        Request $request
+    ) {
         try {
             DB::beginTransaction();
             $message = "Internación registrado correctamente.";
             if (!is_null($request->cod_internacion)) {
                 $repoInternacion->findByUpdate($request);
+                $repoInterAut->findByUpdate($request->id_internacion_autorizacion, $request->cod_internacion);
                 $message = "Internación actualizado correctamente.";
             } else {
                 $repoInternacion->findBySave($request);
+                $repoInterAut->findByUpdate($request->id_internacion_autorizacion, $repoInternacion['cod_internacion']);
             }
             DB::commit();
             return response()->json(["message" => $message], 200);
@@ -129,5 +137,48 @@ class InternacionesController  extends Controller
             'descripcion' => $request->descripcion,
         ]);
         return response()->json(['message' => 'Nota Registrado Correctamente'], 200);
+    }
+
+    // ESTA ES LA API DE EXPORTAR (CORREGIDA)
+    public function getExportInternacion(InternacionFiltrosRepository $repoInternacionFiltro, Request $request)
+    {        
+        try {
+            \Log::info('=== INICIANDO EXPORTACIÓN ===');
+            \Log::info('Parámetros recibidos:', $request->all());
+
+            $data = [];
+
+            if (!empty($request->search)) {
+                if (is_numeric($request->search)) {
+                    $data = $repoInternacionFiltro->findByListDniLike($request->search);
+                } else {
+                    $data = $repoInternacionFiltro->findByListNombresLike($request->search);
+                }
+            } elseif (!empty($request->estado)) {
+                $data = $repoInternacionFiltro->findByListEstado($request->estado);
+            } elseif (!empty($request->interestado)) {
+                $data = $repoInternacionFiltro->findByListNewEstado($request->interestado);
+            } else {
+                $data = $repoInternacionFiltro->findByList();
+            }
+
+            \Log::info('Cantidad de registros a exportar: ' . $data->count());
+
+            // Pasa los datos YA FILTRADOS y los filtros al Excel
+            return Excel::download(new InternacionExport($data, $request), 'Internacion.xlsx');
+
+        } catch (\Exception $e) {
+            \Log::error('Error en exportación Excel: ' . $e->getMessage());
+            \Log::error('File: ' . $e->getFile());
+            \Log::error('Line: ' . $e->getLine());
+            \Log::error('Trace: ' . $e->getTraceAsString());
+
+            return response()->json([
+                'error' => 'Error al generar el archivo Excel',
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ], 500);
+        }
     }
 }

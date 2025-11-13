@@ -2,9 +2,14 @@
 
 namespace App\Http\Controllers\Fiscalizacion;
 
+use App\Models\Afip\DeclaracionesJuradasModelo;
+use App\Models\EmpresaModelo;
 use App\Models\Fiscalizacion\DeudaAporteEmpresa;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\View;
 
 class DeudaAporteEmpresaController extends Controller
 {
@@ -96,7 +101,7 @@ class DeudaAporteEmpresaController extends Controller
         }
 
         // Traer todas las deudas del periodo
-        $deudas = \DB::table('tb_declaraciones_juradas as ddjj')
+        $deudas = DB::table('tb_declaraciones_juradas as ddjj')
             ->selectRaw("
             ddjj.periodo,
             ddjj.cuil,
@@ -132,7 +137,7 @@ class DeudaAporteEmpresaController extends Controller
         // Calcular intereses y total de cada deuda
         $deudas->transform(function ($deuda) use ($hoy) {
 
-            $tasas = \DB::table('tb_fisca_tasas_interes')
+            $tasas = DB::table('tb_fisca_tasas_interes')
                 ->where('articulo_resolucion', 'Artículo 1°')
                 ->where(function ($q) use ($deuda, $hoy) {
                     $q->where('vigencia_inicio', '<=', $hoy)
@@ -169,47 +174,49 @@ class DeudaAporteEmpresaController extends Controller
         return response()->json($deudas, 200);
     }
 
-    //Detalle de deuda - funcionando pero no contempla intereses
-    // public function detalleDeuda(Request $request)
-    // {
-    //     $periodo = $request->input('periodo'); // formato YYMM
-    //     $cuit = $request->input('cuit');
+    public function pdfDeudaEmpresa(Request $request)
+    {
+        $empresa = EmpresaModelo::with(['localidad'])
+            ->where('cuit', $request->empresa)
+            ->first();
 
-    //     if (!$periodo || !$cuit) {
-    //         return response()->json(['error' => 'Faltan parámetros: periodo y cuit'], 400);
-    //     }
+        $detalle = DeclaracionesJuradasModelo::where('cuit', [$request->empresa])
+        ->orderByDesc('periodo')
+        ->get();
 
-    //     $deuda = \DB::table('tb_declaraciones_juradas as ddjj')
-    //         ->selectRaw("
-    //             ddjj.periodo,
-    //             ddjj.cuil,
-    //             ddjj.cuit,
-    //             ddjj.remimpo AS importe_sueldo,
-    //             ROUND(ddjj.remimpo * 0.03, 2) AS aporte,
-    //             ROUND(ddjj.remimpo * 0.06, 2) AS contribucion,
-    //             ddjj.fecpresent AS fecha_recalculo,
-    //             DATE_ADD(ddjj.fecpresent, INTERVAL 30 DAY) AS fecha_vencimiento,
-    //             emp.id_empresa,
-    //             emp.razon_social,
-    //             ROUND(ddjj.remimpo * 0.09, 2) AS monto_deuda,
-    //             'APORTE' AS tipo_deuda,
-    //             'Vigente' AS estado
-    //         ")
-    //         ->leftJoin('tb_transferencias as trf', function ($join) {
-    //             $join->on('ddjj.cuil', '=', 'trf.cuitcont')
-    //                 ->on('ddjj.periodo', '=', 'trf.periodo');
-    //         })
-    //         ->join('tb_empresa as emp', 'emp.cuit', '=', 'ddjj.cuit')
-    //         ->whereNull('trf.id_transferencia')
-    //         ->where('ddjj.periodo', $periodo)
-    //         ->where('emp.cuit', $cuit)
-    //         ->orderBy('ddjj.fecpresent')
-    //         ->get();
 
-    //     if ($deuda->isEmpty()) {
-    //         return response()->json(['error' => 'No se encontró deuda para el periodo y CUIT especificados'], 404);
-    //     }
+        $datos = DB::select("SELECT concat(f.anio,f.mes) as periodo,f.importe_sueldo,f.contribucion,f.monto_deuda,
+                            (SELECT COUNT(DISTINCT cuil) FROM tb_declaraciones_juradas where cuit = e.cuit and periodo = concat(substr(f.anio,3,4),f.mes)) as cant_empleados
+                            FROM tb_fisca_deudas_aportes_empresa f INNER JOIN tb_empresa e ON f.id_empresa  = e.id_empresa
+                            WHERE e.cuit = ? ", [$request->empresa]);
 
-    //     return response()->json($deuda, 200);
-    // }
+        $html = View::make('reportes.pdfdeudaempresa', compact('datos', 'empresa'))->render();
+        $pagedetalle = View::make('reportes.pdfdetallecuilesdeuda', compact('detalle'))->render();
+        $mpdf = new \Mpdf\Mpdf([
+            'default_font' => 'centurygothic',
+            'format' => 'A4',
+            'margin_top' => 5,     // Margen superior en milímetros
+            'margin_bottom' => 0,  // Margen inferior en milímetros
+            'margin_left' => 6,    // Margen izquierdo en milímetros
+            'margin_right' => 6    // Margen derecho en milímetros
+        ]);
+
+        $mpdf->fontdata['centurygothic'] = [
+            'R' => 'resources/fonts/Quicksand-Regular.ttf',   // Fuente normal
+            'B' => 'resources/fonts/Quicksand-Bold.ttf',     // Negrita
+            'I' => 'resources/fonts/Quicksand-Light.ttf',   // Cursiva
+            'BI' => 'resources/fonts/Quicksand-SemiBold.ttf' // Negrita + Cursiva
+        ];
+
+        // $mpdf->SetWatermarkText($convenio == 1 ? 'CONVENIO COLECTIVO' : '', 0.05);
+
+        $mpdf->showWatermarkText = true;
+
+        $mpdf->WriteHTML($html);//'A4-L'
+        $mpdf->AddPage();
+        $mpdf->WriteHTML($pagedetalle);
+        return response($mpdf->Output('recetario.pdf', 'S'), 200)
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'attachment; filename="medicacion.pdf"');
+    }
 }

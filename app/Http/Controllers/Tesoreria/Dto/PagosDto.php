@@ -16,6 +16,8 @@ class PagosDto
     public  $monto_opa;
     public $recursor;
     public $fecha_confirma_pago;
+    public $tipo_factura;
+    public $pago_emergencia;
 
     public function __construct($id_orden_pago,  $id_cuenta_bancaria,  $fecha_probable_pago,  $anticipo,  $comprobante,  $id_forma_pago,  $monto_pago,  $observaciones,  $id_estado_orden_pago,  $monto_opa,  $recursor,  $fecha_confirma_pago)
     {
@@ -31,5 +33,7 @@ class PagosDto
         $this->monto_opa = $monto_opa;
         $this->recursor = $recursor;
         $this->fecha_confirma_pago = $fecha_confirma_pago;
+        $this->tipo_factura = 'PROVEEDOR';
+        $this->pago_emergencia = 0;
     }
 }

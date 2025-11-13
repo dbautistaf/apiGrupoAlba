@@ -61,6 +61,8 @@ class PadronController extends Controller
                         'nombre_archivo' => $doc->nombre_archivo,
                         'url_archivo' => url('/storage/images/' . $doc->nombre_archivo),
                         'tipo_documentacion' => $doc->tipoDocumentacion->tipo_documentacion ?? null, // Enviar el nombre del tipo de documentación
+                        'fecha_carga' => $doc->fecha_carga,
+                        'observaciones' => $doc->observacion
                     ];
                 });
 
@@ -200,6 +202,8 @@ class PadronController extends Controller
                         'nombre_archivo' => $doc->nombre_archivo,
                         'url_archivo' => url('/storage/images/' . $doc->nombre_archivo),
                         'tipo_documentacion' => $doc->tipoDocumentacion->tipo_documentacion ?? null, // Enviar el nombre del tipo de documentación
+                        'fecha_carga' => $doc->fecha_carga,
+                        'observaciones' => $doc->observacion
                     ];
                 });
 
@@ -431,13 +435,12 @@ class PadronController extends Controller
                 }
 
                 foreach ($nombresDeColumnas as $nombreColumna) {
-                    if ($query->$nombreColumna != $titular->$nombreColumna) {
-                        // Guardar solo el campo si ha cambiado
+                    // Evitar error si alguna columna no existe en $titular
+                    if (isset($titular->$nombreColumna) && $query->$nombreColumna != $titular->$nombreColumna) {
 
-                        //array con los nuevos datos
-                        $arrayUpdate[] = array($nombreColumna => $titular->$nombreColumna);
-                        //array con los datos anteriores
-                        $arrayAntes[] = array($nombreColumna => $titular->$nombreColumna);
+                        // Guardar solo los campos que cambiaron
+                        $arrayUpdate[$nombreColumna] = $titular->$nombreColumna; // nuevo valor
+                        $arrayAntes[$nombreColumna] = $query->$nombreColumna;     // valor anterior
                     }
                 }
                 $user = Auth::user();
@@ -895,7 +898,7 @@ class PadronController extends Controller
             return response()->json(['message' => 'Datos no encontrados'], 500);
         }
         $query = AfiliadoPadronEntity::with(['tipoParentesco', 'origen', 'obrasocial', 'caja', 'baja'])->where('cuil_tit', $titular->cuil_tit)->get();
-        $notas = InternacionesNotasEntity::where('dni_afiliado', $titular->dni)->get();
+        $notas = InternacionesNotasEntity::with(['usuario'])->where('dni_afiliado', $titular->dni)->get();
         $prestaciones = PrestacionesPracticaLaboratorioEntity::with(["detalle", "detalle.practica", "estadoPrestacion", "afiliado", "afiliado.obrasocial", "usuario", "prestador", "profesional", "datosTramite", "datosTramite.tramite", "datosTramite.prioridad", "datosTramite.obrasocial"])
             ->where('dni_afiliado', $request->dni)->orderByDesc('fecha_registra')->get();
         foreach ($query as $file) {
@@ -1018,6 +1021,7 @@ class PadronController extends Controller
 
     public function addFilesAfiliados(Request $request)
     {
+        $now = Carbon::now('America/Argentina/Buenos_Aires');
         if ($request->hasFile('files')) {
             foreach ($request->file('files') as $index => $file) {
                 $fileName = time() . $index . '.' . $file->extension();
@@ -1025,7 +1029,9 @@ class PadronController extends Controller
                 DetalleTipoDocAfiliadoModelo::create([
                     'nombre_archivo' => $fileName,
                     'id_padron' => $request->id_afiliado,
-                    'id_tipo_documentacion' =>  $request->id_tipo_doc[$index]
+                    'id_tipo_documentacion' =>  $request->id_tipo_doc[$index],
+                    'fecha_carga' => $now->format('Y-m-d'),
+                    'observacion' => $request->observaciones[$index]
                 ]);
             }
             return response()->json(['message' => 'Documentación del afiliado guardado correctamente'], 200);

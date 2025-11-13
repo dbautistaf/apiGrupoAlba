@@ -15,15 +15,15 @@ class EmpresaModelo extends Model
     protected $fillable = [
         'razon_social',
         'id_localidad',
-        'fecha_alta', 
+        'fecha_alta',
         'fecha_carga',
         'id_usuario',
-        'telefono', 
-        'celular',  
+        'telefono',
+        'celular',
         'cuit',
         'id_partido',
         'id_provincia',
-        'fecha_baja', 
+        'fecha_baja',
         'nombre_fantasia',
         'email',
         'id_delegacion',
@@ -32,4 +32,8 @@ class EmpresaModelo extends Model
         'tipo_empresa',
         'domicilio'
     ];
+    public function localidad()
+    {
+        return $this->hasOne(LocalidadModelo::class, 'id_localidad', 'id_localidad');
+    }
 }

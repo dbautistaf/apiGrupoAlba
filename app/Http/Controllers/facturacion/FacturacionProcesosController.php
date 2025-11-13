@@ -243,4 +243,22 @@ class FacturacionProcesosController extends Controller
         $pdf->setPaper('A4');
         return $pdf->download('comprobante-facturacion' . $factura->numero . '.pdf');
     }
+
+    public function selectComprobanteRelacionado(Request $request)
+    {
+        $query = FacturacionDatosEntity::with(['proveedor', 'prestador', 'razonSocial'])->whereIn('id_tipo_comprobante', [3, 4, 5]);
+
+        if (!empty($request->id_proveedor)) {
+            $query->where('id_proveedor', $request->id_proveedor);
+        }
+
+        if (!empty($request->id_prestador)) {
+            $query->where('id_prestador', $request->id_prestador);
+        }
+
+
+        $facturas = $query->get();
+
+        return response()->json($facturas);
+    }
 }
