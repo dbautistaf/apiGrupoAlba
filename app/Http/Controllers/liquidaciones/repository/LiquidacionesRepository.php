@@ -232,7 +232,6 @@ class LiquidacionesRepository
             $totalDebitado += $value['monto_debitado'];
         }
 
-        // ✔ Insertar en chunks de 1000 para evitar sobrecarga
         foreach (array_chunk($bulk, 1000) as $chunk) {
             LiquidacionDetalleEntity::insert($chunk);
         }
