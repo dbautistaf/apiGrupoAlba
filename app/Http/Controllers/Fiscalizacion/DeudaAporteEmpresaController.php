@@ -90,7 +90,6 @@ class DeudaAporteEmpresaController extends Controller
         ], 200);
     }
 
-    // Detalle de deuda con intereses
     public function detalleDeuda(Request $request)
     {
         $periodo = $request->input('periodo'); // YYMM
@@ -134,45 +133,92 @@ class DeudaAporteEmpresaController extends Controller
 
         $hoy = now()->toDateString();
 
-        // Calcular intereses y total de cada deuda
-        $deudas->transform(function ($deuda) use ($hoy) {
-
-            $tasas = DB::table('tb_fisca_tasas_interes')
-                ->where('articulo_resolucion', 'Artículo 1°')
-                ->where(function ($q) use ($deuda, $hoy) {
-                    $q->where('vigencia_inicio', '<=', $hoy)
-                        ->where(function ($q2) use ($deuda) {
-                            $q2->whereNull('vigencia_fin')
-                                ->orWhere('vigencia_fin', '>=', $deuda->fecha_vencimiento);
-                        });
-                })
-                ->orderBy('vigencia_inicio')
-                ->get();
-
-            $interesCalculado = 0;
-
-            foreach ($tasas as $tasa) {
-                $inicio = \Carbon\Carbon::parse($deuda->fecha_vencimiento)->greaterThan(\Carbon\Carbon::parse($tasa->vigencia_inicio))
-                    ? \Carbon\Carbon::parse($deuda->fecha_vencimiento)
-                    : \Carbon\Carbon::parse($tasa->vigencia_inicio);
-
-                $fin = \Carbon\Carbon::parse($tasa->vigencia_fin ?? $hoy)->lessThan(\Carbon\Carbon::parse($hoy))
-                    ? \Carbon\Carbon::parse($tasa->vigencia_fin)
-                    : \Carbon\Carbon::parse($hoy);
-
-                $dias = $inicio->diffInDays($fin) + 1;
-
-                $interesCalculado += $deuda->monto_deuda * $tasa->interes_diario * $dias;
-            }
-
-            $deuda->intereses = round($interesCalculado, 2);
-            $deuda->monto_total = round($deuda->monto_deuda + $interesCalculado, 2);
-
-            return $deuda;
-        });
-
         return response()->json($deudas, 200);
     }
+
+    // Detalle de deuda con intereses -> quitar y usar los intereses de la tabla de deudas
+    // public function detalleDeuda(Request $request)
+    // {
+    //     $periodo = $request->input('periodo'); // YYMM
+    //     $cuit = $request->input('cuit');
+
+    //     if (!$periodo || !$cuit) {
+    //         return response()->json(['error' => 'Faltan parámetros: periodo y cuit'], 400);
+    //     }
+
+    //     // Traer todas las deudas del periodo
+    //     $deudas = DB::table('tb_declaraciones_juradas as ddjj')
+    //         ->selectRaw("
+    //         ddjj.periodo,
+    //         ddjj.cuil,
+    //         ddjj.cuit,
+    //         ddjj.remimpo AS importe_sueldo,
+    //         ROUND(ddjj.remimpo * 0.03, 2) AS aporte,
+    //         ROUND(ddjj.remimpo * 0.06, 2) AS contribucion,
+    //         ddjj.fecpresent AS fecha_recalculo,
+    //         DATE_ADD(ddjj.fecpresent, INTERVAL 30 DAY) AS fecha_vencimiento,
+    //         emp.id_empresa,
+    //         emp.razon_social,
+    //         ROUND(ddjj.remimpo * 0.09, 2) AS monto_deuda,
+    //         'APORTE' AS tipo_deuda,
+    //         'Vigente' AS estado
+    //     ")
+    //         ->leftJoin('tb_transferencias as trf', function ($join) {
+    //             $join->on('ddjj.cuil', '=', 'trf.cuitcont')
+    //                 ->on('ddjj.periodo', '=', 'trf.periodo');
+    //         })
+    //         ->join('tb_empresa as emp', 'emp.cuit', '=', 'ddjj.cuit')
+    //         ->whereNull('trf.id_transferencia')
+    //         ->where('ddjj.periodo', $periodo)
+    //         ->where('emp.cuit', $cuit)
+    //         ->orderBy('ddjj.fecpresent')
+    //         ->get();
+
+    //     if ($deudas->isEmpty()) {
+    //         return response()->json(['error' => 'No se encontraron deudas para el periodo y CUIT especificados'], 404);
+    //     }
+
+    //     $hoy = now()->toDateString();
+
+    //     // Calcular intereses y total de cada deuda
+    //     $deudas->transform(function ($deuda) use ($hoy) {
+
+    //         $tasas = DB::table('tb_fisca_tasas_interes')
+    //             ->where('articulo_resolucion', 'Artículo 1°')
+    //             ->where(function ($q) use ($deuda, $hoy) {
+    //                 $q->where('vigencia_inicio', '<=', $hoy)
+    //                     ->where(function ($q2) use ($deuda) {
+    //                         $q2->whereNull('vigencia_fin')
+    //                             ->orWhere('vigencia_fin', '>=', $deuda->fecha_vencimiento);
+    //                     });
+    //             })
+    //             ->orderBy('vigencia_inicio')
+    //             ->get();
+
+    //         $interesCalculado = 0;
+
+    //         foreach ($tasas as $tasa) {
+    //             $inicio = \Carbon\Carbon::parse($deuda->fecha_vencimiento)->greaterThan(\Carbon\Carbon::parse($tasa->vigencia_inicio))
+    //                 ? \Carbon\Carbon::parse($deuda->fecha_vencimiento)
+    //                 : \Carbon\Carbon::parse($tasa->vigencia_inicio);
+
+    //             $fin = \Carbon\Carbon::parse($tasa->vigencia_fin ?? $hoy)->lessThan(\Carbon\Carbon::parse($hoy))
+    //                 ? \Carbon\Carbon::parse($tasa->vigencia_fin)
+    //                 : \Carbon\Carbon::parse($hoy);
+
+    //             $dias = $inicio->diffInDays($fin) + 1;
+
+    //             $interesCalculado += $deuda->monto_deuda * $tasa->interes_diario * $dias;
+    //         }
+
+    //         $deuda->intereses = round($interesCalculado, 2);
+    //         $deuda->monto_total = round($deuda->monto_deuda + $interesCalculado, 2);
+
+    //         return $deuda;
+    //     });
+
+    //     return response()->json($deudas, 200);
+    // }
 
     public function pdfDeudaEmpresa(Request $request)
     {
@@ -181,8 +227,8 @@ class DeudaAporteEmpresaController extends Controller
             ->first();
 
         $detalle = DeclaracionesJuradasModelo::where('cuit', [$request->empresa])
-        ->orderByDesc('periodo')
-        ->get();
+            ->orderByDesc('periodo')
+            ->get();
 
 
         $datos = DB::select("SELECT concat(f.anio,f.mes) as periodo,f.importe_sueldo,f.contribucion,f.monto_deuda,
