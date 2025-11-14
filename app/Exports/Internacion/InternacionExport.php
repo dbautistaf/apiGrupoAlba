@@ -10,62 +10,50 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use Illuminate\Support\Collection;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class InternacionExport implements FromCollection, WithHeadings, ShouldAutoSize, WithStyles, WithMapping
 {
-    protected $params;
+    protected $data;
+    protected $filtros;
     
-    public function __construct($param)
+    public function __construct($data, $filtros = null)
     {
-        $this->params = $param;
+        $this->data = $data;
+        $this->filtros = $filtros;
     }
 
     public function collection()
     {
-        // Traemos todas las internaciones con sus relaciones
-        $internaciones = InternacionesEntity::with([
-            "prestador",
-            "tipoPrestacion",
-            "tipoInternacion",
-            "tipoHabitacion",
-            "afiliado.obrasocial",
-            "categoria",
-            "especialidad",
-            "tipoEgreso",
-            "tipoDiagnostico",
-            "usuario",
-            "estadoPrestacion",
-        ])
-        ->whereBetween('fecha_internacion', [$this->params->desde, $this->params->hasta])
-        ->orderBy('fecha_internacion', 'desc')
-        ->get();
-
         $rows = new Collection();
 
-        // Expandir cada internación por sus detalles
-        foreach ($internaciones as $internacion) {
+        foreach ($this->data as $internacion) {
             $detalles = DetallePrestacionesPracticaLaboratorioEntity::with(["practica", "prestacion"])
                 ->whereHas('prestacion', function ($query) use ($internacion) {
                     $query->where('cod_internacion', $internacion->cod_internacion);
                 })
                 ->get();
 
+            // SOLUCIÓN: Si hay detalles, mostrar SOLO EL PRIMERO o resumen
             if ($detalles->isEmpty()) {
-                // Si no tiene detalles, igual agregamos una fila vacía
+                // Sin detalles - una fila
                 $rows->push([
                     'internacion' => $internacion,
                     'detalle' => null,
+                    'total_detalles' => 0
                 ]);
             } else {
-                foreach ($detalles as $detalle) {
-                    $rows->push([
-                        'internacion' => $internacion,
-                        'detalle' => $detalle,
-                    ]);
-                }
+                // CON detalles - UNA SOLA FILA con el primer detalle o resumen
+                $rows->push([
+                    'internacion' => $internacion,
+                    'detalle' => $detalles->first(), // Solo el primer detalle
+                    'total_detalles' => $detalles->count(),
+                    'todos_detalles' => $detalles // Guardar todos por si necesitas
+                ]);
             }
         }
 
+        \Log::info('Total filas en export: ' . $rows->count());
         return $rows;
     }
 
@@ -80,6 +68,7 @@ class InternacionExport implements FromCollection, WithHeadings, ShouldAutoSize,
             'Fecha Internación',
             'Fecha Egreso',
             'Cantidad Días',
+            'Total Prácticas',
             'Código Práctica',
             'Nombre Práctica',
             'Cant. Solicitada',
@@ -88,7 +77,7 @@ class InternacionExport implements FromCollection, WithHeadings, ShouldAutoSize,
         ];
     }
 
-    public function styles($sheet)
+    public function styles(Worksheet $sheet)
     {
         return [
             1 => ['font' => ['bold' => true]],
@@ -99,6 +88,7 @@ class InternacionExport implements FromCollection, WithHeadings, ShouldAutoSize,
     {
         $internacion = $row['internacion'];
         $detalle = $row['detalle'];
+        $totalDetalles = $row['total_detalles'];
 
         return [
             $internacion->num_internacion ?? '',
@@ -109,8 +99,9 @@ class InternacionExport implements FromCollection, WithHeadings, ShouldAutoSize,
             $internacion->fecha_internacion ?? '',
             $internacion->fecha_egreso ?? '',
             $internacion->cantidad_dias ?? '',
-            $detalle?->practica?->codigo_practica ?? '',
-            $detalle?->practica?->nombre_practica ?? '',
+            $totalDetalles, // Total de prácticas
+            $detalle?->practica?->codigo_practica ?? 'MÚLTIPLES',
+            $detalle?->practica?->nombre_practica ?? ($totalDetalles > 0 ? 'Varias prácticas' : 'Sin prácticas'),
             $detalle?->cantidad_solicitada ?? '',
             $detalle?->cantidad_autorizada ?? '',
             $detalle?->monto_pagar ?? '',
