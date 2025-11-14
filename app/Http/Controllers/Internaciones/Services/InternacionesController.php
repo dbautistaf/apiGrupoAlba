@@ -143,8 +143,6 @@ class InternacionesController  extends Controller
     public function getExportInternacion(InternacionFiltrosRepository $repoInternacionFiltro, Request $request)
     {        
         try {
-            \Log::info('=== INICIANDO EXPORTACIÓN ===');
-            \Log::info('Parámetros recibidos:', $request->all());
 
             $data = [];
 
@@ -162,16 +160,11 @@ class InternacionesController  extends Controller
                 $data = $repoInternacionFiltro->findByList();
             }
 
-            \Log::info('Cantidad de registros a exportar: ' . $data->count());
 
             // Pasa los datos YA FILTRADOS y los filtros al Excel
             return Excel::download(new InternacionExport($data, $request), 'Internacion.xlsx');
 
         } catch (\Exception $e) {
-            \Log::error('Error en exportación Excel: ' . $e->getMessage());
-            \Log::error('File: ' . $e->getFile());
-            \Log::error('Line: ' . $e->getLine());
-            \Log::error('Trace: ' . $e->getTraceAsString());
 
             return response()->json([
                 'error' => 'Error al generar el archivo Excel',
