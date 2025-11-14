@@ -194,15 +194,22 @@ class LiquidacionesRepository
         $totalFacturado = 0;
         $totalAprobado = 0;
         $totalDebitado = 0;
-        $data = [];
+
+        $bulk = [];
+
         foreach ($detalle as $value) {
+
             if (!is_null($idFactura)) {
-                $liquidacion = $this->findByCrearLiquidacionImport($idFactura, $value['dni_afiliado'], $value['id_afiliado']);
+                $liquidacion = $this->findByCrearLiquidacionImport(
+                    $idFactura,
+                    $value['dni_afiliado'],
+                    $value['id_afiliado']
+                );
                 $liquidacion->refresh();
                 $idLiquidacion = $liquidacion->id_liquidacion;
             }
 
-            LiquidacionDetalleEntity::create([
+            $bulk[] = [
                 'id_liquidacion' => $idLiquidacion,
                 'fecha_prestacion' => $value['fecha_prestacion'],
                 'id_identificador_practica' => $value['id_identificador_practica'],
@@ -213,20 +220,24 @@ class LiquidacionesRepository
                 'monto_facturado' => $value['monto_facturado'],
                 'monto_aprobado' => $value['monto_aprobado'],
                 'coseguro' => $value['coseguro'],
-                'debita_coseguro' => '0',
-                'debita_iva' => '0',
+                'debita_coseguro' => 0,
+                'debita_iva' => 0,
                 'id_tipo_motivo_debito' => $value['id_tipo_motivo_debito'],
                 'observacion_debito' => $value['observacion_debito'],
-                'monto_debitado' =>  $value['monto_debitado'],
-            ]);
+                'monto_debitado' => $value['monto_debitado'],
+            ];
 
             $totalFacturado += $value['monto_facturado'];
             $totalAprobado += $value['monto_aprobado'];
             $totalDebitado += $value['monto_debitado'];
-            $data = $this->findByUpdate($idLiquidacion);
         }
 
-        return $data;
+        // ✔ Insertar en chunks de 1000 para evitar sobrecarga
+        foreach (array_chunk($bulk, 1000) as $chunk) {
+            LiquidacionDetalleEntity::insert($chunk);
+        }
+
+        return $this->findByUpdate($idLiquidacion);
     }
 
     public function findByCrearLiquidacionImport($idFactura, $dniAfiliado, $idAfiliado)

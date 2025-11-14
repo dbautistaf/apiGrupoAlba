@@ -61,7 +61,7 @@ class ImportarLiquidacionesImport implements ToCollection, WithStartRow
             $debito   = $debitos[$row[7]] ?? $debitos[$row[6]] ?? null;
             $afiliado = $afiliados[$row[0]] ?? null;
             $costo = str_replace(['$', ','], '', $row[4]);
-            $monto = str_replace(['$', ','], '', $row[5]);
+            $monto = ($row[5] === null || $row[5] === '') ? 0 : str_replace(['$', ','], '', $row[5]);
 
             if (!is_null($row[2]) && !is_null($row[0])) {
                 if ($practica && $afiliado) {
@@ -74,7 +74,7 @@ class ImportarLiquidacionesImport implements ToCollection, WithStartRow
                         'porcentaje_hon'           => 100,
                         'porcentaje_gast'          => 100,
                         'monto_facturado'          => $costo,
-                        'monto_aprobado'           => $monto,
+                        'monto_aprobado'           => $monto?? 0,
                         'coseguro'                 => $row[9] ?? '0',
                         'debita_coseguro'          => '0',
                         'debita_iva'               => '0',
