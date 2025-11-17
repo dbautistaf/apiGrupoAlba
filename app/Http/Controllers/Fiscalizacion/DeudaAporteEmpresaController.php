@@ -10,6 +10,7 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\View;
+use Mpdf\Mpdf;
 
 class DeudaAporteEmpresaController extends Controller
 {
@@ -31,33 +32,37 @@ class DeudaAporteEmpresaController extends Controller
         $query = DeudaAporteEmpresa::with('empresa')
             ->where('estado', 'Vigente');
 
-        // Filtros por fechas de recálculo
-        if ($request->filled('desde') && $request->filled('hasta')) {
-            $query->whereDate('fecha_recalculo', '>=', $request->desde)
-                ->whereDate('fecha_recalculo', '<=', $request->hasta);
-        } elseif ($request->filled('desde')) {
-            $query->whereDate('fecha_recalculo', '>=', $request->desde);
-        } elseif ($request->filled('hasta')) {
-            $query->whereDate('fecha_recalculo', '<=', $request->hasta);
-        }
 
-        // Filtro por año
-        if ($request->filled('anio')) {
-            $query->where('anio', '=', $request->anio);
-        }
+        // Manejo de filtros de periodo (periodo_desde / periodo_hasta) en formato AAMM (ej. 2402)
+        if ($request->filled('periodo_desde') || $request->filled('periodo_hasta')) {
+            // Normaliza AAMM -> YYYYMM (numérico)
+            $normalizePeriodo = function ($p) {
+                $p = preg_replace('/\D/', '', (string) $p);
+                if (strlen($p) === 4) {
+                    $yy = substr($p, 0, 2);
+                    $mm = substr($p, 2, 2);
+                    $yyyy = '20' . $yy;
+                    // validación mínima de mes
+                    $mm = str_pad($mm, 2, '0', STR_PAD_LEFT);
+                    return intval($yyyy . $mm);
+                }
+                return null;
+            };
 
-        // Filtro por mes
-        if ($request->filled('mes')) {
-            $query->where('mes', '=', $request->mes);
-        }
+            $desdeNum = $request->filled('periodo_desde') ? $normalizePeriodo($request->periodo_desde) : null;
+            $hastaNum = $request->filled('periodo_hasta') ? $normalizePeriodo($request->periodo_hasta) : null;
 
-        // Filtro por monto de deuda (desde/hasta)
-        if ($request->filled('monto_desde') && $request->filled('monto_hasta')) {
-            $query->whereBetween('monto_deuda', [$request->monto_desde, $request->monto_hasta]);
-        } elseif ($request->filled('monto_desde')) {
-            $query->where('monto_deuda', '>=', $request->monto_desde);
-        } elseif ($request->filled('monto_hasta')) {
-            $query->where('monto_deuda', '<=', $request->monto_hasta);
+            // Si ambos vienen, asegurar orden correcto
+            if ($desdeNum && $hastaNum) {
+                if ($desdeNum > $hastaNum) {
+                    [$desdeNum, $hastaNum] = [$hastaNum, $desdeNum];
+                }
+                $query->whereRaw("CAST(CONCAT(anio, LPAD(mes,2,'0')) AS UNSIGNED) BETWEEN ? AND ?", [$desdeNum, $hastaNum]);
+            } elseif ($desdeNum) {
+                $query->whereRaw("CAST(CONCAT(anio, LPAD(mes,2,'0')) AS UNSIGNED) >= ?", [$desdeNum]);
+            } elseif ($hastaNum) {
+                $query->whereRaw("CAST(CONCAT(anio, LPAD(mes,2,'0')) AS UNSIGNED) <= ?", [$hastaNum]);
+            }
         }
 
         // Filtro por nombre de empresa (requiere join)
@@ -79,7 +84,7 @@ class DeudaAporteEmpresaController extends Controller
         $perPage = $request->input('per_page', 10);
         $total = $query->count();
 
-        $query->orderBy('fecha_recalculo', 'desc');
+        $query->orderBy('id_deuda', 'desc');
 
         $result = $query->skip(($page - 1) * $perPage)->take($perPage)->get();
 
@@ -238,6 +243,7 @@ class DeudaAporteEmpresaController extends Controller
 
         $html = View::make('reportes.pdfdeudaempresa', compact('datos', 'empresa'))->render();
         $pagedetalle = View::make('reportes.pdfdetallecuilesdeuda', compact('detalle'))->render();
+
         $mpdf = new \Mpdf\Mpdf([
             'default_font' => 'centurygothic',
             'format' => 'A4',
