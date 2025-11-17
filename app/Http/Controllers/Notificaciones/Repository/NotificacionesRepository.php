@@ -27,6 +27,6 @@ class NotificacionesRepository
 
     public function findByListar($user)
     {
-        return NotificacionesEntity::where('usuario_notificar', $user)->get();
+        return NotificacionesEntity::where('email_notificar', $user)->get();
     }
 }

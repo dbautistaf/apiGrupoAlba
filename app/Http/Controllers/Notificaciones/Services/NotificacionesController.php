@@ -19,6 +19,6 @@ class NotificacionesController extends Controller
     public function listar(Request $request)
     {
         $user = auth()->user();
-        return response()->json($this->repo->findByListar($user->cod_usuario));
+        return response()->json($this->repo->findByListar($user->email));
     }
 }

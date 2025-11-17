@@ -185,10 +185,10 @@ class TicketSoporteController extends Controller
                 $this->repoNotificacion->findByCreate(new NotificarDataDto(
                     'TICKET',
                     'NORMAL',
-                    'El Ticket fue ' . $refreshTiket->estadoNuevo->estado_tipo,
+                    'TICKET #'.$refreshTiket->id_ticket.'- ' . $refreshTiket->ticket->categoria->nombre_categoria,
                     $ticket->id_Usuario,
                     'NO DEFINIDO',
-                    $request->comentario
+                    'ESTADO: '.$ticket->estado->estado_tipo
                 ));
             }
         }
