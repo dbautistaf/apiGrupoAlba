@@ -1347,3 +1347,10 @@ Route::group([
     Route::get('consultar', [App\Http\Controllers\Coseguros\Services\CosegurosController::class, 'consultarCoseguros']);
     Route::post('actualizar-matriz', [App\Http\Controllers\Coseguros\Services\CosegurosController::class, 'actualizarCostos']);
 });
+
+Route::group([
+    'middleware' => ['jwt.verify'],
+    'prefix' => '/v1/dashboard'
+], function () {
+    Route::get('/', [App\Http\Controllers\Dashboard\DashboardController::class, 'getDashboard']);
+});
