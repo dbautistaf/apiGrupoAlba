@@ -166,7 +166,7 @@ class TicketSoporteController extends Controller
         if (!$ticket) {
             return response()->json(['message' => 'Ticket no encontrado'], 404);
         }
-
+        
         // Registrar el cambio en el historial
         $historico = SoporteHistorialTicketModelo::create([
             'id_ticket' => $request->id_ticket,

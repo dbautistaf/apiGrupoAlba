@@ -264,13 +264,27 @@ class LiquidacionesRepository
 
     public function fidByObtenerTotalDebitadoFactura($idLiquidacion)
     {
-        return LiquidacionEntity::where('id_factura', $idLiquidacion)
+        /* return LiquidacionEntity::where('id_factura', $idLiquidacion)
             ->selectRaw('
         SUM(COALESCE(total_debitado, 0)) AS total_debitado,
         SUM(COALESCE(total_facturado, 0)) AS total_facturado,
         SUM(COALESCE(total_aprobado, 0)) AS total_aprobado,
         SUM(COALESCE(total_coseguro, 0)) AS total_coseguro
     ')
-            ->first();
+            ->first(); */
+
+        $result = DB::select("
+    SELECT 
+        SUM(COALESCE(ld.monto_facturado, 0)) AS total_facturado,
+        SUM(COALESCE(ld.monto_aprobado, 0)) AS total_aprobado,
+        SUM(COALESCE(ld.monto_debitado, 0)) AS total_debitado,
+        SUM(COALESCE(ld.coseguro, 0)) AS total_coseguro
+    FROM tb_liquidaciones_detalle ld
+    JOIN tb_liquidaciones l ON ld.id_liquidacion = l.id_liquidacion
+    JOIN tb_facturacion_datos fa ON l.id_factura = fa.id_factura
+    WHERE fa.id_factura = ?
+", [$idLiquidacion]);
+
+        return $result[0];
     }
 }
