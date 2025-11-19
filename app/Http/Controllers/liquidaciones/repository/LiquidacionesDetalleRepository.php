@@ -125,6 +125,8 @@ class LiquidacionesDetalleRepository
 
     public function findByUpdateDetalleEstado($estado, $idLiquidacion)
     {
-        return DB::update("UPDATE tb_liquidaciones_detalle SET estado = ? WHERE id_liquidacion = ? ", [$estado, $idLiquidacion]);
+        return DB::table('tb_liquidaciones_detalle')
+            ->whereIn('id_liquidacion', $idLiquidacion)
+            ->update(['estado' => $estado]);
     }
 }

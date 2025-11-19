@@ -74,9 +74,11 @@ class FacturasPrestadoresController extends Controller
                 $repoDetalle->findByUpdateDetalleEstado($request->estado, $liquidaciones->id_liquidacion);
             } */
             if (count($liquidaciones) > 0) {
-                foreach ($liquidaciones as $key) {
+                $ids = collect($liquidaciones)->pluck('id_liquidacion')->toArray();
+                $repoDetalle->findByUpdateDetalleEstado($request->estado, $ids);
+                /* foreach ($liquidaciones as $key) {
                     $repoDetalle->findByUpdateDetalleEstado($request->estado, $key->id_liquidacion);
-                }
+                } */
             }
 
             $message = $request->estado === '4' ? 'Factura ANULADO correctamente'
