@@ -35,7 +35,7 @@ class PrestacionMedicaRepository
             'dni_afiliado' => $params->dni_afiliado,
             'cod_tipo_estado' => $params->cod_tipo_estado,
             'diagnostico' => $params->diagnostico ?? null,
-            'id_diagnostico' => !empty($params->id_diagnostico)? $params->id_diagnostico: null,
+            'id_diagnostico' => !empty($params->id_diagnostico) ? $params->id_diagnostico : null,
             'domicilio_prestador' => $params->domicilio_prestador,
             'domicilio_profesional' => $params->domicilio_profesional,
             'edad_afiliado' => $params->edad_afiliado,
@@ -48,7 +48,6 @@ class PrestacionMedicaRepository
     public function findByUpdateId($params, $nombreArchivo, $datosTramite)
     {
         $prestacion = PrestacionesPracticaLaboratorioEntity::find($params->cod_prestacion);
-        $prestacion->fecha_registra = $this->fechaActual;
         $prestacion->observaciones = $params->observaciones;
         $prestacion->vigente = $params->vigente;
         $prestacion->monto_pagar = $params->monto_pagar;
@@ -58,16 +57,14 @@ class PrestacionMedicaRepository
         $prestacion->dni_afiliado = $params->dni_afiliado;
         $prestacion->cod_tipo_estado = $params->cod_tipo_estado;
         $prestacion->diagnostico = $params->diagnostico;
-        $prestacion->id_diagnostico = !empty($params->id_diagnostico)? $params->id_diagnostico: null;
+        $prestacion->id_diagnostico = !empty($params->id_diagnostico) ? $params->id_diagnostico : null;
         $prestacion->domicilio_prestador = $params->domicilio_prestador;
         $prestacion->domicilio_profesional = $params->domicilio_profesional;
         $prestacion->edad_afiliado = $params->edad_afiliado;
         $prestacion->cod_internacion = (!empty($params->cod_internacion) ? $params->cod_internacion : null);
         $prestacion->id_detalle_tramite = $datosTramite->id_detalle_tramite;
         $prestacion->observacion_interna = $params->observacion_interna;
-        if (is_null($prestacion->fecha_modifica)) {
-            $prestacion->fecha_modifica = $prestacion->fecha_registra;
-        }
+        $prestacion->fecha_modifica = $this->fechaActual;
 
         $prestacion->update();
         return $prestacion;
