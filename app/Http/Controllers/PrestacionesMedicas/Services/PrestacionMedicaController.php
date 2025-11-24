@@ -128,12 +128,12 @@ class PrestacionMedicaController  extends Controller
         $prestacion = $repoFiltro->findById($request->id);
 
         //if ($prestacion->cod_tipo_estado == '2') {
-            //DB::delete('DELETE FROM tb_prestaciones_medicas_detalle WHERE cod_prestacion = ?', [$request->id]);
-            //DB::delete('DELETE FROM tb_prestaciones_medicas WHERE cod_prestacion = ?', [$request->id]);
-            // $storagaFile->findByDeleteFileName("prestaciones/" . $prestacion->archivo_adjunto);
-            $repoFiltro->findByDeleteId($request->id);
+        //DB::delete('DELETE FROM tb_prestaciones_medicas_detalle WHERE cod_prestacion = ?', [$request->id]);
+        //DB::delete('DELETE FROM tb_prestaciones_medicas WHERE cod_prestacion = ?', [$request->id]);
+        // $storagaFile->findByDeleteFileName("prestaciones/" . $prestacion->archivo_adjunto);
+        $repoFiltro->findByDeleteId($request->id);
         //} else {
-         //   return response()->json(["message" => "No se puede eliminar una prestación ya Autorizada o Rechazada."], 409);
+        //   return response()->json(["message" => "No se puede eliminar una prestación ya Autorizada o Rechazada."], 409);
         //}
 
         return response()->json(["message" => "Prestación eliminada correctamente."], 200);
@@ -164,19 +164,30 @@ class PrestacionMedicaController  extends Controller
     }
 
     public function getEliminarAdjunto(PrestacionMedicaRepository $repoFiltro, Request $request)
-    {        
+    {
         $repoFiltro->findByEliminarAdjunto($request->id);
 
         return response()->json(["success" => true, "message" => "Archivo eliminado correctamente"]);
     }
 
     public function getExportPrestacion(Request $request)
-    {        
+    {
         return Excel::download(new PrestacionMedicaExport($request), 'Prestaciones.xlsx');
     }
 
     public function getListPrestacion(PrestacionesmedicasFiltrosRepository $repoFiltro, Request $request)
     {
         return response()->json($repoFiltro->findByListAutorizacionLimit($request->shared));
+    }
+
+    public function getListPrestacionIds(PrestacionesmedicasFiltrosRepository $repoFiltro, Request $request)
+    {
+
+        $ids = $request->query('ids');
+        if (!$ids || !is_array($ids)) {
+            return response()->json([]);
+        }
+
+        return response()->json($repoFiltro->findByListAutorizacionIds($ids));
     }
 }

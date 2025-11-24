@@ -65,8 +65,8 @@ class InternacionesController  extends Controller
                 $repoInterAut->findByUpdate($request->id_internacion_autorizacion, $request->cod_internacion);
                 $message = "Internación actualizado correctamente.";
             } else {
-                $repoInternacion->findBySave($request);
-                $repoInterAut->findBySave($request->id_internacion_autorizacion, $request->cod_internacion);
+                $repo = $repoInternacion->findBySave($request);
+                $repoInterAut->findBySave($request->id_internacion_autorizacion, $repo->cod_internacion);
             }
             DB::commit();
             return response()->json(["message" => $message], 200);

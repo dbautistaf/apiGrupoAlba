@@ -156,4 +156,9 @@ class PrestacionesmedicasFiltrosRepository
 
         return $query->get();
     }
+
+    public function findByListAutorizacionIds($ids)
+    {
+        return PrestacionesPracticaLaboratorioEntity::whereIn('cod_prestacion', $ids)->get();
+    }
 }
