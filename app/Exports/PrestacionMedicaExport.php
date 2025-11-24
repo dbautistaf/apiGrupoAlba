@@ -61,6 +61,9 @@ class PrestacionMedicaExport implements FromCollection, WithHeadings, ShouldAuto
                     'cantidad_solicitada'  => $d->cantidad_solicitada ?? 0,
                     'cantidad_autorizada'  => $d->cantidad_autorizada ?? 0,
                     'monto_detalle'        => number_format($d->monto_pagar ?? 0, 2, '.', ''),
+                    'diagnostico'          => $p->diagnostico,
+                    'obrasocial'           => $p->datosTramite?->obrasocial?->locatorio,
+                    'usuario'              => $p->usuario?->nombre_apellidos
                 ]);
             }
         }
@@ -85,7 +88,10 @@ class PrestacionMedicaExport implements FromCollection, WithHeadings, ShouldAuto
             'cantidad_solicitada',
             'cantidad_autorizada',
             'montoPagar',
-            'fecha alta',
+            'diagnostico',
+            'obrasocial',
+            'usuario'
+
         ];
     }
 
@@ -114,6 +120,9 @@ class PrestacionMedicaExport implements FromCollection, WithHeadings, ShouldAuto
             $row['cantidad_solicitada'],
             $row['cantidad_autorizada'],
             $row['monto_detalle'],
+            $row['diagnostico'],
+            $row['obrasocial'],
+            $row['usuario'],
         ];
     }
 }

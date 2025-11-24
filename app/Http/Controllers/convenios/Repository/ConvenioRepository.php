@@ -45,15 +45,19 @@ class ConvenioRepository
 
     public function findByListFiltrarConvenios($param)
     {
-        
-        $query = ConveniosEntity::with(['provincia','locatarios'])
-        ->orderByDesc('fecha_inicio');
-        
-        if(!empty($param->search)){
+
+        $query = ConveniosEntity::with(['provincia', 'locatarios'])
+            ->orderByDesc('fecha_inicio');
+
+        if (!empty($param->search)) {
             $query->where('descripcion_convenio', 'LIKE', "%{$param->search}%");
         }
-        if(!empty($param->desde) && !empty($param->hasta)){
+        if (!empty($param->desde) && !empty($param->hasta)) {
             $query->whereBetween('fecha_registra', [$param->desde, $param->hasta]);
+        }
+
+        if (!empty($param->estado)) {
+            $query->where('vigente', $param->estado);
         }
         return $query->get();
     }
