@@ -9,6 +9,7 @@ class DashboardRepository
     public function getDashboardTotals($fechaDesde = null, $fechaHasta = null)
     {
         return [
+            // ========== DATOS ORIGINALES ==========
             'total_facturacion' => $this->countWithFilter('tb_facturacion_datos', 'fecha_comprobante', $fechaDesde, $fechaHasta),
             'total_liquidaciones' => $this->countWithFilter('tb_liquidaciones', 'fecha_registra', $fechaDesde, $fechaHasta),
             'total_autorizaciones' => $this->countWithFilter('tb_prestaciones_medicas', 'fecha_registra', $fechaDesde, $fechaHasta),
@@ -32,6 +33,33 @@ class DashboardRepository
             'total_padron_comercial' => $this->countWithFilter('tb_padron_comercial', 'fe_alta', $fechaDesde, $fechaHasta),
             'total_coseguros' => $this->countWithFilter('tb_matriz_coseguros', 'fecha_carga', $fechaDesde, $fechaHasta),
             'total_recaudacion' => $this->countWithFilter('tb_liquidaciones_obras', 'fecha_proceso', $fechaDesde, $fechaHasta),
+            
+            // ========== NUEVOS DATOS ==========
+            
+            // AFILIACIONES
+            'beneficiarios_mayoria_edad' => $this->getBeneficiariosMayoriaEdad(),
+            'afiliados_escolaridad_activa' => $this->getAfiliadosEscolaridadActiva(),
+            
+            // AUDITORÍAS
+            'total_auditorias_terreno' => $this->countWithFilter('tb_internaciones_auditadas', 'fecha_autoriza', $fechaDesde, $fechaHasta),
+            'total_auditorias_tecnicas' => $this->countWithFilter('tb_facturacion_auditar', 'fecha_audita', $fechaDesde, $fechaHasta),
+            
+            // FACTURACIÓN
+            'facturas_por_tipo' => $this->getFacturasPorTipo($fechaDesde, $fechaHasta),
+            
+            // REINTEGROS
+            'total_reintegros' => $this->countWithFilter('tb_reintegros', 'fecha_solicitud', $fechaDesde, $fechaHasta),
+            'total_reintegros_pendientes' => $this->getReintegrosPorEstado('PENDIENTE', $fechaDesde, $fechaHasta),
+            'total_reintegros_autorizados' => $this->getReintegrosPorEstado('AUTORIZADO', $fechaDesde, $fechaHasta),
+            
+            // RECETAS
+            'total_recetas' => $this->countWithFilter('tb_recetas', 'fecha_receta', $fechaDesde, $fechaHasta),
+            
+            // RECETARIOS
+            'total_recetarios' => $this->countWithFilter('tb_recetarios_medicacion', 'fecha_registra', $fechaDesde, $fechaHasta),
+            
+            // FISCALIZACIÓN
+            'ingresos_acuerdos_pago' => $this->getIngresosAcuerdosPago($fechaDesde, $fechaHasta),
         ];
     }
 
@@ -47,5 +75,76 @@ class DashboardRepository
         }
         
         return $query->count();
+    }
+    
+    /**
+     * Beneficiarios próximos a cumplir mayoría de edad (18 a 20 años)
+     */
+    private function getBeneficiariosMayoriaEdad()
+    {
+        return DB::table('tb_padron')
+            ->whereRaw('TIMESTAMPDIFF(YEAR, fe_nac, CURDATE()) BETWEEN 18 AND 20')
+            ->where('activo', 1)
+            ->count();
+    }
+    
+    /**
+     * Afiliados con escolaridad activa (21 a 25 años cursando estudios regulares)
+     */
+    private function getAfiliadosEscolaridadActiva()
+    {
+        return DB::table('tb_escolaridad as e')
+            ->join('tb_padron as p', 'e.id_padron', '=', 'p.id')
+            ->whereRaw('TIMESTAMPDIFF(YEAR, p.fe_nac, CURDATE()) BETWEEN 21 AND 25')
+            ->where('p.activo', 1)
+            ->where('e.fecha_vencimiento', '>=', DB::raw('CURDATE()'))
+            ->count();
+    }
+    
+    /**
+     * Obtiene facturas agrupadas por tipo
+     */
+    private function getFacturasPorTipo($fechaDesde = null, $fechaHasta = null)
+    {
+        $query = DB::table('tb_facturacion_datos as fd')
+            ->join('tb_facturacion_tipo as ft', 'fd.id_tipo_factura', '=', 'ft.id_tipo_factura')
+            ->select('ft.descripcion as tipo', DB::raw('COUNT(*) as total'))
+            ->groupBy('ft.id_tipo_factura', 'ft.descripcion');
+        
+        if ($fechaDesde && $fechaHasta) {
+            $query->whereBetween('fd.fecha_comprobante', [$fechaDesde, $fechaHasta]);
+        }
+        
+        return $query->get();
+    }
+    
+    /**
+     * Obtiene reintegros por estado
+     */
+    private function getReintegrosPorEstado($estadoNombre, $fechaDesde = null, $fechaHasta = null)
+{
+    $query = DB::table('tb_reintegros as r')
+        ->join('tb_estado_autorizacion as ea', 'r.id_estado_autorizacion', '=', 'ea.id_estado_autorizacion')
+        ->where('ea.estado_autorizacion', 'LIKE', "%{$estadoNombre}%");
+    
+    if ($fechaDesde && $fechaHasta) {
+        $query->whereBetween('r.fecha_solicitud', [$fechaDesde, $fechaHasta]);
+    }
+    
+    return $query->count();
+}
+    
+    /**
+     * Obtiene suma de ingresos por acuerdos de pago
+     */
+    private function getIngresosAcuerdosPago($fechaDesde = null, $fechaHasta = null)
+    {
+        $query = DB::table('tb_fisca_acuerdo_pago');
+        
+        if ($fechaDesde && $fechaHasta) {
+            $query->whereBetween('fecha_creacion', [$fechaDesde, $fechaHasta]);
+        }
+        
+        return $query->sum('importe_total') ?? 0;
     }
 }
