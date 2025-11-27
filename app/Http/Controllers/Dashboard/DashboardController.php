@@ -10,7 +10,7 @@ class DashboardController extends Controller
 {
     public function getDashboard(Request $request, DashboardRepository $repository)
     {
-        // Validación opcional
+        // Validación de fechas
         $request->validate([
             'desde' => 'nullable|date',
             'hasta' => 'nullable|date|after_or_equal:desde',
@@ -21,6 +21,13 @@ class DashboardController extends Controller
 
         $data = $repository->getDashboardTotals($desde, $hasta);
 
-        return response()->json($data);
+        return response()->json([
+            'success' => true,
+            'data' => $data,
+            'filtros' => [
+                'desde' => $desde,
+                'hasta' => $hasta,
+            ]
+        ]);
     }
 }
