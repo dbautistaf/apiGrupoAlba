@@ -74,6 +74,11 @@ class PrestacionesPracticaLaboratorioEntity extends Model
         return $this->hasOne(PrestadorEntity::class, 'cod_prestador', 'cod_prestador');
     }
 
+    public function prestadorefector()
+    {
+        return $this->hasOne(PrestadorEntity::class, 'cod_prestador', 'cod_profesional');
+    }
+
     public function profesional()
     {
         return $this->hasOne(PrestadorMedicosEntity::class, 'cod_profesional', 'cod_profesional');

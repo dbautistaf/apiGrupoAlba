@@ -31,6 +31,7 @@ class PrestacionMedicaExport implements FromCollection, WithHeadings, ShouldAuto
                 "afiliado.obrasocial",
                 "usuario",
                 "prestador",
+                "prestadorefector",
                 "profesional",
                 "datosTramite",
                 "datosTramite.tramite",
@@ -47,23 +48,23 @@ class PrestacionMedicaExport implements FromCollection, WithHeadings, ShouldAuto
         foreach ($prestacion as $p) {
             foreach ($p->detalle as $d) {
                 $rows->push([
-                    'tramite'              => $p->datosTramite?->tramite?->descripcion ?? 'N/A',
-                    'numero_tramite'       => $p->numero_tramite ?? 'N/A',
-                    'prioridad'            => $p->datosTramite?->prioridad?->descripcion ?? 'N/A',
                     'fecha_registra'       => $p->fecha_registra ?? 'N/A',
-                    'cuil_benef'           => $p->afiliado?->cuil_benef ?? 'N/A',
+                    'fecha_registra'       => $p->fecha_registra ?? 'N/A',
+                    'solicitante'          => $p->prestador?->razon_social ?? 'N/A',
+                    'efector'              => $p->prestadorefector?->razon_social ?? 'N/A',
+                    'imputacion_total'     => 'N/A',
+                    'imputacion_detalle'   => 'N/A',
+                    'origen'               => $p->datosTramite?->obrasocial?->locatorio ?? 'N/A',
+                    'num_filiado'          => $p->afiliado?->cuil_benef ?? 'N/A',
                     'nombre_completo'      => trim(($p->afiliado?->nombre ?? '') . ' ' . ($p->afiliado?->apellidos ?? '')),
-                    'monto_pagar_total'    => number_format($p->monto_pagar ?? 0, 2, '.', ''),
-                    'codigo_practica'      => $d->practica?->codigo_practica ?? 'N/A',
-                    'nombre_practica'      => $d->practica?->nombre_practica ?? 'N/A',
-                    'razon_social'         => $p->prestador?->razon_social ?? 'N/A',
-                    'profesional'          => $p->profesional?->apellidos_nombres ?? 'N/A',
-                    'cantidad_solicitada'  => $d->cantidad_solicitada ?? 0,
-                    'cantidad_autorizada'  => $d->cantidad_autorizada ?? 0,
-                    'monto_detalle'        => number_format($d->monto_pagar ?? 0, 2, '.', ''),
-                    'diagnostico'          => $p->diagnostico,
-                    'obrasocial'           => $p->datosTramite?->obrasocial?->locatorio,
-                    'usuario'              => $p->usuario?->nombre_apellidos
+                    'edad'                 => $p->afiliado?->fe_nac
+                        ? \Carbon\Carbon::parse($p->afiliado->fe_nac)->age
+                        : 'N/A',
+                    'sexo'                 => $p->afiliado?->sexo?->sexo ?? 'N/A',
+                    'dni'                  => $p->afiliado?->dni ?? 'N/A',
+                    'practica'             => $d->practica?->nombre_practica ?? 'N/A',
+                    'importe_facturado'    => number_format($d->monto_pagar ?? 0, 2, '.', ''),
+                    'importe_aprobado'     => number_format($d->monto_pagar ?? 0, 2, '.', ''),
                 ]);
             }
         }
@@ -74,23 +75,21 @@ class PrestacionMedicaExport implements FromCollection, WithHeadings, ShouldAuto
     public function headings(): array
     {
         return [
-            'Tipo Tramite',
-            'Nº Tramite',
-            'Prioridad',
-            'Fecha Prestación',
-            'CUIL',
-            'Afiliado',
-            'monto_pagar',
-            'codigoPractica',
-            'nombre_practica',
-            'razon_social',
-            'Profesional',
-            'cantidad_solicitada',
-            'cantidad_autorizada',
-            'montoPagar',
-            'diagnostico',
-            'obrasocial',
-            'usuario'
+            'Fecha Ingreso',
+            'Fecha Emision',
+            'Solicitante',
+            'Efector',
+            'Imputacion Contable (Total)',
+            'Imputacion Contable (Detalle)',
+            'Origen',
+            'Nro.Afiliado',
+            'Nombre y Apellido Afiliado',
+            'Edad',
+            'Sexo',
+            'Nº DNI',
+            'Practica/Medicamento Descripción',
+            'Importe Facturado',
+            'Importe Aprobado',
 
         ];
     }
@@ -106,23 +105,21 @@ class PrestacionMedicaExport implements FromCollection, WithHeadings, ShouldAuto
     {
 
         return [
-            $row['tramite'],
-            $row['numero_tramite'],
-            $row['prioridad'],
             $row['fecha_registra'],
-            $row['cuil_benef'],
+            $row['fecha_registra'],
+            $row['solicitante'],
+            $row['efector'],
+            $row['imputacion_total'],
+            $row['imputacion_detalle'],
+            $row['origen'],
+            $row['num_filiado'],
             $row['nombre_completo'],
-            $row['monto_pagar_total'],
-            $row['codigo_practica'],
-            $row['nombre_practica'],
-            $row['razon_social'],
-            $row['profesional'],
-            $row['cantidad_solicitada'],
-            $row['cantidad_autorizada'],
-            $row['monto_detalle'],
-            $row['diagnostico'],
-            $row['obrasocial'],
-            $row['usuario'],
+            $row['edad'],
+            $row['sexo'],
+            $row['dni'],
+            $row['practica'],
+            $row['importe_facturado'],
+            $row['importe_aprobado'],
         ];
     }
 }

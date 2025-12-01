@@ -409,6 +409,12 @@ Route::group([
     Route::post('updateRazonSocial', [App\Http\Controllers\configuracion\RazonSocialController::class, 'updateEstado']);
     Route::get('getIdRazonSocial', [App\Http\Controllers\configuracion\RazonSocialController::class, 'getIdRazonSocial']);
     Route::get('filterRazonSocial', [App\Http\Controllers\configuracion\RazonSocialController::class, 'getListaRazonSocial']);
+
+    Route::post('postsaveEntidad', [App\Http\Controllers\EntidadesBancariasController::class, 'saveEntidadBancaria']);
+    Route::get('getEntidad/{id}', [App\Http\Controllers\EntidadesBancariasController::class, 'filterEntidadBancaria']);
+    Route::get('listTipoEntidad', [App\Http\Controllers\EntidadesBancariasController::class, 'getEntidadBancaria']);
+    Route::get('listTipoEntidadActivos', [App\Http\Controllers\EntidadesBancariasController::class, 'getEntidadBancariaActivo']);
+    Route::post('updateEstadoEntidad', [App\Http\Controllers\EntidadesBancariasController::class, 'updateEstado']);
 });
 
 Route::group([

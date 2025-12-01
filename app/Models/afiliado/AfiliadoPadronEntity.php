@@ -9,6 +9,7 @@ use App\Models\DetalleTipoDocAfiliadoModelo;
 use App\Models\LocalidadModelo;
 use App\Models\LocatorioModelos;
 use App\Models\MotivosBajaModel;
+use App\Models\SexoModelo;
 use App\Models\TransaccionesModel;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -128,5 +129,10 @@ class AfiliadoPadronEntity extends Model
     public function baja()
     {
         return $this->hasOne(MotivosBajaModel::class, 'id_baja_motivos', 'id_baja_motivos');
+    }
+
+    public function sexo()
+    {
+        return $this->hasOne(SexoModelo::class, 'id_sexo', 'id_sexo');
     }
 }
