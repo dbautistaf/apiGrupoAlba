@@ -26,7 +26,9 @@ class FacturaPrestadorExport implements FromCollection, WithHeadings, ShouldAuto
     {
         //
         $sql = "SELECT vwm.cuit, vwm.razon_social, vwm.comprobante, vwm.refacturacion, vwm.delegacion, vwm.periodo, 
-               ma.articulo, tfd.cantidad, tfd.precio_neto, vwm.subtotal, vwm.total_iva, vwm.total_neto,
+               ma.articulo, 
+               tfd.cantidad, tfd.precio_neto, 
+               tfd.subtotal, tfd.monto_iva, tfd.total_importe,
                vwm.fecha_comprobante,  vwm.fecha_registra, vwm.total_aprobado, vwm.total_facturado,
                vwm.total_debitado, vwm.r_social, vwm.tipo_comprobante,
                vwm.observaciones
