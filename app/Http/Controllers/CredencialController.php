@@ -51,31 +51,38 @@ class CredencialController extends Controller
 
     public function printCarnetFamiliar(Request $request)
     {
-        /* $afiliados = DB::table('tb_padron')
-            ->leftJoin('tb_usuarios', 'tb_usuarios.dni', '=', 'tb_padron.dni')
-            ->whereNull('tb_usuarios.dni')
-            ->where('tb_padron.id_parentesco', '00')
+        /* $afiliados = DB::table('tb_padron as p')
+            ->where('p.id_parentesco', '00')
+            ->whereNotExists(function ($q) {
+                $q->select(DB::raw(1))
+                    ->from('tb_usuarios as u')
+                    ->whereColumn('u.documento', 'p.dni');
+            })
             ->get();
+        $data = [];
+
         foreach ($afiliados as $af) {
-            User::create([
-                'nombre_apellidos' => $af->nombre . ' ' . $af->apellidos,
-                'documento' => $af->dni,
-                'telefono' => $af->telefono,
-                'direccion' => '',
-                'fecha_alta' => $af->fe_alta,
-                'estado_cuenta' => true,
-                'fecha_cambio_clave' => $af->fe_alta,
-                'email' => $af->dni,
-                'codigo_verificacion' => null,
-                'password' => bcrypt($af->dni),
-                'cod_perfil' => 25,
-                'actualizo_datos' => 0
-            ]);
-        } */
+            $data[] = [
+                'nombre_apellidos'     => $af->nombre . ' ' . $af->apellidos,
+                'documento'            => $af->dni,
+                'telefono'             => $af->telefono,
+                'direccion'            => '',
+                'fecha_alta'            => $af->fe_alta,
+                'estado_cuenta'        => 1,
+                'fecha_cambio_clave'   => $af->fe_alta,
+                'email'                => $af->dni, 
+                'password'             => bcrypt($af->dni),
+                'cod_perfil'           => 25,
+                'actualizo_datos'      => 0
+            ];
+        }
+
+        DB::table('tb_usuarios')->insertOrIgnore($data); */
+
         $datos = AfiliadoPadronEntity::with('detalleplan.addplan', 'tipoParentesco', 'origen')->where('dni', $request->dni)->first();
         if ($datos->activo != 0) {
             $now = new \DateTime('now', new \DateTimeZone('America/Argentina/Buenos_Aires'));
-            $grupal = AfiliadoPadronEntity::with('detalleplan.addplan', 'tipoParentesco', 'origen')->where('cuil_tit', $datos->cuil_tit)->where('activo','1')->get();
+            $grupal = AfiliadoPadronEntity::with('detalleplan.addplan', 'tipoParentesco', 'origen')->where('cuil_tit', $datos->cuil_tit)->where('activo', '1')->get();
             $fecha_inicio = $now->format('Y-m-d');
             $fecha_final = $now->modify('last day of this month')->format('Y-m-d');
             $carnet = AfiliadoCredencialEntity::where('dni', $datos->dni)->first();
@@ -104,7 +111,7 @@ class CredencialController extends Controller
         $now = new \DateTime('now', new \DateTimeZone('America/Argentina/Buenos_Aires'));
         $fecha_inicio = $now->format('Y-m-d');
         $fecha_final = $now->modify('last day of this month')->format('Y-m-d');
-        $datos = AfiliadoPadronEntity::with('detalleplan.addplan', 'tipoParentesco', 'origen')->where('dni', $request->dni)->where('activo','1')->get();
+        $datos = AfiliadoPadronEntity::with('detalleplan.addplan', 'tipoParentesco', 'origen')->where('dni', $request->dni)->where('activo', '1')->get();
         if ($datos[0]->activo != 0) {
             $now = new \DateTime('now', new \DateTimeZone('America/Argentina/Buenos_Aires'));
             $datos = AfiliadoPadronEntity::with('detalleplan.addplan', 'tipoParentesco', 'origen')->where('dni', $request->dni)->get();
@@ -135,7 +142,7 @@ class CredencialController extends Controller
         $now = new \DateTime('now', new \DateTimeZone('America/Argentina/Buenos_Aires'));
         $datos = AfiliadoPadronEntity::with('detalleplan.addplan', 'tipoParentesco', 'origen')->where('dni', $user->documento)->first();
         if ($request->id == '0') {
-            $grupal = AfiliadoPadronEntity::with('detalleplan.addplan', 'tipoParentesco', 'origen')->where('cuil_tit', $datos->cuil_tit)->where('activo','1')->get();
+            $grupal = AfiliadoPadronEntity::with('detalleplan.addplan', 'tipoParentesco', 'origen')->where('cuil_tit', $datos->cuil_tit)->where('activo', '1')->get();
         } else {
             $grupal = AfiliadoPadronEntity::with('detalleplan.addplan', 'tipoParentesco', 'origen')->where('dni', $user->documento)->get();
         }
