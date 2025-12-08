@@ -6,7 +6,7 @@ return [
 
     'allowed_methods' => ['GET', 'POST', 'PUT', 'DELETE'],
 
-    'allowed_origins' => ['http://localhost:4200', 'https://grupoalbasalud.oridheansoft.com', 'https://fatfa.site'],
+    'allowed_origins' => ['http://localhost:4200', 'https://sistemasalud.oridheansoft.com', 'https://fatfa.site'],
 
     'allowed_origins_patterns' => [],
 

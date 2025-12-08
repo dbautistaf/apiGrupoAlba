@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Tesoreria\Repository;
 
 use App\Models\Tesoreria\TesPagoEntity;
+use App\Models\Tesoreria\TesPagosParciales;
 use App\Models\Tesoreria\TestDetalleComprobantesPagoEntity;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -69,7 +70,9 @@ class TesPagosRepository
                 'opa.proveedor',
                 'opa.proveedor.datosBancarios',
                 'opa.factura.razonSocial',
-                'comprobantes'
+                'comprobantes',
+                'pagosParciales',
+                'pagosParciales.formaPago'
             ]);
             $jquery->where('tipo_factura', 'PROVEEDOR');
         } else {
@@ -80,7 +83,9 @@ class TesPagosRepository
                 'opa.prestador',
                 'opa.prestador.datosBancarios',
                 'opa.factura.razonSocial',
-                'comprobantes'
+                'comprobantes',
+                'pagosParciales',
+                'pagosParciales.formaPago'
             ]);
             $jquery->where('tipo_factura', 'PRESTADOR');
         }
@@ -134,10 +139,9 @@ class TesPagosRepository
     public function findByConfirmarPago($params)
     {
         $pago = TesPagoEntity::find($params->id_pago);
-        $pago->monto_opa = $params->monto_opa;
         $pago->id_cuenta_bancaria = $params->id_cuenta_bancaria;
-        $pago->fecha_confirma_pago = $params->fecha_confirma_pago;
-        $pago->id_forma_pago = $params->id_forma_pago;
+        $pago->fecha_confirma_pago = $this->fechaActual;
+        $pago->id_forma_pago = 0;
         $pago->monto_pago = $params->anticipo == '1' ? $params->monto_anticipado : $params->monto_pago;
         $pago->id_estado_orden_pago = 5;
         $pago->anticipo = $params->anticipo;
@@ -154,6 +158,21 @@ class TesPagosRepository
         $pago->banco = $params->banco;
 
         $pago->update();
+        foreach ($params->lista_pagos as $pagos) {
+            if ($pagos->id_pago_parcial != null) {
+                TesPagosParciales::create([
+                    'fecha_registra' => $this->fechaActual,
+                    'fecha_confirma_pago' => $pagos->fecha_confirma_pago,
+                    'id_forma_pago' => $pagos->id_forma_pago,
+                    'monto_pago' => $pagos->monto_pago,
+                    'monto_opa' => $pagos->monto_opa,
+                    'num_cheque' => $pagos->num_cheque,
+                    'id_usuario' => $this->user->cod_usuario,
+                    'id_pago' => $pago->id_pago,
+                    'monto_restante' => $pagos->monto_restante,
+                ]);
+            }
+        }
         return $pago;
     }
 

@@ -109,13 +109,19 @@ class TesPagosController extends Controller
             DB::beginTransaction();
             $params = json_decode($request->data);
             $opaFactus = null;
-            $monto_Validar = $params->anticipo == '1' ? $params->monto_anticipado : $params->monto_pago;
+
 
             // @VERIFICAMOS SI TENEMOS UN FONDOS EN LA CUENTA DE PAGO
-            if (!$cuenta->findByVerificarSaldoCuenta($params->id_cuenta_bancaria, $monto_Validar)) {
-                DB::rollBack();
-                return response()->json(['message' => 'No hemos podido procesar tu solicitud de pago porque la cuenta bancaria seleccionada no tiene fondos suficientes. Por favor, revisa tu saldo e inténtalo otra vez.'], 409);
+            $monto_total = $params->anticipo == '1' ? $params->monto_anticipado : 0;
+            foreach ($params->lista_pagos as $pagos) {
+                $monto_Validar = $pagos->monto_pago;
+                if (!$cuenta->findByVerificarSaldoCuenta($params->id_cuenta_bancaria, $monto_Validar)) {
+                    DB::rollBack();
+                    return response()->json(['message' => 'No hemos podido procesar tu solicitud de pago porque la cuenta bancaria seleccionada no tiene fondos suficientes. Por favor, revisa tu saldo e inténtalo otra vez.'], 409);
+                }
+                $monto_total = $monto_total + $monto_Validar;
             }
+
             // @CONFIRMAMOS EL PAGO || CONFIRMA MONTO
             $pagoDb = $pago->findByConfirmarPago($params);
 
@@ -132,13 +138,13 @@ class TesPagosController extends Controller
                 $pago->findByCargarComprobantePago($key['nombre'], $params->id_pago);
             }
 
-
             // @CONFIRMAMOS LA OPA || **PAGO ANTICIPADO**
+
             if ($params->anticipo == '1') {
                 //@OBTENER LA DATA DE LA OPA
-                $dataOpa = $opa->findById($params->id_orden_pago);
+                $dataOpa = $opa->findById($params->id_pago);
                 //@OBTENER LA SUMA DE LOS PAGOS ANTICIPADOS
-                $sumMontosTotalAnticipados = $pago->findBySumarDetallePagosAnticipados($params->id_orden_pago);
+                $sumMontosTotalAnticipados = $pago->findBySumarDetallePagosAnticipados($params->id_pago);
                 //@VALIDAR QUE EL ANTICIPO NO SEA MAYOR AL VALOR DE LA OPA
                 if ($sumMontosTotalAnticipados > $dataOpa->monto_orden_pago) {
                     DB::rollBack();
@@ -185,9 +191,9 @@ class TesPagosController extends Controller
             }
 
             // @REGISTRAMOS EL RETIRO DE LA CUENTA BANCARIA
-            $cuenta->findByRetiroCuenta($params->id_cuenta_bancaria, $monto_Validar);
+            $cuenta->findByRetiroCuenta($params->id_cuenta_bancaria, $monto_total);
             // @REGISTRAMOS EL MOVIMIENTO DE LA CUENTA BANCARIA
-            $cuenta->findByRegistrarMovimiento($params->id_cuenta_bancaria, $monto_Validar, 'EGRESO', $params->id_pago, null, 'OPA');
+            $cuenta->findByRegistrarMovimiento($params->id_cuenta_bancaria, $monto_total, 'EGRESO', $params->id_pago, null, 'OPA');
 
             DB::commit();
             return response()->json(['message' => 'El Pago ha sido confirmado y procesado con éxito.']);
