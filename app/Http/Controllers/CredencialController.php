@@ -82,7 +82,8 @@ class CredencialController extends Controller
         $datos = AfiliadoPadronEntity::with('detalleplan.addplan', 'tipoParentesco', 'origen')->where('dni', $request->dni)->first();
         if ($datos->activo != 0) {
             $now = new \DateTime('now', new \DateTimeZone('America/Argentina/Buenos_Aires'));
-            $grupal = AfiliadoPadronEntity::with('detalleplan.addplan', 'tipoParentesco', 'origen')->where('cuil_tit', $datos->cuil_tit)->where('activo', '1')->get();
+            $grupal = AfiliadoPadronEntity::with('detalleplan.addplan', 'tipoParentesco', 'origen')->where('cuil_tit', $datos->cuil_tit)->where('activo', '1')
+            ->OrderBy('id_parentesco','asc')->get();
             $fecha_inicio = $now->format('Y-m-d');
             $fecha_final = $now->modify('last day of this month')->format('Y-m-d');
             $carnet = AfiliadoCredencialEntity::where('dni', $datos->dni)->first();
