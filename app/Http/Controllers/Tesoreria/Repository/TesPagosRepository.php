@@ -159,7 +159,7 @@ class TesPagosRepository
 
         $pago->update();
         foreach ($params->lista_pagos as $pagos) {
-            if ($pagos->id_pago_parcial != null) {
+            if (empty($pagos->id_pago_parcial)) {
                 TesPagosParciales::create([
                     'fecha_registra' => $this->fechaActual,
                     'fecha_confirma_pago' => $pagos->fecha_confirma_pago,
