@@ -571,6 +571,9 @@ Route::group([
     Route::get('validar-internacion', [App\Http\Controllers\Internaciones\Services\InternacionesController::class, 'validarInternacion']);
     Route::post('save-notas-internacion', [App\Http\Controllers\Internaciones\Services\InternacionesController::class, 'postSaveNotasInternacion']);
     
+    
+
+
     Route::get('export-internacion', [App\Http\Controllers\Internaciones\Services\InternacionesController::class, 'getExportInternacion']);
 });
 
@@ -806,6 +809,10 @@ Route::group([
     Route::get('detalle-comprobantes-factura', [App\Http\Controllers\facturacion\FacturacionProcesosController::class, 'getListarDetalleComprobantes']);
 
     Route::post('procesar', [App\Http\Controllers\facturacion\FacturacionProcesosController::class, 'postProcesarFactura']);
+    // Route para recibir facturas automatizadas (API externa)
+    Route::post('automation', [App\Http\Controllers\facturacion\Services\FacturaAutomaticaController::class, 'recibirFactura']);
+
+    
     Route::post('auditar', [App\Http\Controllers\facturacion\AuditarFacturaController::class, 'postAuditarFactura']);
     Route::post('alta-tipo-letra-factura', [App\Http\Controllers\facturacion\FacturacionTipoLetraController::class, 'getProcesarTipoLetraFactura']);
     Route::post('cambiar-estado', [App\Http\Controllers\facturacion\FacturasPrestadoresController::class, 'getActualizarEstadoLiquidacion']);
@@ -821,6 +828,8 @@ Route::group([
     Route::get('exportarFacturaProveedor', [App\Http\Controllers\facturacion\FacturasPrestadoresController::class, 'getExportFacturaProveedor']);
 
     Route::get('comprobante_relacionado', [App\Http\Controllers\facturacion\FacturacionProcesosController::class, 'selectComprobanteRelacionado']);
+
+    
 });
 
 Route::group([
