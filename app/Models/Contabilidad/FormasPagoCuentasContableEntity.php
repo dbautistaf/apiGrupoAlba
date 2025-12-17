@@ -19,7 +19,8 @@ class FormasPagoCuentasContableEntity extends Model
         'cod_usuario_crea',
         'fecha_registra',
         'cod_usuario_modifica',
-        'fecha_modifica'
+        'fecha_modifica',
+        'vigente'
     ];
 
     public function formaPago()

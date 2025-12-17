@@ -2,19 +2,20 @@
 
 namespace App\Models\Contabilidad;
 
+use App\Models\facturacion\TipoFacturacionEntity;
 use App\Models\proveedor\MatrizProveedoresEntity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class ProveedorCuentaContableEntity extends Model
+class FamiliaCuentaContableEntity extends Model
 {
     use HasFactory;
-    protected $table = 'tb_cont_proveedor_cuenta_contable';
-    protected $primaryKey = 'id_proveedor_cuenta_contable';
+    protected $table = 'tb_cont_familia_cuenta_contable';
+    protected $primaryKey = 'id_familia_cuenta_contable';
     public $timestamps = false;
 
     protected $fillable = [
-        'id_proveedor',
+        'id_tipo_factura',
         'id_detalle_plan',
         'cod_usuario_crea',
         'fecha_registra',
@@ -23,9 +24,9 @@ class ProveedorCuentaContableEntity extends Model
         'vigente'
     ];
 
-    public function proveedor()
+    public function tipoFactura()
     {
-        return $this->hasOne(MatrizProveedoresEntity::class, 'cod_proveedor', 'id_proveedor');
+        return $this->hasOne(TipoFacturacionEntity::class, 'id_tipo_factura', 'id_tipo_factura');
     }
 
     public function detallePlan()

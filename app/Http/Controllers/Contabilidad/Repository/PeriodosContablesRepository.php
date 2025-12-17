@@ -53,7 +53,7 @@ class PeriodosContablesRepository
         if (!is_null($params->estado)) {
             $query->where('activo', $params->estado);
         }
-        $query->orderBy('id_periodo_contable');
+        $query->orderBy('periodo','desc');
         return $query->get();
     }
 
@@ -63,10 +63,34 @@ class PeriodosContablesRepository
             ->where('activo', '1')
             ->exists();
     }
+    public function findByExistsPeriodoActivo($periodo)
+    {
+        return PeriodosContablesEntity::where('periodo', $periodo)
+            ->where('activo', '1')
+            ->first();
+    }
 
     public function findByPeriodoContableActivo()
     {
         return PeriodosContablesEntity::where('activo', '1')
             ->first();
+    }
+
+    public function toggleActivo($id)
+    {
+        $periodo = PeriodosContablesEntity::find($id);
+        $periodo->activo = !$periodo->activo;
+        $periodo->cod_usuario_modifica = $this->user->cod_usuario;
+        $periodo->fecha_modifica = $this->fechaActual;
+        $periodo->save();
+    }
+
+    public function toggleVigente($id)
+    {
+        $periodo = PeriodosContablesEntity::find($id);
+        $periodo->vigente = !$periodo->vigente;
+        $periodo->cod_usuario_modifica = $this->user->cod_usuario;
+        $periodo->fecha_modifica = $this->fechaActual;
+        $periodo->save();
     }
 }

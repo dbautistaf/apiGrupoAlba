@@ -21,6 +21,7 @@ class DetallePlanCuentasEntity extends Model
         'id_tipo_cuenta',
         'id_periodo_contable',
         'vigente',
+        'imputable',
         'grupo',
         'subgrupo',
         'id_detalle_nivel',

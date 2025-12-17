@@ -256,7 +256,7 @@ class DeudaAporteEmpresaController extends Controller
         $mpdf->fontdata['centurygothic'] = [
             'R' => 'resources/fonts/Quicksand-Regular.ttf',   // Fuente normal
             'B' => 'resources/fonts/Quicksand-Bold.ttf',     // Negrita
-            'I' => 'resources/fonts/Quicksand-Light.ttf',   // Cursiva
+            'I' => 'resources/fonts/Quicksand-Light.ttf',   // Cursiva 
             'BI' => 'resources/fonts/Quicksand-SemiBold.ttf' // Negrita + Cursiva
         ];
 

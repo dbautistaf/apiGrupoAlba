@@ -570,7 +570,7 @@ Route::group([
     Route::post('update-estado-internacion', [App\Http\Controllers\Internaciones\Services\InternacionesController::class, 'postUpdateEstado']);
     Route::get('validar-internacion', [App\Http\Controllers\Internaciones\Services\InternacionesController::class, 'validarInternacion']);
     Route::post('save-notas-internacion', [App\Http\Controllers\Internaciones\Services\InternacionesController::class, 'postSaveNotasInternacion']);
-    
+
     Route::get('export-internacion', [App\Http\Controllers\Internaciones\Services\InternacionesController::class, 'getExportInternacion']);
 });
 
@@ -1297,7 +1297,7 @@ Route::group(
         Route::get('getListAcuerdosPago', [App\Http\Controllers\Fiscalizacion\AcuerdoPagoController::class, 'getListAcuerdosPago']);
         Route::delete('eliminarAcuerdo/{id}', [App\Http\Controllers\Fiscalizacion\AcuerdoPagoController::class, 'eliminarAcuerdo']);
         // Route::get('acuerdo-pago/{id}', [App\Http\Controllers\Fiscalizacion\AcuerdoPagoController::class, 'getAcuerdoPagoById']);
-
+    
         // Rutas para tb_fisca_cobranza_periodo
         Route::get('cobranzas-periodo', [App\Http\Controllers\Fiscalizacion\CobranzaPeriodoController::class, 'getListCobranzasPeriodo']);
         Route::get('cobranza-periodo/{id}', [App\Http\Controllers\Fiscalizacion\CobranzaPeriodoController::class, 'getCobranzaPeriodoById']);
@@ -1344,8 +1344,67 @@ Route::group(
         Route::get('getFormasPago', [App\Http\Controllers\Fiscalizacion\FormasPagoController::class, 'getListFormasPago']);
     }
 
-    
+
 );
+
+
+Route::group([
+    'middleware' => ['jwt.verify'],
+    'prefix' => '/v1/contabilidad'
+], function ($router) {
+    Route::get('cs-periodos-contables', [App\Http\Controllers\Contabilidad\Services\PeriodosContablesService::class, 'getListar']);
+    Route::get('cs-tipo-plan-cuenta', [App\Http\Controllers\Contabilidad\Services\CatalogoController::class, 'getTipoPlanCuenta']);
+    Route::get('cs-planes-cuentas', [App\Http\Controllers\Contabilidad\Services\PlanesCuentasController::class, 'getListar']);
+    Route::get('obt-plan-cuenta', [App\Http\Controllers\Contabilidad\Services\PlanesCuentasController::class, 'getId']);
+    Route::get('cs-tipo-niveles', [App\Http\Controllers\Contabilidad\Services\CatalogoController::class, 'getTipoNiveles']);
+    Route::get('cs-tipo-planes-organico', [App\Http\Controllers\Contabilidad\Services\CatalogoController::class, 'getTipoPlanOrganicoCuenta']);
+    Route::get('cs-detalle-niveles', [App\Http\Controllers\Contabilidad\Services\PlanesCuentasController::class, 'getListarDetalleNiveles']);
+    Route::get('cs-matriz-planes-cuentas', [App\Http\Controllers\Contabilidad\Services\PlanesCuentasController::class, 'getListarMatrizPlanesCuenta']);
+    Route::get('cs-proveedor-plan-cuenta', [App\Http\Controllers\Contabilidad\Services\ProveedorPlanesCuentaController::class, 'getListar']);
+    Route::get('cs-plan-cuenta-padres', [App\Http\Controllers\Contabilidad\Services\PlanesCuentasController::class, 'getListarCuentasPrincipales']);
+    Route::get('cs-forma-pago-plan-cuenta', [App\Http\Controllers\Contabilidad\Services\FormaPagoCuentaContableController::class, 'getListar']);
+    Route::get('cs-familia-plan-cuenta', [App\Http\Controllers\Contabilidad\Services\FamiliaPlanesCuentasController::class, 'getListar']);
+    Route::get('cs-impuesto-plan-cuenta', [App\Http\Controllers\Contabilidad\Services\ImpuestoCuentaContableController::class, 'getListar']);
+    Route::get('cs-cuenta-bancaria-plan-cuenta', [App\Http\Controllers\Contabilidad\Services\BancoCuentaContableController::class, 'getListar']);
+    Route::get('cs-asientos-contables', [App\Http\Controllers\Contabilidad\Services\AsientoContableController::class, 'getListar']);
+    Route::get('obt-asiento-contable', [App\Http\Controllers\Contabilidad\Services\AsientoContableController::class, 'getBuscarId']);
+    Route::get('cs-tipo-retencion', [App\Http\Controllers\Contabilidad\Services\CatalogoController::class, 'getTipoRetencion']);
+    Route::get('cs-tipo-impuesto', [App\Http\Controllers\Contabilidad\Services\CatalogoController::class, 'getTipoImpuesto']);
+    Route::get('cs-retencion-cuenta-contable', [App\Http\Controllers\Contabilidad\Services\RetencionCuentaContableController::class, 'getListar']);
+    Route::get('cs-plan-cuenta-completo', [App\Http\Controllers\Contabilidad\Services\PlanesCuentasController::class, 'getListarCuentasCompleto']);
+    Route::get('get-imputaciones-contables', [App\Http\Controllers\Contabilidad\Services\ImputacionCuentaContableController::class, 'getListarTipoImputacionContable']);
+
+    Route::post('psr-periodo-contable', [App\Http\Controllers\Contabilidad\Services\PeriodosContablesService::class, 'getProcesar']);
+    Route::post('toggle-activo/{id_periodo_contable}', [App\Http\Controllers\Contabilidad\Services\PeriodosContablesService::class, 'toggleActivo']);
+    Route::post('toggle-vigente/{id_periodo_contable}', [App\Http\Controllers\Contabilidad\Services\PeriodosContablesService::class, 'toggleVigente']);
+
+    Route::post('relacionar-imputacion-plan-cuenta', [App\Http\Controllers\Contabilidad\Services\ImputacionCuentaContableController::class, 'getProcesar']);
+    Route::post('psr-plan-cuenta', [App\Http\Controllers\Contabilidad\Services\PlanesCuentasController::class, 'getProcesar']);
+    Route::post('psr-nuevo-nivel', [App\Http\Controllers\Contabilidad\Services\PlanesCuentasController::class, 'getAgregarNivel']);
+    Route::post('psr-estructura-plan-cuenta', [App\Http\Controllers\Contabilidad\Services\PlanesCuentasController::class, 'getAgregarItemEstructuraPlanCuenta']);
+    Route::post('psr-proveedor-plan-cuenta', [App\Http\Controllers\Contabilidad\Services\ProveedorPlanesCuentaController::class, 'getProcesar']);
+    Route::post('psr-forma-pago-plan-cuenta', [App\Http\Controllers\Contabilidad\Services\FormaPagoCuentaContableController::class, 'getProcesar']);
+    Route::post('psr-familia-plan-cuenta', [App\Http\Controllers\Contabilidad\Services\FamiliaPlanesCuentasController::class, 'getProcesar']);
+    Route::post('psr-cuenta-bancaria-plan-cuenta', [App\Http\Controllers\Contabilidad\Services\BancoCuentaContableController::class, 'getProcesar']);
+    Route::post('psr-impuesto-plan-cuenta', [App\Http\Controllers\Contabilidad\Services\ImpuestoCuentaContableController::class, 'getProcesar']);
+    Route::post('psr-retencion-cuenta-contable', [App\Http\Controllers\Contabilidad\Services\RetencionCuentaContableController::class, 'getProcesar']);
+    Route::post('psr-asiento-contable', [App\Http\Controllers\Contabilidad\Services\AsientoContableController::class, 'getProcesar']);
+    Route::post('up-anular-asiento-contable', [App\Http\Controllers\Contabilidad\Services\AsientoContableController::class, 'getAnularAsientoContableId']);
+
+    Route::delete('eliminar-nivel', [App\Http\Controllers\Contabilidad\Services\PlanesCuentasController::class, 'getEliminarNivel']);
+    Route::delete('eliminar-item-plan-cuenta', [App\Http\Controllers\Contabilidad\Services\PlanesCuentasController::class, 'getEliminarDetalleItem']);
+    Route::delete('eliminar-asiento-detalle-item', [App\Http\Controllers\Contabilidad\Services\AsientoContableController::class, 'getEliminarDetalleId']);
+    //libro Diario
+    Route::get('cs-resumen-libro-diario', [App\Http\Controllers\Contabilidad\Services\LibroDiarioController::class, 'getListarResumenDiario']);
+    Route::get('getReporteLibroDiario', [App\Http\Controllers\Contabilidad\Services\LibroDiarioController::class, 'getReporteLibroDiario']);
+    //Libro Mayor
+    Route::get('getLibroMayor', [App\Http\Controllers\Contabilidad\Services\LibroMayorController::class, 'getLibroMayor']);
+    Route::get('getReporteLibroMayor', [App\Http\Controllers\Contabilidad\Services\LibroMayorController::class, 'getReporteLibroMayor']);
+    //Balance
+    Route::get('getBalanceSaldo', [App\Http\Controllers\Contabilidad\Services\BalanceController::class, 'getBalanceSaldo']);
+    Route::get('getExportarBalanceSaldo', [App\Http\Controllers\Contabilidad\Services\BalanceController::class, 'getExportarBalanceSaldo']);
+});
+
 
 Route::group([
     'middleware' => ['jwt.verify'],

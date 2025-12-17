@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\facturacion;
 
+use App\Http\Controllers\Contabilidad\Repository\AsientoContableRepository;
+use App\Http\Controllers\Contabilidad\Repository\PeriodosContablesRepository;
 use App\Http\Controllers\facturacion\repository\FacturaRepository;
 use App\Http\Controllers\Tesoreria\Repository\TesPagosRepository;
 use App\Http\Controllers\Tesoreria\Repository\TestOrdenPagoRepository;
@@ -24,7 +26,9 @@ class FacturacionProcesosController extends Controller
         TestOrdenPagoRepository $tesoreria,
         TesPagosRepository $tesPagosRepository,
         ManejadorDeArchivosUtils $storageFile,
+        AsientoContableRepository $asientoContableRepository,
         GeneradorCodigosUtils $generadorCodigos,
+        PeriodosContablesRepository $periodoContableRepositorio,
         Request $request
     ) {
         DB::beginTransaction();
@@ -50,6 +54,32 @@ class FacturacionProcesosController extends Controller
                     ], 409);
                 }
 
+                // @VALIDAR CONFIGURACIÓN CONTABLE ANTES DE PROCESAR LA FACTURA
+                if (!is_null($cabecera->id_proveedor) && $cabecera->id_tipo_factura == 16) {
+                    // Verificar que el proveedor tenga cuenta contable asignada
+                    // if (!$asientoContableRepository->verificarProveedorTieneCuentaContable($cabecera->id_proveedor)) {
+                    //     DB::rollBack();
+                    //     return response()->json([
+                    //         'message' => "No se puede procesar la factura. El proveedor seleccionado no tiene una cuenta contable asignada. Por favor, configure la relación proveedor-cuenta contable antes de continuar."
+                    //     ], 422);
+                    // }
+
+                    // Verificar que tenga cuenta de gasto definida
+                    // if (!$asientoContableRepository->verificarFamiliaTieneCuentaContable($cabecera->id_tipo_factura)) {
+                    //     DB::rollBack();
+                    //     return response()->json([
+                    //         'message' => "No se puede procesar la factura. La imputacion seleccionada no tiene una cuenta contable asignada. Por favor, configure la relación imputacion-cuenta contable antes de continuar."
+                    //     ], 422);
+                    // }
+
+                    // if (is_null($cabecera->id_tipo_imputacion_sintetizada)) {
+                    //     DB::rollBack();
+                    //     return response()->json([
+                    //         'message' => "No se puede procesar la factura. Debe seleccionar una cuenta de imputación contable para el gasto."
+                    //     ], 422);
+                    // }
+                }
+
                 $facturacion = $repo->findBySaveDatosFactura($cabecera, $user->cod_usuario, $nombre_archivo);
 
                 if (count($detalle) > 0) {
@@ -68,6 +98,68 @@ class FacturacionProcesosController extends Controller
                     $archivosAdjuntos = $storageFile->findByCargaMasivaArchivos("FACTURA_" . $cabecera->tipo_letra . $cabecera->numero . $cabecera->sucursal, 'facturacion/comprobantes', $request);
                     $repo->findBySaveDetalleComprobantesFactura($archivosAdjuntos, $facturacion->id_factura);
                 }
+
+                // ============================================================
+                // CREAR ASIENTO CONTABLE AUTOMÁTICO
+                // ============================================================
+                // @CREAR ASIENTO CONTABLE AUTOMÁTICO PARA FACTURAS DE PROVEEDOR
+                if ($cabecera->idImputacionHaber) {
+                    //Período contable activo
+                    try {
+                        $formatoCorto = substr($cabecera->periodo, 2, 2) . substr($cabecera->periodo, 5, 2);
+                        $periodoContableActivo = $periodoContableRepositorio->findByExistsPeriodoActivo($formatoCorto);
+
+                        if (!$periodoContableActivo) {
+                            throw new \Exception("No se encontró un período contable activo para registrar el asiento contable de la factura.");
+                        }
+                    } catch (\Throwable $th) {
+                        DB::rollBack();
+                        return response()->json([
+                            'message' => $th->getMessage()
+                        ], 404);
+                    }
+                    // Obtener datos del proveedor desde la factura
+                    $facturaConProveedor = $repo->findById($facturacion->id_factura);
+
+                    $datosFactura = [
+                        // 'id_proveedor' => $facturacion->id_proveedor,
+                        'cuit' => $facturaConProveedor->proveedor->cuit ?? $facturaConProveedor->prestador->cuit,
+                        'nombre' => $facturaConProveedor->proveedor->razon_social ?? $facturaConProveedor->prestador->razon_social,
+                        'numero_factura' => $cabecera->tipo_letra . ' ' . $cabecera->sucursal . '-' . $cabecera->numero,
+                        'total_factura' => $facturacion->total_neto,
+                        'id_cuenta_gasto' => $cabecera->id_tipo_imputacion_sintetizada,
+                        'id_tipo_factura' => $facturacion->id_tipo_factura,
+                        'idImputacionHaber' => $cabecera->idImputacionHaber,
+                        'ImputacionDebe' => array_map(function ($item) {
+                            return [
+                                'idImputacionDebe' => $item->idImputacionDebe ?? null,
+                                'nombreDebe' => $item->nombreDebe ?? null,
+                                'codigoDebe' => $item->codigoDebe ?? null,
+                                'totalImporteDebe' => $item->total_importe ?? null,
+                            ];
+                        }, $detalle),
+                    ];
+                    // Crear asiento contable (las validaciones ya se hicieron arriba)
+                    try {
+                        $asientoContableRepository->crearAsientoFactura($datosFactura, $periodoContableActivo->id_periodo_contable);
+                    } catch (\Exception $e) {
+                        DB::rollBack();
+
+                        // Verificar si el error es específico de imputación/familia
+                        if (strpos($e->getMessage(), 'imputación') !== false && strpos($e->getMessage(), 'cuenta contable asignada') !== false) {
+                            return response()->json([
+                                'message' => $e->getMessage()
+                            ], 422);
+                        }
+
+                        // Para otros errores de validación contable
+                        return response()->json([
+                            'message' => $e->getMessage()
+                        ], 423);
+                    }
+                }
+
+
                 /* || $facturacion->id_tipo_factura == 17 */
                 if (!is_null($facturacion->id_proveedor)) {
                     $opaData = (object) [

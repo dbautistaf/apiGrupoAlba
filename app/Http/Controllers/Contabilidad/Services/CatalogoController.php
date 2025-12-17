@@ -28,4 +28,8 @@ class CatalogoController extends Controller
     {
         return response()->json($repo->findByListTipoRetencion());
     }
+    public function getTipoImpuesto(CatalogoContabilidadRepository $repo)
+    {
+        return response()->json($repo->findByListTipoImpuesto());
+    }
 }

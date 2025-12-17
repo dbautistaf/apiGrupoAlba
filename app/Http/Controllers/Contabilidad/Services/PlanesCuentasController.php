@@ -72,7 +72,7 @@ class PlanesCuentasController extends Controller
             return response()->json(['error' => 'Cuenta no encontrada'], 404);
         }
         $padronCuenta = [];
-        $main =  new PadronMapaPlanesDTOs(
+        $main = new PadronMapaPlanesDTOs(
             $cuentaCabecera->plan_cuenta,
             true,
             'bx bxs-key',
@@ -175,5 +175,10 @@ class PlanesCuentasController extends Controller
     public function getListarCuentasPrincipales(Request $request, PlanesCuentasRepository $repo)
     {
         return response()->json($repo->findByDetalleCuentasPlanesPrincipal($request->id_nivel));
+    }
+    public function getListarCuentasCompleto(Request $request, PlanesCuentasRepository $repo)
+    {
+        $search = $request->query('search');
+        return response()->json($repo->findByDetalleCuentasPlanesCompleto($search));
     }
 }

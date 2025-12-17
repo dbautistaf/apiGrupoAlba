@@ -71,7 +71,7 @@ class PlanesCuentasRepository
     {
         return DetalleNivelesPlanCuentaEntity::create([
             'id_nivel_padre' => $params->id_nivel_padre,
-            'id_tipo_nivel_plan_cuenta' =>  $params->id_tipo_nivel_plan_cuenta,
+            'id_tipo_nivel_plan_cuenta' => $params->id_tipo_nivel_plan_cuenta,
             'id_plan_cuenta' => $params->id_plan_cuenta,
             'vigente' => '1'
         ]);
@@ -86,13 +86,13 @@ class PlanesCuentasRepository
 
     public function findByDeleteNivel($id)
     {
-        $padre =  DetalleNivelesPlanCuentaEntity::find($id);
+        $padre = DetalleNivelesPlanCuentaEntity::find($id);
         return $padre->delete();
     }
 
     public function findByAgregarItemEstructuraPalnCuenta($params)
     {
-        return  DetallePlanCuentasEntity::create([
+        return DetallePlanCuentasEntity::create([
             'id_plan_cuenta' => $params->id_plan_cuenta,
             'id_nivel_plan_cuenta' => $params->id_nivel_plan_cuenta,
             'codigo_cuenta' => $params->codigo_cuenta,
@@ -205,10 +205,20 @@ class PlanesCuentasRepository
     {
         return DetallePlanCuentasEntity::with(['periodo', 'tipo', 'plan'])
             ->where('id_nivel_plan_cuenta', $idNivel)
-            ->whereHas('periodo', function ($query) use ($idNivel) {
-                $query->where('activo', '1');
-            })
+            // ->whereHas('periodo', function ($query) use ($idNivel) {
+            //     $query->where('activo', '1');
+            // })
             ->get();
+    }
+    public function findByDetalleCuentasPlanesCompleto($search = null)
+    {
+        $query = DetallePlanCuentasEntity::with(['periodo', 'tipo', 'plan']);
+
+        if ($search) {
+            $query->where('cuenta', 'LIKE', '%' . $search . '%');
+        }
+
+        return $query->get();
     }
 
 
