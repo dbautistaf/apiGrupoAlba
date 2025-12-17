@@ -138,27 +138,13 @@ class TesPagosRepository
 
     public function findByConfirmarPago($params)
     {
+
+        $pagosparciales = 0;
+        $estado = null;
         $pago = TesPagoEntity::find($params->id_pago);
-        $pago->id_cuenta_bancaria = $params->id_cuenta_bancaria;
-        $pago->fecha_confirma_pago = $this->fechaActual;
-        $pago->id_forma_pago = 0;
-        $pago->monto_pago = $params->anticipo == '1' ? $params->monto_anticipado : $params->monto_pago;
-        $pago->id_estado_orden_pago = 5;
-        $pago->anticipo = $params->anticipo;
-        $pago->monto_anticipado = $params->monto_anticipado;
-        $pago->num_cheque = $params->num_cheque;
-        $pago->fecha_probable_pago = $params->fecha_probable_pago;
-        $pago->observaciones = $params->observaciones;
 
-        $pago->id_forma_cobro = is_numeric($params->id_forma_cobro) ? $params->id_forma_cobro : null;
-        $pago->monto_cobro = $params->monto_cobro;
-        $pago->fecha_confirma_cobro = $params->fecha_confirma_cobro;
-        $pago->cuenta_bancaria = $params->cuenta_bancaria;
-        $pago->imputacion_contable = $params->imputacion_contable;
-        $pago->banco = $params->banco;
-
-        $pago->update();
         foreach ($params->lista_pagos as $pagos) {
+            $pagosparciales = $pagosparciales + $pagos->monto_pago;
             if (empty($pagos->id_pago_parcial)) {
                 TesPagosParciales::create([
                     'fecha_registra' => $this->fechaActual,
@@ -173,6 +159,32 @@ class TesPagosRepository
                 ]);
             }
         }
+        if ($pagosparciales < $pago->monto_opa) {
+            $estado = 6;
+        } elseif ($pagosparciales == $pago->monto_opa) {
+            $estado = 5;
+        }
+
+        $pago->id_cuenta_bancaria = $params->id_cuenta_bancaria;
+        $pago->fecha_confirma_pago = $this->fechaActual;
+        $pago->id_forma_pago = 0;
+        $pago->monto_pago = $params->anticipo == '1' ? $params->monto_anticipado : $params->monto_pago;
+        $pago->id_estado_orden_pago = $estado;
+        $pago->anticipo = $params->anticipo;
+        $pago->monto_anticipado = $params->monto_anticipado;
+        $pago->num_cheque = $params->num_cheque;
+        $pago->fecha_probable_pago = $params->fecha_probable_pago;
+        $pago->observaciones = $params->observaciones;
+
+        $pago->id_forma_cobro = is_numeric($params->id_forma_cobro) ? $params->id_forma_cobro : null;
+        $pago->monto_cobro = $params->monto_cobro;
+        $pago->fecha_confirma_cobro = $params->fecha_confirma_cobro;
+        $pago->cuenta_bancaria = $params->cuenta_bancaria;
+        $pago->imputacion_contable = $params->imputacion_contable;
+        $pago->banco = $params->banco;
+
+        $pago->update();
+
         return $pago;
     }
 
