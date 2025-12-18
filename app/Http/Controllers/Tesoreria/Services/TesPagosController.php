@@ -74,7 +74,8 @@ class TesPagosController extends Controller
                 $opa->findByUpdateEstado($param['id_orden_pago'], 4);
                 $opa->findByConfirmarFechaProbablePago($param['id_orden_pago'], $param['fecha_probable_pago'], $param['cuotas']);
                 $opa->findByConfirmarPagoEmergencia($param['id_orden_pago'], $param['pago_emergencia']);
-            };
+            }
+            ;
             DB::commit();
             return response()->json(['message' => 'Opa confirmada correctamente, enviada a Pagos']);
         } catch (\Throwable $th) {
@@ -102,7 +103,8 @@ class TesPagosController extends Controller
         ManejadorDeArchivosUtils $storage,
         GeneradorCodigosUtils $generadorCodigos,
         FacturaRepository $facturaRepository,
-        AsientoContableRepository $asientoContableRepository
+        AsientoContableRepository $asientoContableRepository,
+        PeriodosContablesRepository $periodoContableRepositorio,
     ) {
         try {
 
@@ -194,6 +196,59 @@ class TesPagosController extends Controller
             $cuenta->findByRetiroCuenta($params->id_cuenta_bancaria, $monto_total);
             // @REGISTRAMOS EL MOVIMIENTO DE LA CUENTA BANCARIA
             $cuenta->findByRegistrarMovimiento($params->id_cuenta_bancaria, $monto_total, 'EGRESO', $params->id_pago, null, 'OPA');
+
+            // ============================================================
+            // CREAR ASIENTO CONTABLE AUTOMÁTICO
+            // =========================================================== 
+            // if (!is_null($opaFactus)) {
+            //     if (is_null($this->periodoContableActivo)) {
+            //         DB::rollBack();
+            //         return response()->json(['message' => "No se encontro un periodo contable activo."], 409);
+            //     }
+
+            //     // Obtener datos del proveedor y factura
+            //     $factura = $opaFactus->factura;
+            //     $facturaTipoComprobante = $opaFactus->factura->tipoComprobante;
+            //     $proveedorPrestador = $opaFactus->proveedor ?? $opaFactus->prestador;
+            //     // $detalle = $params->detalleImputacionesHaber;
+
+            //     //Período contable activo
+            //     try {
+            //         $formatoCorto = substr($factura->periodo, 2, 2) . substr($factura->periodo, 5, 2);
+            //         $periodoContableActivo = $periodoContableRepositorio->findByExistsPeriodoActivo($formatoCorto);
+
+            //         if (!$periodoContableActivo) {
+            //             throw new \Exception("No se encontró un período contable activo para registrar el asiento contable del pago.");
+            //         }
+            //     } catch (\Throwable $th) {
+            //         DB::rollBack();
+            //         return response()->json([
+            //             'message' => $th->getMessage()
+            //         ], 404);
+            //     }
+
+
+            //     $datosPago = [
+            //         'cuit' => $proveedorPrestador->cuit ?? 'S/CUIT',
+            //         'nombre' => $proveedorPrestador->razon_social ?? 'S/NOMBRE',
+            //         'numero_pago' => "PAGO-" . $pagoDb->num_pago,
+            //         // 'monto_pago' => $monto_Validar,
+            //         'id_cuenta_bancaria' => $params->id_cuenta_bancaria,
+            //         'id_metodo_pago' => $params->id_forma_pago,
+            //         'idImputacionDebe' => $params->idImputacionDebe,
+            //         'ImputacionHaber' => [
+            //             // 'idImputacionHaber' => $params->idImputacionHaber,
+            //             // 'nombreHaber' => $params->nombreHaber,
+            //             // 'codigoHaber' => $params->codigoHaber,
+            //             'totalImporteHaber' => $params->monto_pago,
+            //         ]
+
+
+            //     ];
+
+            //     // Crear asiento contable (las validaciones ya se hicieron arriba)
+            //     $asientoContableRepository->crearAsientoPago($datosPago, $periodoContableActivo->id_periodo_contable);
+            // }
 
             DB::commit();
             return response()->json(['message' => 'El Pago ha sido confirmado y procesado con éxito.']);
