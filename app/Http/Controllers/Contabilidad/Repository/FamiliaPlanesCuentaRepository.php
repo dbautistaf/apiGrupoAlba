@@ -19,16 +19,16 @@ class FamiliaPlanesCuentaRepository
     public function findByCrear($params)
     {
         return FamiliaCuentaContableEntity::create([
-            'id_tipo_factura' => $params->id_tipo_factura,
+            'id_familia' => $params->id_familia,
             'id_detalle_plan' => $params->id_detalle_plan,
             'cod_usuario_crea' => $this->user->cod_usuario,
             'fecha_registra' => $this->fechaActual
         ]);
     }
 
-    public function findByExisteRelacion($id_tipo_factura, $id_detalle_plan)
+    public function findByExisteRelacion($id_familia, $id_detalle_plan)
     {
-        return FamiliaCuentaContableEntity::where('id_tipo_factura', $id_tipo_factura)
+        return FamiliaCuentaContableEntity::where('id_familia', $id_familia)
             ->where('id_detalle_plan', $id_detalle_plan)
             ->exists();
     }
@@ -36,7 +36,7 @@ class FamiliaPlanesCuentaRepository
     public function findByUpdate($params, $id)
     {
         $familia = FamiliaCuentaContableEntity::find($id);
-        $familia->id_tipo_factura = $params->id_tipo_factura;
+        $familia->id_familia = $params->id_familia;
         $familia->id_detalle_plan = $params->id_detalle_plan;
         $familia->cod_usuario_modifica = $this->user->cod_usuario;
         $familia->fecha_modifica = $this->fechaActual;
@@ -45,13 +45,13 @@ class FamiliaPlanesCuentaRepository
 
     public function findByListar()
     {
-        return FamiliaCuentaContableEntity::with(['tipoFactura', 'detallePlan'])
+        return FamiliaCuentaContableEntity::with(['familia', 'detallePlan'])
             ->get();
     }
 
-    public function findByBuscarRelacionFamilia($idTipoFactura, $idPeriodo)
+    public function findByBuscarRelacionFamilia($idFamilia, $idPeriodo)
     {
-        return FamiliaCuentaContableEntity::where('id_tipo_factura', $idTipoFactura)
+        return FamiliaCuentaContableEntity::where('id_familia', $idFamilia)
             ->whereHas('detallePlan', function ($query) use ($idPeriodo) {
                 $query->where('id_periodo_contable', $idPeriodo);
             })

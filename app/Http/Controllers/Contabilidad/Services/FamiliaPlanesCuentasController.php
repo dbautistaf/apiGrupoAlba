@@ -26,7 +26,7 @@ class FamiliaPlanesCuentasController extends Controller
                 DB::commit();
                 return response()->json(["message" => "Registro modifico con éxito."], 200);
             } else {
-                if ($repo->findByExisteRelacion($request->id_tipo_factura, $request->id_detalle_plan)) {
+                if ($repo->findByExisteRelacion($request->id_familia, $request->id_detalle_plan)) {
                     return response()->json(['message' => 'Ya éxiste una relacion con la cuenta y la familia para el periodo vigente.'], 409);
                 }
 

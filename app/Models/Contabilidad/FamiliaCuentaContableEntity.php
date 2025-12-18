@@ -2,6 +2,7 @@
 
 namespace App\Models\Contabilidad;
 
+use App\Models\articulos\ArticuloFamiliaEntity;
 use App\Models\facturacion\TipoFacturacionEntity;
 use App\Models\proveedor\MatrizProveedoresEntity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -15,7 +16,7 @@ class FamiliaCuentaContableEntity extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'id_tipo_factura',
+        'id_familia',
         'id_detalle_plan',
         'cod_usuario_crea',
         'fecha_registra',
@@ -32,5 +33,9 @@ class FamiliaCuentaContableEntity extends Model
     public function detallePlan()
     {
         return $this->hasOne(DetallePlanCuentasEntity::class, 'id_detalle_plan', 'id_detalle_plan');
+    }
+    public function familia()
+    {
+        return $this->hasOne(ArticuloFamiliaEntity::class, 'id_familia', 'id_familia');
     }
 }
