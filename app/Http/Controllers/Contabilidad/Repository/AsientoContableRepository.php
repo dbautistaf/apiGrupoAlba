@@ -165,7 +165,7 @@ class AsientoContableRepository
     }
     public function verificarFamiliaTieneCuentaContable($idFamilia)
     {
-        return FamiliaCuentaContableEntity::where('id_tipo_factura', $idFamilia)
+        return FamiliaCuentaContableEntity::where('id_tipo_familia', $idFamilia)
             ->where('vigente', 1)
             ->exists();
     }
@@ -192,7 +192,7 @@ class AsientoContableRepository
     }
     public function obtenerCuentaContableFamilia($idFamilia)
     {
-        return FamiliaCuentaContableEntity::where('id_tipo_factura', $idFamilia)
+        return FamiliaCuentaContableEntity::where('id_tipo_familia', $idFamilia)
             ->where('vigente', 1)
             ->first();
     }
@@ -253,8 +253,17 @@ class AsientoContableRepository
         // $ImputacionDebe = $this->obtenerCuentaContableImputacion($detalleImputaciones['idImputacionDebe']);
         $ImputacionHaber = $this->obtenerCuentaContableImputacion($datosFactura['idImputacionHaber']);
 
+        //Verificar que todas las imputaciones tengan cuenta contable asignada
+        foreach ($detalleImputaciones as $imputacion) {
+            if (!$this->verificarFamiliaTieneCuentaContable($imputacion['idImputacionDebe'])) {
+                throw new Exception("La imputacion '{$imputacion['nombreDebe']}' no tiene una cuenta contable asignada. Configure la relación imputación-cuenta contable antes de continuar.");
+                // return;
+            }
+        }
+
+
         // Crear leyenda: CUIT - NOMBRE - NUMERO_FACTURA
-        $leyenda = $datosFactura['cuit'] . ' - ' .
+        $leyenda = ' FACTURA- ' . $datosFactura['cuit'] . ' - ' .
             $datosFactura['nombre'] . ' - ' .
             $datosFactura['numero_factura'];
 
@@ -274,7 +283,7 @@ class AsientoContableRepository
 
         // Iterar sobre las imputaciones para llenar el debe
         foreach ($detalleImputaciones as $imputacion) {
-            $ImputacionDebe = $this->obtenerCuentaContableImputacion($imputacion['idImputacionDebe']);
+            $ImputacionDebe = $this->obtenerCuentaContableFamilia($imputacion['idImputacionDebe']);
             $this->findByCrearDetalleAsiento([
                 'id_asiento_contable' => $asiento->id_asiento_contable,
                 'id_forma_pago_cuenta_contable' => null,

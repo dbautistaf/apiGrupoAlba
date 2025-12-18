@@ -16,7 +16,7 @@ class FamiliaCuentaContableEntity extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'id_familia',
+        'id_tipo_familia',
         'id_detalle_plan',
         'cod_usuario_crea',
         'fecha_registra',
@@ -36,6 +36,6 @@ class FamiliaCuentaContableEntity extends Model
     }
     public function familia()
     {
-        return $this->hasOne(ArticuloFamiliaEntity::class, 'id_familia', 'id_familia');
+        return $this->hasOne(ArticuloFamiliaEntity::class, 'id_familia', 'id_tipo_familia');
     }
 }
