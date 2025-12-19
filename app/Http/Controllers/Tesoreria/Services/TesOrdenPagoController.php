@@ -91,7 +91,7 @@ class TesOrdenPagoController extends Controller
             "domicilio_proveedor" => $query?->proveedor ? $query->proveedor->direccion : $query?->prestador->direccion,
             "tipo_comprobante" => $query?->factura?->tipoComprobante?->descripcion,
             "numero_comprobante" => $query?->factura?->numero,
-            "facturas" => $query?->factura,
+            "facturas" => [$query?->factura],
             "total" => $query?->monto_orden_pago,
             "pagos" => $query?->pagos,
             "fecha_pago" => $query?->fecha_confirma_pago,
@@ -101,7 +101,7 @@ class TesOrdenPagoController extends Controller
                 : '0.00',
             "razon_social" => $query?->factura->razonSocial,
             "observaciones" => 'PRESTACIÓN ' . strtoupper($fecha->translatedFormat('F')) . ' ' . $fecha->year,
-            "pagosParciales" =>$query?->pagos?->pagosParciales,
+            "pagosParciales" =>$query->pagos->pluck('pagosParciales')->flatten()
         ];
 
         $pdf = PDF::loadView('orden_pago', $datos);
