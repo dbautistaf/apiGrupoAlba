@@ -215,7 +215,10 @@ class PlanesCuentasRepository
         $query = DetallePlanCuentasEntity::with(['periodo', 'tipo', 'plan']);
 
         if ($search) {
-            $query->where('cuenta', 'LIKE', '%' . $search . '%');
+            $query->where(function ($q) use ($search) {
+                $q->where('cuenta', 'LIKE', '%' . $search . '%')
+                    ->orWhere('codigo_cuenta', 'LIKE', '%' . $search . '%');
+            });
         }
 
         return $query->get();
