@@ -10,11 +10,18 @@ class LibroDiarioRepository
 
     public function findListDetalleResumenDiario($filters)
     {
-        return AsientosContablesEntity::with(['detalle', 'detalle.planCuenta', 'periodoContable'])
-            ->where('vigente', 'ACTIVO')
-            ->whereBetween('fecha_asiento', [$filters->desde, $filters->hasta])
-            ->where('id_periodo_contable', $filters->id_periodo_contable)
-            ->orderByDesc('id_asiento_contable')
+        $query = AsientosContablesEntity::with(['detalle', 'detalle.planCuenta', 'periodoContable'])
+            ->where('vigente', 'ACTIVO');
+
+        if (!empty($filters->desde) && !empty($filters->hasta)) {
+            $query->whereBetween('fecha_asiento', [$filters->desde, $filters->hasta]);
+        }
+
+        if (!empty($filters->id_periodo_contable)) {
+            $query->where('id_periodo_contable', $filters->id_periodo_contable);
+        }
+
+        return $query->orderByDesc('id_asiento_contable')
             // ->orderByDesc('recursor')
             ->get();
     }
