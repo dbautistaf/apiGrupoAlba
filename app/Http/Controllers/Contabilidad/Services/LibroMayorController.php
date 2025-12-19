@@ -29,19 +29,19 @@ class LibroMayorController extends Controller
     {
         try {
             // El frontend manda id_periodo_contable requerido; si no lo hace aceptamos rango de fechas
-            if (is_null($request->id_periodo_contable) && (is_null($request->desde) || is_null($request->hasta))) {
+            if (empty($request->id_periodo_contable) && (empty($request->desde) || empty($request->hasta))) {
                 return response()->json([
                     'message' => 'Debe especificar un período contable o un rango de fechas para generar el libro mayor.'
                 ], 422);
             }
 
             // Si no se especifica período pero sí fechas, usar el período activo
-            if (is_null($request->id_periodo_contable) && !is_null($request->desde)) {
-                $periodoActivo = $this->periodoContableRepositorio->findByPeriodoContableActivo();
-                if ($periodoActivo) {
-                    $request->merge(['id_periodo_contable' => $periodoActivo->id_periodo_contable]);
-                }
-            }
+            // if (empty($request->id_periodo_contable) && !empty($request->desde)) {
+            //     $periodoActivo = $this->periodoContableRepositorio->findByPeriodoContableActivo();
+            //     if ($periodoActivo) {
+            //         $request->merge(['id_periodo_contable' => $periodoActivo->id_periodo_contable]);
+            //     }
+            // }
 
             // Generar el libro mayor agrupado por cuenta
             $libroMayor = $this->libroMayorRepository->findByResumenPorCuenta($request);

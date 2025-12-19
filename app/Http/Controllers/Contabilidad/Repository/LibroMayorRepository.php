@@ -24,7 +24,7 @@ class LibroMayorRepository
             ->whereIn('ac.vigente', ['ACTIVO', 'S', '1']);
 
         // Filtro por período contable
-        if (!is_null($params->id_periodo_contable)) {
+        if (!empty($params->id_periodo_contable)) {
             $query->where('ac.id_periodo_contable', $params->id_periodo_contable);
         }
 

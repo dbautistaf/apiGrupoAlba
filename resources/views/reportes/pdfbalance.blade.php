@@ -77,7 +77,7 @@
     <table class="header">
         <tr>
             <td style="width:80px;">
-                <img src="{{ storage_path('app/public/images/ospf.png') }}" alt="logo" class="logo" width="70" />
+                <img src="{{ storage_path('app/public/images/alba.png') }}" alt="logo" class="logo" width="70" />
             </td>
             <td class="title">
                 <h2 style="margin:0;color:#28A745">O.S.P.F - BALANCE DE SALDOS</h2>

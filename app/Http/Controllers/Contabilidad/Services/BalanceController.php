@@ -103,19 +103,19 @@ class BalanceController extends Controller
             }
 
             // Obtener el periodo activo si no viene en el request
-            $periodoActivo = null;
-            if (empty($request->id_periodo_contable) && !empty($request->desde)) {
-                $periodoActivo = $this->periodoContableRepositorio->findByPeriodoContableActivo();
-                if ($periodoActivo) {
-                    $filtros['id_periodo_contable'] = $periodoActivo->id_periodo_contable;
-                    $filtros['anio_periodo'] = $periodoActivo->anio_periodo;
-                }
-            } else if (!empty($request->id_periodo_contable)) {
-                $periodoActivo = \App\Models\Contabilidad\PeriodosContablesEntity::find($request->id_periodo_contable);
-                if ($periodoActivo) {
-                    $filtros['anio_periodo'] = $periodoActivo->anio_periodo;
-                }
-            }
+            // $periodoActivo = null;
+            // if (empty($request->id_periodo_contable) && !empty($request->desde)) {
+            //     $periodoActivo = $this->periodoContableRepositorio->findByPeriodoContableActivo();
+            //     if ($periodoActivo) {
+            //         $filtros['id_periodo_contable'] = $periodoActivo->id_periodo_contable;
+            //         $filtros['anio_periodo'] = $periodoActivo->anio_periodo;
+            //     }
+            // } else if (!empty($request->id_periodo_contable)) {
+            //     $periodoActivo = \App\Models\Contabilidad\PeriodosContablesEntity::find($request->id_periodo_contable);
+            //     if ($periodoActivo) {
+            //         $filtros['anio_periodo'] = $periodoActivo->anio_periodo;
+            //     }
+            // }
 
             // Pasar todos los filtros al repositorio
             $reporte = $this->balanceRepository->findByReporteBalance($filtros);

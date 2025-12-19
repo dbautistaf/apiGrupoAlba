@@ -199,7 +199,7 @@ class BalanceRepository
             'encabezado' => [
                 'empresa' => $empresa ?? ['nombre' => 'Mi Empresa'],
                 'filtros' => [
-                    'id_periodo_contable' => $params['id_periodo_contable'] ?? null,
+                    'id_periodo_contable' => $params['id_periodo_contable'] ?? "No especificado",
                     'anio_periodo' => $params['anio_periodo'] ?? null,
                     'desde' => $params['desde'] ?? null,
                     'hasta' => $params['hasta'] ?? null,
