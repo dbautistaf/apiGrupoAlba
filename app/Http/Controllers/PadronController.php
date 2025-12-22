@@ -427,7 +427,7 @@ class PadronController extends Controller
                                     'fecha_alta' => $plan->fecha_alta,
                                     'fecha_baja' => $plan->fecha_baja,
                                     'id_tipo_plan' => $plan->id_tipo_plan,
-                                    'id_padron' => $titular->dni
+                                    'id_padron' => $familia->dni
                                 ]);
                             }
                         }
