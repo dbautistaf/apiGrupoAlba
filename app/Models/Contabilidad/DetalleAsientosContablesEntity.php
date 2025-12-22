@@ -16,6 +16,7 @@ class DetalleAsientosContablesEntity extends Model
         'id_asiento_contable',
         'id_proveedor_cuenta_contable',
         'id_forma_pago_cuenta_contable',
+        'id_familia_cuenta_contable',
         'monto_debe',
         'monto_haber',
         'observaciones',
@@ -41,5 +42,9 @@ class DetalleAsientosContablesEntity extends Model
     public function formaPagoCuentaContable()
     {
         return $this->hasOne(FormasPagoCuentasContableEntity::class, 'id_forma_pago_cuenta_contable', 'id_forma_pago_cuenta_contable');
+    }
+    public function familiaCuentaContable()
+    {
+        return $this->hasOne(FamiliaCuentaContableEntity::class, 'id_familia_cuenta_contable', 'id_familia_cuenta_contable');
     }
 }

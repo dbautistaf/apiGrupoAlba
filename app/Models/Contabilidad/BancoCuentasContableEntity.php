@@ -2,19 +2,19 @@
 
 namespace App\Models\Contabilidad;
 
-use App\Models\proveedor\MatrizProveedoresEntity;
+use App\Models\Tesoreria\TesCuentasBancariasEntity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class ProveedorCuentaContableEntity extends Model
+class BancoCuentasContableEntity extends Model
 {
     use HasFactory;
-    protected $table = 'tb_cont_proveedor_cuenta_contable';
-    protected $primaryKey = 'id_proveedor_cuenta_contable';
+    protected $table = 'tb_cont_banco_cuenta_contable';
+    protected $primaryKey = 'id_banco_cuenta_contable';
     public $timestamps = false;
 
     protected $fillable = [
-        'id_proveedor',
+        'id_cuenta_bancaria',
         'id_detalle_plan',
         'cod_usuario_crea',
         'fecha_registra',
@@ -23,9 +23,9 @@ class ProveedorCuentaContableEntity extends Model
         'vigente'
     ];
 
-    public function proveedor()
+    public function banco()
     {
-        return $this->hasOne(MatrizProveedoresEntity::class, 'cod_proveedor', 'id_proveedor');
+        return $this->hasOne(TesCuentasBancariasEntity::class, 'id_cuenta_bancaria', 'id_cuenta_bancaria');
     }
 
     public function detallePlan()

@@ -28,6 +28,14 @@ class AsientosContablesEntity extends Model
         'vigente'
     ];
 
+    protected $casts = [
+        'fecha_asiento' => 'date',
+        'fecha_registra' => 'datetime',
+        'fecha_modifica' => 'datetime',
+        'numero' => 'integer',
+        'numero_referencia' => 'integer'
+    ];
+
     public function tipo()
     {
         return $this->hasOne(TipoAsientoContableEntity::class, 'id_tipo_asiento', 'id_tipo_asiento');

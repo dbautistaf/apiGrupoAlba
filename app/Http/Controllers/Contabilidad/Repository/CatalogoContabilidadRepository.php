@@ -6,6 +6,7 @@ use App\Models\Contabilidad\NivelesPlanCuentaEntity;
 use App\Models\Contabilidad\TipoPlanCuentaEntity;
 use App\Models\Contabilidad\TipoPlanOrganicoCuentaEntity;
 use App\Models\Contabilidad\TipoRetencionesEntity;
+use App\Models\Contabilidad\TipoImpuestoEntity;
 
 class CatalogoContabilidadRepository
 {
@@ -28,5 +29,9 @@ class CatalogoContabilidadRepository
     public function findByListTipoRetencion()
     {
         return TipoRetencionesEntity::get();
+    }
+    public function findByListTipoImpuesto()
+    {
+        return TipoImpuestoEntity::get();
     }
 }
