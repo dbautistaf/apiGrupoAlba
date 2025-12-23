@@ -80,7 +80,7 @@
                 <img src="{{ storage_path('app/public/images/alba.png') }}" alt="logo" class="logo" width="70" />
             </td>
             <td class="title">
-                <h2 style="margin:0;color:#28A745">O.S.P.F - LIBRO MAYOR</h2>
+                <h2 style="margin:0;color:#28A745">ALBA - LIBRO MAYOR</h2>
                 <div class="small">Generado: {{ $reporte['encabezado']['fecha_generacion'] ?? date('Y-m-d H:i:s') }}
                 </div>
             </td>
