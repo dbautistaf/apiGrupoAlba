@@ -64,6 +64,11 @@ class TesOrdenPagoEntity extends Model
         return $this->hasMany(TesPagoEntity::class, 'id_orden_pago');
     }
 
+    public function pagoFecha()
+    {
+        return $this->hasOne(TesPagoEntity::class, 'id_orden_pago');
+    }
+
     public function fechapagos()
     {
         return $this->hasOne(TesPagoEntity::class, 'id_orden_pago','id_orden_pago');

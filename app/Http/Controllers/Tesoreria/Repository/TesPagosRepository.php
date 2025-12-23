@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Tesoreria\Repository;
 
+use App\Models\Tesoreria\TesFechaProbablePagoEntity;
 use App\Models\Tesoreria\TesPagoEntity;
 use App\Models\Tesoreria\TesPagosParciales;
 use App\Models\Tesoreria\TestDetalleComprobantesPagoEntity;
@@ -22,7 +23,7 @@ class TesPagosRepository
 
     public function findByCrearPago($params)
     {
-        return TesPagoEntity::create([
+        $pago = TesPagoEntity::create([
             'id_orden_pago'         => $params['id_orden_pago'],
             'id_cuenta_bancaria'    => $params['id_cuenta_bancaria'],
             'fecha_registra'        => $this->fechaActual,
@@ -36,10 +37,20 @@ class TesPagosRepository
             'id_usuario'            => $this->user->cod_usuario,
             'monto_opa'             => $params['monto_opa'],
             'recursor'              => $params['recursor'],
-            'fecha_probable_pago'   => $params['fecha_probable_pago'],
+            'fecha_probable_pago'   => null,
             'tipo_factura'          => $params['tipo_factura'],
             'pago_emergencia'       => $params['pago_emergencia'],
         ]);
+
+        foreach ($params['cuotas'] as $cuotas) {
+            TesFechaProbablePagoEntity::create([
+                'fecha_registra' => $this->fechaActual,
+                'fecha_probable_pago' => $cuotas['fecha_probable_pago'],
+                'orden_cuotas' => $cuotas['orden_cuotas'],
+                'id_pago' => $pago->id_pago,
+            ]);
+        }
+        return $pago;
     }
 
     public function findByAsignarCodigoVerificacion($id, $codigo)

@@ -72,7 +72,7 @@ class TesPagosController extends Controller
                 $pago->findByAsignarCodigoVerificacion($boletaPago->id_pago, $codigoVerificado);
                 //@ACTUALIZAMOS ESTADO DE LA OPA *[4] EN PROCESO*
                 $opa->findByUpdateEstado($param['id_orden_pago'], 4);
-                $opa->findByConfirmarFechaProbablePago($param['id_orden_pago'], $param['fecha_probable_pago'], $param['cuotas']);
+                //$opa->findByConfirmarFechaProbablePago($param['id_orden_pago'], $param['fecha_probable_pago'], $param['cuotas']);
                 $opa->findByConfirmarPagoEmergencia($param['id_orden_pago'], $param['pago_emergencia']);
             }
             ;
