@@ -83,10 +83,16 @@ class CredencialController extends Controller
         if ($datos->activo != 0) {
             $now = new \DateTime('now', new \DateTimeZone('America/Argentina/Buenos_Aires'));
             $grupal = AfiliadoPadronEntity::with('detalleplan.addplan', 'tipoParentesco', 'origen')->where('cuil_tit', $datos->cuil_tit)->where('activo', '1')
-            ->OrderBy('id_parentesco','asc')->get();
+                ->OrderBy('id_parentesco', 'asc')->get();
             $fecha_inicio = $now->format('Y-m-d');
             $fecha_final = $now->modify('last day of this month')->format('Y-m-d');
             $carnet = AfiliadoCredencialEntity::where('dni', $datos->dni)->first();
+
+            $grupal = $grupal->map(function ($item, $index) use ($request) {
+                $item->correlativo = $index; // empieza en 0
+                $item->es_seleccionado = ($item->dni == $request->dni);
+                return $item;
+            });
             if ($datos) {
                 foreach ($grupal as $afiliado) {
                     $afiliado["cuil_benef"] = $afiliado->dni;
@@ -116,8 +122,22 @@ class CredencialController extends Controller
         if ($datos[0]->activo != 0) {
             $now = new \DateTime('now', new \DateTimeZone('America/Argentina/Buenos_Aires'));
             $datos = AfiliadoPadronEntity::with('detalleplan.addplan', 'tipoParentesco', 'origen')->where('dni', $request->dni)->get();
-            $grupal = AfiliadoPadronEntity::with('detalleplan.addplan', 'tipoParentesco', 'origen')->where('cuil_tit', $datos[0]->cuil_tit)->get();
+            $grupal = AfiliadoPadronEntity::with('detalleplan.addplan', 'tipoParentesco', 'origen')->where('cuil_tit', $datos[0]->cuil_tit)
+                ->OrderBy('id_parentesco', 'asc')->get();
             $carnet = AfiliadoCredencialEntity::where('dni', $datos[0]->dni)->first();
+
+            $correlativo = null;
+            foreach ($grupal as $index => $item) {
+                if ($item->dni == $request->dni) {
+                    $correlativo = $index;
+                    break;
+                }
+            }
+            $datos = $datos->map(function ($afiliado) use ($correlativo) {
+                $afiliado->correlativo = $correlativo;
+                return $afiliado;
+            });
+
             if ($datos) {
                 foreach ($datos as $afiliado) {
                     $afiliado["cuil_benef"] = $afiliado->dni;

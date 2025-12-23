@@ -57,7 +57,7 @@ class LiqImportarDatosController extends Controller
             $totalFacturado = 0;
             $totalAprobado = 0;
             $totalDebitado = 0;
-            $totalCoseguro = 0;
+            $totalCoseguro = 0; 
 
             if (!is_null($sumDetalle)) {
                 $totalFacturado = $sumDetalle->total_facturado;
