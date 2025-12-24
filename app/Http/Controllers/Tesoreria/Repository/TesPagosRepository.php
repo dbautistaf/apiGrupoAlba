@@ -83,7 +83,8 @@ class TesPagosRepository
                 'opa.factura.razonSocial',
                 'comprobantes',
                 'pagosParciales',
-                'pagosParciales.formaPago'
+                'pagosParciales.formaPago',
+                'fechaprobablepagos'
             ]);
             $jquery->where('tipo_factura', 'PROVEEDOR');
         } else {
@@ -96,14 +97,17 @@ class TesPagosRepository
                 'opa.factura.razonSocial',
                 'comprobantes',
                 'pagosParciales',
-                'pagosParciales.formaPago'
+                'pagosParciales.formaPago',
+                'fechaprobablepagos'
             ]);
             $jquery->where('tipo_factura', 'PRESTADOR');
         }
 
 
-        if (!is_null($params->desde) && !is_null($params->hasta)) {
-            $jquery->whereBetween(DB::raw('DATE(fecha_probable_pago)'), [$params->desde, $params->hasta]);
+        if (!is_null($params->desde) && !is_null($params->hasta)) {            
+             $jquery->whereHas('fechaprobablepagos', function ($query) use ($params) {
+                $query->whereBetween(DB::raw('DATE(fecha_probable_pago)'), [$params->desde, $params->hasta]);
+            });
         }
 
         /*  if (!is_null($params->monto_desde) && !is_null($params->monto_hasta)) {
