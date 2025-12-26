@@ -14,6 +14,10 @@ class PeriodosContablesService extends Controller
     {
         return response()->json($periodosContablesRepository->findByList($request));
     }
+    public function getListarPeriodosAnuales(Request $request, PeriodosContablesRepository $periodosContablesRepository)
+    {
+        return response()->json($periodosContablesRepository->findByListAnual($request));
+    }
 
     public function getProcesar(Request $request, PeriodosContablesRepository $periodosContablesRepository)
     {

@@ -809,7 +809,7 @@ Route::group([
     // Route para recibir facturas automatizadas (API externa)
     Route::post('automation', [App\Http\Controllers\facturacion\Services\FacturaAutomaticaController::class, 'recibirFactura']);
 
-    
+
     Route::post('auditar', [App\Http\Controllers\facturacion\AuditarFacturaController::class, 'postAuditarFactura']);
     Route::post('alta-tipo-letra-factura', [App\Http\Controllers\facturacion\FacturacionTipoLetraController::class, 'getProcesarTipoLetraFactura']);
     Route::post('cambiar-estado', [App\Http\Controllers\facturacion\FacturasPrestadoresController::class, 'getActualizarEstadoLiquidacion']);
@@ -826,7 +826,7 @@ Route::group([
 
     Route::get('comprobante_relacionado', [App\Http\Controllers\facturacion\FacturacionProcesosController::class, 'selectComprobanteRelacionado']);
 
-    
+
 });
 
 Route::group([
@@ -1359,6 +1359,7 @@ Route::group([
     'prefix' => '/v1/contabilidad'
 ], function ($router) {
     Route::get('cs-periodos-contables', [App\Http\Controllers\Contabilidad\Services\PeriodosContablesService::class, 'getListar']);
+    Route::get('cs-periodos-anuales', [App\Http\Controllers\Contabilidad\Services\PeriodosContablesService::class, 'getListarPeriodosAnuales']);
     Route::get('cs-tipo-plan-cuenta', [App\Http\Controllers\Contabilidad\Services\CatalogoController::class, 'getTipoPlanCuenta']);
     Route::get('cs-planes-cuentas', [App\Http\Controllers\Contabilidad\Services\PlanesCuentasController::class, 'getListar']);
     Route::get('obt-plan-cuenta', [App\Http\Controllers\Contabilidad\Services\PlanesCuentasController::class, 'getId']);

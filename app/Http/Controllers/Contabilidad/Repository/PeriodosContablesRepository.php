@@ -53,7 +53,17 @@ class PeriodosContablesRepository
         if (!is_null($params->estado)) {
             $query->where('activo', $params->estado);
         }
-        $query->orderBy('periodo','desc');
+        $query->orderBy('periodo', 'desc');
+        return $query->get();
+    }
+    public function findByListAnual($params)
+    {
+        $query = PeriodosContablesEntity::with([]);
+        $query->where('id_tipo_periodo', 2);
+        if (!is_null($params->estado)) {
+            $query->where('activo', $params->estado);
+        }
+        $query->orderBy('periodo', 'desc');
         return $query->get();
     }
 
