@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\PrestacionesMedicas\Services;
 
+use App\Exports\PrestacionMedicaDetalleExport;
 use App\Exports\PrestacionMedicaExport;
 use App\Http\Controllers\PrestacionesMedicas\Repository\PrestacionesmedicasFiltrosRepository;
 use App\Http\Controllers\PrestacionesMedicas\Repository\PrestacionMedicaRepository;
@@ -172,7 +173,11 @@ class PrestacionMedicaController  extends Controller
 
     public function getExportPrestacion(Request $request)
     {
-        return Excel::download(new PrestacionMedicaExport($request), 'Prestaciones.xlsx');
+        if ($request->tipo == '0') {
+            return Excel::download(new PrestacionMedicaExport($request), 'Prestaciones.xlsx');
+        } else {
+            return Excel::download(new PrestacionMedicaDetalleExport($request), 'Prestaciones.xlsx');
+        }
     }
 
     public function getListPrestacion(PrestacionesmedicasFiltrosRepository $repoFiltro, Request $request)
