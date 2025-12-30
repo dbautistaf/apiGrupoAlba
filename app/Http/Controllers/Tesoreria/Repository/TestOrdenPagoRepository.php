@@ -127,9 +127,10 @@ class TestOrdenPagoRepository
             'estado',
             'factura',
             'factura.razonSocial',
-            'factura.comprobantes', // <-- corregido aquí
+            'factura.comprobantes', 
             'proveedor',
-            'prestador'
+            'prestador',
+            'pagoFecha.fechaprobablepagos'
         ]);
 
         if (!is_null($params->tipo)) {

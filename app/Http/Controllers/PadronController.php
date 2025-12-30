@@ -170,20 +170,38 @@ class PadronController extends Controller
         }
     }
 
-    public function getLikePadron($dni)
+    public function getLikePadron(Request $request)
     {
-        $files = AfiliadoPadronEntity::with([
+        $query = AfiliadoPadronEntity::with([
             'origen',
             'user',
             'tipoParentesco',
             'detalleplan.tipoPlan',
             'documentos.tipoDocumentacion' // Relación para obtener la descripción del tipo de documentación
-        ])
-            ->where('dni', 'LIKE', "$dni%")
-            ->orWhere('cuil_tit', 'LIKE', "%$dni%")
-            ->orWhere('nombre', 'LIKE', "%$dni%")
-            ->orWhere('apellidos', 'LIKE', "%$dni%")
-            ->limit(30)
+        ]);
+
+        if (!empty($request->dni)) {
+            $query->where(function ($q) use ($request) {
+                $q->where('dni', 'like', $request->dni . '%')
+                    ->orWhere('nombre', 'like', '%' . $request->dni . '%')
+                    ->orWhere('apellidos', 'like', '%' . $request->dni . '%');
+            });
+        }
+
+        if (!empty($request->cuil)) {
+            $query->where('cuil_tit', 'like', '%' . $request->cuil . '%');
+        }
+
+        if (!empty($request->id_comercial_caja)) {
+            $query->where('id_comercial_caja', $request->id_comercial_caja);
+        }
+
+        if (!empty($request->desde) && !empty($request->hasta)) {
+            $query->whereBetween('fecha_carga', [$request->desde, $request->hasta]);
+        }
+
+        $files = $query
+            ->limit(50)
             ->get()
             ->map(function ($file) {
                 // Edad (años)

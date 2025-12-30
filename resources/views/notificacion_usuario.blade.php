@@ -21,7 +21,7 @@
     </ul>
     <br>
     <p>Tu cuenta ya está habilitada y podés ingresar desde cualquier dispositivo en:</p>
-    <p><b>https://grupoalbasalud.oridheansoft.com</b></p>
+    <p><b>https://sistemasalud.oridheansoft.com</b></p>
     <p>Usuario: {{ $afiliado->dni }}</p>
     <p>Contraseña: {{ $afiliado->dni }}</p>
     <br>

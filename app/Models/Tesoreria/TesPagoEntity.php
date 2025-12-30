@@ -67,7 +67,13 @@ class TesPagoEntity extends Model
         return $this->hasMany(TestDetalleComprobantesPagoEntity::class, 'id_pago', 'id_pago');
     }
 
-    public function pagosParciales(){
+    public function pagosParciales()
+    {
         return $this->hasMany(TesPagosParciales::class, 'id_pago', 'id_pago');
+    }
+
+    public function fechaprobablepagos()
+    {
+        return $this->hasMany(TesFechaProbablePagoEntity::class, 'id_pago', 'id_pago');
     }
 }

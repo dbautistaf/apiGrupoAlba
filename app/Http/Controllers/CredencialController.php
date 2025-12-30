@@ -163,40 +163,17 @@ class CredencialController extends Controller
         $now = new \DateTime('now', new \DateTimeZone('America/Argentina/Buenos_Aires'));
         $datos = AfiliadoPadronEntity::with('detalleplan.addplan', 'tipoParentesco', 'origen')->where('dni', $user->documento)->first();
         if ($request->id == '0') {
-            $grupal = AfiliadoPadronEntity::with('detalleplan.addplan', 'tipoParentesco', 'origen')->where('cuil_tit', $datos->cuil_tit)->where('activo', '1')->get();
+            $grupal = AfiliadoPadronEntity::with('detalleplan.addplan', 'tipoParentesco', 'origen')->where('cuil_tit', $datos->cuil_tit)->where('activo', '1')
+                ->OrderBy('id_parentesco', 'asc')->get();
         } else {
-            $grupal = AfiliadoPadronEntity::with('detalleplan.addplan', 'tipoParentesco', 'origen')->where('dni', $user->documento)->get();
+            $grupal = AfiliadoPadronEntity::with('detalleplan.addplan', 'tipoParentesco', 'origen')->where('dni', $user->documento)
+                ->OrderBy('id_parentesco', 'asc')->get();
         }
-        /*$plan = AfiliadoDetalleTipoPlanEntity::with(['TipoPlan'])
-            ->where('id_padron', $user->documento)
-            ->first();
-         if ($plan?->id_tipo_plan === 1 || $plan?->id_tipo_plan === 6) {
-
-            $ultPeriodos = PeriodoModelo::orderBy('id_periodo', 'desc')->take(2)->get();
-
-
-            $transferencias = TransferenciasModelo::where('cuitapo', $datos->cuil_tit)
-                ->whereIn('periodo_tranf', $ultPeriodos->pluck('desc'))
-                ->get();
-            if ($transferencias->count() === 2) {
-                if ($datos) {
-                    foreach ($grupal as $afiliado) {
-                        if ($afiliado->id_parentesco == '00') {
-                            AfiliadoPadronEntity::where('id', $afiliado->id)->update([
-                                'fech_descarga' => $now->format('Y-m-d H:i:s'),
-                            ]);
-                        }
-                    }
-                    $fecha_inicio = $now->format('Y-m-d');
-                    $fecha_final = $now->modify('last day of this month')->format('Y-m-d');
-                    $pdf = Pdf::loadView('carnet_afiliado', ["data" => $grupal, "f_inicio" => $fecha_inicio, "f_fin" => $fecha_final, "plan" => $grupal]);
-                    $pdf->setPaper('A5', 'landscape');
-                    return $pdf->download('carnet.pdf');
-                }
-            } else {
-                return response()->json(['error' => 'Estimado afiliado. Detectamos que tiene aportes impagos para con la Obra Social. Por favor, regularizar la situación. Muchas gracias.'], 404);
-            }
-        } else { */
+        $grupal = $grupal->map(function ($item, $index) use ($request) {
+                $item->correlativo = $index; // empieza en 0
+                $item->es_seleccionado = ($item->dni == $request->dni);
+                return $item;
+            });
         if ($datos) {
             foreach ($grupal as $afiliado) {
                 if ($afiliado->id_parentesco == '00') {
