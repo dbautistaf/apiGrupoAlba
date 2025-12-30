@@ -126,6 +126,7 @@ class FacturacionProcesosController extends Controller
                         'cuit' => $facturaConProveedor->proveedor->cuit ?? $facturaConProveedor->prestador->cuit,
                         'nombre' => $facturaConProveedor->proveedor->razon_social ?? $facturaConProveedor->prestador->razon_social,
                         'numero_factura' => $cabecera->tipo_letra . ' ' . $cabecera->sucursal . '-' . $cabecera->numero,
+                        'fecha_registra' => $facturacion->fecha_registra,
                         'total_factura' => $facturacion->total_neto,
                         'id_cuenta_gasto' => $cabecera->id_tipo_imputacion_sintetizada,
                         'id_tipo_factura' => $facturacion->id_tipo_factura,
