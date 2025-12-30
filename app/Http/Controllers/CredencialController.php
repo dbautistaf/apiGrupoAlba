@@ -169,14 +169,11 @@ class CredencialController extends Controller
             $grupal = AfiliadoPadronEntity::with('detalleplan.addplan', 'tipoParentesco', 'origen')->where('dni', $user->documento)
                 ->OrderBy('id_parentesco', 'asc')->get();
         }
-        $correlativo = null;
-        foreach ($grupal as $index => $item) {
-            if ($item->dni == $request->dni) {
-                $correlativo = $index;
-                break;
-            }
-        }
-        $datos->correlativo = $correlativo;
+        $grupal = $grupal->map(function ($item, $index) use ($request) {
+                $item->correlativo = $index; // empieza en 0
+                $item->es_seleccionado = ($item->dni == $request->dni);
+                return $item;
+            });
         if ($datos) {
             foreach ($grupal as $afiliado) {
                 if ($afiliado->id_parentesco == '00') {

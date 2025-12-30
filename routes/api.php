@@ -56,7 +56,7 @@ Route::group([
     Route::post('savePadron', [App\Http\Controllers\PadronController::class, 'postSavePadron']);
     Route::get('listPadron', [App\Http\Controllers\PadronController::class, 'getPadron']);
     Route::get('listPadronId/{id}', [App\Http\Controllers\PadronController::class, 'getPadronId']);
-    Route::get('listLikePadron/{dni}', [App\Http\Controllers\PadronController::class, 'getLikePadron']);
+    Route::get('listLikePadron', [App\Http\Controllers\PadronController::class, 'getLikePadron']);
     Route::get('listFechaPadron', [App\Http\Controllers\PadronController::class, 'getFechaPadron']);
     Route::post('updateEstado', [App\Http\Controllers\PadronController::class, 'UpdateEstadoPadron']);
     Route::get('listPadronEstado/{estado}', [App\Http\Controllers\PadronController::class, 'getListPadronEstado']);
