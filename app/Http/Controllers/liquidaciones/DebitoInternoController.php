@@ -64,8 +64,9 @@ class DebitoInternoController extends Controller
             $mpdf->WriteHTML(view('debito.rpt_debito_liquidacion_header', ['factura' => $datos])->render());
 
             // Dividimos el detalle en partes
+            $solodebito=0;
             foreach (array_chunk($detalle, 2000) as $chunk) {
-                $htmlChunk = view('debito.rpt_debito_liquidacion_detalle', ['detalle' => $chunk])->render();
+                $htmlChunk = view('debito.rpt_debito_liquidacion_detalle', ['detalle' => $chunk, 'debito'=>$solodebito])->render();
                 $mpdf->WriteHTML($htmlChunk);
             }
 
