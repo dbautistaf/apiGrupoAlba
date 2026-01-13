@@ -1062,7 +1062,7 @@ class PadronController extends Controller
     {
         $Afiliados = AfiliadoPadronEntity::where('cuil_tit', $request->cuil_tit)->get();
         $relacionLaboral = RelacionLaboralModelo::where('id_padron', $request->dni)->get();
-        $plan = AfiliadoDetalleTipoPlanEntity::where('id', $request->dni)->get();
+        $plan = AfiliadoDetalleTipoPlanEntity::where('id_padron', $request->dni)->get();
         if ($Afiliados) {
             foreach ($Afiliados as $afiliado) {
 
