@@ -82,8 +82,7 @@
         $tipoPrincipal = $plan[0]->detalleplan[0]->addplan->tipo ?? null;
         $dniTitular=null;
     @endphp
-    @foreach ($data as $padron)
-        
+    @foreach ($data as $padron)        
             @php
                 $dniTitular = strlen($padron->cuil_tit) > 3 ? substr($padron->cuil_tit, 2, -1) : $padron->cuil_tit;
             @endphp
@@ -118,10 +117,9 @@
 
             </div>
         </div>
-        </div>
-        @endif
         @if (!$loop->last)
             <div class="page-break"></div>
+        @endif
         @endif
     @endforeach
 </body>
