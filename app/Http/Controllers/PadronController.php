@@ -183,6 +183,8 @@ class PadronController extends Controller
         if (!empty($request->dni)) {
             $query->where(function ($q) use ($request) {
                 $q->where('dni', 'like', $request->dni . '%')
+                    ->orWhere('cuil_tit', 'like', '%' . $request->dni . '%')
+                    ->orWhere('cuil_benef', 'like', '%' . $request->dni . '%')
                     ->orWhere('nombre', 'like', '%' . $request->dni . '%')
                     ->orWhere('apellidos', 'like', '%' . $request->dni . '%');
             });
