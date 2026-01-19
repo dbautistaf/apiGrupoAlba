@@ -19,7 +19,8 @@
         "owen-it/laravel-auditing": "^13.6",
         "php-open-source-saver/jwt-auth": "^2.2",
         "spatie/pdf-to-text": "^1.53",
-        "thiagoalessio/tesseract_ocr": "^2.13"
+        "thiagoalessio/tesseract_ocr": "^2.13",
+        "ua-parser/uap-php": "^3.10"
     },
     "require-dev": {
         "barryvdh/laravel-ide-helper": "2.13",
