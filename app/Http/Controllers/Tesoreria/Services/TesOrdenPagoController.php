@@ -101,7 +101,7 @@ class TesOrdenPagoController extends Controller
                 : '0.00',
             "razon_social" => $query?->factura->razonSocial,
             "observaciones" => 'PRESTACIÓN ' . strtoupper($fecha->translatedFormat('F')) . ' ' . $fecha->year,
-            "pagosParciales" =>$query->pagos->pluck('pagosParciales')->flatten()
+            "pagosParciales" => $query->pagos->pluck('pagosParciales')->flatten()
         ];
 
         $pdf = PDF::loadView('orden_pago', $datos);
@@ -112,5 +112,52 @@ class TesOrdenPagoController extends Controller
     public function exportOrdenesPago(Request $request)
     {
         return Excel::download(new OrdenesPagoExport($request), 'OrdenesPago.xlsx');
+    }
+
+    public function printMultiplePago(Request $request)
+    {
+        $query = TesOrdenPagoEntity::with([
+            'estado',
+            'factura.razonSocial',
+            'factura.tipoComprobante',
+            'proveedor.datosBancarios',
+            'proveedor.tipoIva',
+            'prestador.datosBancarios',
+            'prestador.tipoIva',
+            'pagos.formaPago',
+            'pagos.cuenta.entidadBancaria',
+            'pagos.pagosParciales'
+        ])->whereRelation('factura', 'id_factura', $id)
+            ->first();
+
+        Carbon::setLocale('es');
+        $fecha = Carbon::parse($query?->factura?->periodo);
+
+        $datos = [
+            "comprobante_nro" => $query?->num_orden_pago,
+            "fecha_emision" => $query?->fecha_emision,
+            "cuit_proveedor" => $query?->proveedor ? $query->proveedor->cuit : $query?->prestador->cuit,
+            "nombre_proveedor" => $query?->proveedor ? $query->proveedor->razon_social : $query?->prestador->razon_social,
+            "cbu_proveedor" => $query?->proveedor ? $query->proveedor->datosBancarios?->cbu_cuenta : $query?->prestador->datosBancarios?->cbu_cuenta,
+            "iva_proveedor" => $query?->proveedor ? $query->proveedor->tipoIva->descripcion_iva : $query?->prestador->tipoIva->descripcion_iva,
+            "domicilio_proveedor" => $query?->proveedor ? $query->proveedor->direccion : $query?->prestador->direccion,
+            "tipo_comprobante" => $query?->factura?->tipoComprobante?->descripcion,
+            "numero_comprobante" => $query?->factura?->numero,
+            "facturas" => [$query?->factura],
+            "total" => $query?->monto_orden_pago,
+            "pagos" => $query?->pagos,
+            "fecha_pago" => $query?->fecha_confirma_pago,
+            "debito" => $query?->factura?->total_debitado_liquidacion,
+            "totalPagos" => !empty($query?->pagos) && count($query?->pagos) > 0
+                ? number_format((float) $query?->monto_orden_pago, 2, '.', '')
+                : '0.00',
+            "razon_social" => $query?->factura->razonSocial,
+            "observaciones" => 'PRESTACIÓN ' . strtoupper($fecha->translatedFormat('F')) . ' ' . $fecha->year,
+            "pagosParciales" => $query->pagos->pluck('pagosParciales')->flatten()
+        ];
+
+        $pdf = PDF::loadView('pago_multiple.multiple_pago', $datos);
+        $pdf->setPaper('A4');
+        return $pdf->download('recibo-pago-' . $query->id_orden_pago . '.pdf');
     }
 }
