@@ -7,6 +7,7 @@ use App\Http\Controllers\Contabilidad\Repository\PeriodosContablesRepository;
 use App\Http\Controllers\facturacion\repository\FacturaRepository;
 use App\Http\Controllers\Tesoreria\Repository\TesPagosRepository;
 use App\Http\Controllers\Tesoreria\Repository\TestOrdenPagoRepository;
+use App\Http\Controllers\Contabilidad\Repository\AsientosFacturacionHistorialRepository;
 use App\Http\Controllers\Utils\ManejadorDeArchivosUtils;
 use App\Http\Controllers\Utils\GeneradorCodigosUtils;
 use App\Models\facturacion\FacturacionDatosEntity;
@@ -27,6 +28,7 @@ class FacturacionProcesosController extends Controller
         TesPagosRepository $tesPagosRepository,
         ManejadorDeArchivosUtils $storageFile,
         AsientoContableRepository $asientoContableRepository,
+        AsientosFacturacionHistorialRepository $historialAsientosRepository,
         GeneradorCodigosUtils $generadorCodigos,
         PeriodosContablesRepository $periodoContableRepositorio,
         Request $request
@@ -142,7 +144,19 @@ class FacturacionProcesosController extends Controller
                     ];
                     // Crear asiento contable (las validaciones ya se hicieron arriba)
                     try {
-                        $asientoContableRepository->crearAsientoFactura($datosFactura, $periodoContableActivo->id_periodo_contable);
+                        // Crear asiento contable
+                        $asientoContable = $asientoContableRepository->crearAsientoFactura($datosFactura, $periodoContableActivo->id_periodo_contable);
+
+                        // Guardar en historial como ALTA
+                        $historialAsientosRepository->guardarHistorial(
+                            $facturacion->id_factura,
+                            $asientoContable->id_asiento_contable,
+                            'ALTA',
+                            false,
+                            null,
+                            'Asiento contable creado automáticamente al registrar la factura'
+                        );
+
                     } catch (\Exception $e) {
                         DB::rollBack();
 
@@ -210,6 +224,13 @@ class FacturacionProcesosController extends Controller
                     }
                 }
             } else {
+                // ============================================================
+                // MODIFICAR FACTURA EXISTENTE CON HISTORIAL CONTABLE
+                // ============================================================
+
+                // Verificar si la factura tiene asientos contables
+                $tieneAsientos = $historialAsientosRepository->facturaTieneAsientos($cabecera->id_factura);
+
 
                 $facturacion = $repo->findByUpdateDatosFactura($cabecera, $fechaActual, $nombre_archivo);
 
@@ -230,6 +251,55 @@ class FacturacionProcesosController extends Controller
                 if (count($request->archivos) > 0) {
                     $archivosAdjuntos = $storageFile->findByCargaMasivaArchivos("FACTURA_" . $cabecera->tipo_letra . $cabecera->numero . $cabecera->sucursal, 'facturacion/comprobantes', $request);
                     $repo->findBySaveDetalleComprobantesFactura($archivosAdjuntos, $facturacion->id_factura);
+                }
+
+                // Procesar modificación contable si tiene asientos y datos contables
+                if ($tieneAsientos && $cabecera->idImputacionHaber) {
+                    try {
+                        $formatoCorto = substr($cabecera->periodo, 2, 2) . substr($cabecera->periodo, 5, 2);
+                        $periodoContableActivo = $periodoContableRepositorio->findByExistsPeriodoActivo($formatoCorto);
+
+                        if (!$periodoContableActivo) {
+                            throw new \Exception("No se encontró un período contable activo para modificar el asiento contable de la factura.");
+                        }
+
+                        // Obtener datos actualizados de la factura
+                        $facturaConProveedor = $repo->findById($facturacion->id_factura);
+
+                        $nuevosDatosFactura = [
+                            'id_proveedor' => $facturacion->id_proveedor,
+                            'cuit' => $facturaConProveedor->proveedor->cuit ?? $facturaConProveedor->prestador->cuit,
+                            'nombre' => $facturaConProveedor->proveedor->razon_social ?? $facturaConProveedor->prestador->razon_social,
+                            'numero_factura' => $cabecera->tipo_letra . ' ' . $cabecera->sucursal . '-' . $cabecera->numero,
+                            'fecha_registra' => $facturacion->fecha_registra,
+                            'total_factura' => $facturacion->total_neto,
+                            'id_cuenta_gasto' => $cabecera->id_tipo_imputacion_sintetizada,
+                            'id_tipo_factura' => $facturacion->id_tipo_factura,
+                            'idImputacionHaber' => $cabecera->idImputacionHaber,
+                            'ImputacionDebe' => array_map(function ($item) {
+                                return [
+                                    'idImputacionDebe' => $item->idImputacionDebe ?? null,
+                                    'nombreDebe' => $item->nombreDebe ?? null,
+                                    'codigoDebe' => $item->codigoDebe ?? null,
+                                    'totalImporteDebe' => $item->total_importe ?? null,
+                                ];
+                            }, $detalle),
+                        ];
+
+                        // Procesar modificación contable
+                        $historialAsientosRepository->procesarModificacionFactura(
+                            $facturacion->id_factura,
+                            $nuevosDatosFactura,
+                            $periodoContableActivo->id_periodo_contable,
+                            'Asiento modificado por actualización de datos de factura'
+                        );
+
+                    } catch (\Exception $e) {
+                        DB::rollBack();
+                        return response()->json([
+                            'message' => 'Error al procesar la modificación contable: ' . $e->getMessage()
+                        ], 423);
+                    }
                 }
 
                 //@UPDATE OPA Y PRE-PAGO TESORERIA
@@ -254,14 +324,53 @@ class FacturacionProcesosController extends Controller
         return response()->json($repo->findByIdFactura($request->id));
     }
 
-    public function deleteFacturaDetalle(Request $request)
-    {
+    public function deleteFacturaDetalle(
+        AsientosFacturacionHistorialRepository $historialAsientosRepository,
+        Request $request
+    ) {
+        DB::beginTransaction();
+        try {
+            $factura = FacturacionDatosEntity::find($request->id_factura);
 
-        $factura = FacturacionDatosEntity::find($request->id_factura);
-        //$factura->estado = '4';
-        $factura->delete();
+            if (!$factura) {
+                return response()->json([
+                    'message' => 'Factura no encontrada'
+                ], 404);
+            }
 
-        return response()->json(["message" => "La Factura N° " . $factura->num_liquidacion . " fue anulada correctamente"]);
+            // Verificar si la factura tiene asientos contables
+            $tieneAsientos = $historialAsientosRepository->facturaTieneAsientos($request->id_factura);
+
+            if ($tieneAsientos) {
+                // Procesar anulación contable
+                try {
+                    $historialAsientosRepository->procesarAnulacionFactura(
+                        $request->id_factura,
+                        'Factura anulada por el usuario'
+                    );
+                } catch (\Exception $e) {
+                    DB::rollBack();
+                    return response()->json([
+                        'message' => 'Error al anular asientos contables: ' . $e->getMessage()
+                    ], 423);
+                }
+            }
+
+            // Cambiar estado de la factura a anulada
+            $factura->estado = '4';
+            $factura->update();
+
+            DB::commit();
+            return response()->json([
+                "message" => "La Factura N° " . $factura->num_liquidacion . " fue anulada correctamente"
+            ]);
+
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Error al procesar la anulación: ' . $th->getMessage()
+            ], 500);
+        }
     }
 
     public function getBuscarNumeroFactura(FacturaRepository $repo, Request $request)
