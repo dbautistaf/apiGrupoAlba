@@ -12,30 +12,72 @@ class LibroDiarioController extends Controller
 
     public function getListarResumenDiario(Request $request, LibroDiarioRepository $libroDiarioRepository)
     {
-        $data = [];
-        $dtListaData = [];
         $data = $libroDiarioRepository->findListDetalleResumenDiario($request);
-        foreach ($data as $value) {
-            $detalle = [];
-            foreach ($value->detalle as $key) {
-                $detalle[] = array(
-                    'cuenta' => $key->planCuenta->codigo_cuenta . ' - ' . $key->planCuenta->cuenta,
-                    'debe' => (float) $key->monto_debe > 0 ? $key->monto_debe : '',
-                    'haber' => (float) $key->monto_haber > 0 ? $key->monto_haber : '',
-                    'recursor' => $key->recursor
+        $totalItems = $libroDiarioRepository->getTotalCount($request);
+
+        // Si los datos vienen paginados
+        if (method_exists($data, 'items')) {
+            $dtListaData = [];
+            foreach ($data->items() as $value) {
+                $detalle = [];
+                foreach ($value->detalle as $key) {
+                    $detalle[] = array(
+                        'cuenta' => $key->planCuenta->codigo_cuenta . ' - ' . $key->planCuenta->cuenta,
+                        'debe' => (float) $key->monto_debe > 0 ? $key->monto_debe : '',
+                        'haber' => (float) $key->monto_haber > 0 ? $key->monto_haber : '',
+                        'recursor' => $key->recursor
+                    );
+                }
+                $dtListaData[] = array(
+                    'id_asiento_contable' => $value->id_asiento_contable,
+                    'periodo_contable' => $value->periodoContable->periodo,
+                    'fecha' => $value->fecha_asiento,
+                    'numero' => $value->numero,
+                    'leyenda' => $value->asiento_leyenda,
+                    'cuentas' => $detalle
                 );
             }
-            $dtListaData[] = array(
-                'id_asiento_contable' => $value->id_asiento_contable,
-                'periodo_contable' => $value->periodoContable->periodo,
-                'fecha' => $value->fecha_asiento,
-                'numero' => $value->numero,
-                'leyenda' => $value->asiento_leyenda,
-                'cuentas' => $detalle
-            );
-        }
 
-        return response()->json($dtListaData);
+            return response()->json([
+                'data' => $dtListaData,
+                'totalItems' => $totalItems,
+                'pagination' => [
+                    'current_page' => $data->currentPage(),
+                    'last_page' => $data->lastPage(),
+                    'per_page' => $data->perPage(),
+                    'total' => $data->total(),
+                    'from' => $data->firstItem(),
+                    'to' => $data->lastItem()
+                ]
+            ]);
+        } else {
+            // Si no hay paginación (respuesta tradicional)
+            $dtListaData = [];
+            foreach ($data as $value) {
+                $detalle = [];
+                foreach ($value->detalle as $key) {
+                    $detalle[] = array(
+                        'cuenta' => $key->planCuenta->codigo_cuenta . ' - ' . $key->planCuenta->cuenta,
+                        'debe' => (float) $key->monto_debe > 0 ? $key->monto_debe : '',
+                        'haber' => (float) $key->monto_haber > 0 ? $key->monto_haber : '',
+                        'recursor' => $key->recursor
+                    );
+                }
+                $dtListaData[] = array(
+                    'id_asiento_contable' => $value->id_asiento_contable,
+                    'periodo_contable' => $value->periodoContable->periodo,
+                    'fecha' => $value->fecha_asiento,
+                    'numero' => $value->numero,
+                    'leyenda' => $value->asiento_leyenda,
+                    'cuentas' => $detalle
+                );
+            }
+
+            return response()->json([
+                'data' => $dtListaData,
+                'totalItems' => $totalItems
+            ]);
+        }
     }
 
     /**
