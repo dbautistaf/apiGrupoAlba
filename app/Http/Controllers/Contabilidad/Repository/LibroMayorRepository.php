@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Contabilidad\Repository;
 use App\Models\Contabilidad\AsientosContablesEntity;
 use App\Models\Contabilidad\DetalleAsientosContablesEntity;
 use App\Models\Contabilidad\DetallePlanCuentasEntity;
+use App\Models\Contabilidad\PeriodosContablesEntity;
 use Illuminate\Support\Facades\DB;
 
 class LibroMayorRepository
@@ -24,7 +25,7 @@ class LibroMayorRepository
             ->whereIn('ac.vigente', ['ACTIVO', 'S', '1']);
 
         // Filtro por período contable
-        if (!empty($params->id_periodo_contable)) {
+        if (!is_null($params->id_periodo_contable)) {
             $query->where('ac.id_periodo_contable', $params->id_periodo_contable);
         }
 
@@ -54,16 +55,91 @@ class LibroMayorRepository
         return $query->get();
     }
 
+    private function findByMovimientosCuenta($idDetallePlan, $fechaDesde, $fechaHasta, $idPeriodoContable = null)
+    {
+        // Normalizar fechas/periodo (tratar '' como null)
+        if ($fechaDesde === '')
+            $fechaDesde = null;
+        if ($fechaHasta === '')
+            $fechaHasta = null;
+        if ($idPeriodoContable === '')
+            $idPeriodoContable = null;
+
+        // Usar JOIN para filtrar y ordenar por la tabla de asientos (ac)
+        $query = DetalleAsientosContablesEntity::select('tb_cont_asientos_contables_detalle.*')
+            ->join('tb_cont_asientos_contables as ac', 'tb_cont_asientos_contables_detalle.id_asiento_contable', '=', 'ac.id_asiento_contable')
+            ->where('tb_cont_asientos_contables_detalle.id_detalle_plan', $idDetallePlan)
+            // aceptar distintos valores históricos para "vigente" en asientos
+            ->whereIn('ac.vigente', ['ACTIVO', 'S', '1', 'CONTRAASIENTO'])
+        ;
+
+        // Si vienen las fechas, aplicamos el filtro de rango
+        if (!is_null($fechaDesde) && !is_null($fechaHasta)) {
+            $query->whereBetween('ac.fecha_asiento', [$fechaDesde, $fechaHasta]);
+        }
+
+        // Si viene el periodo contable, aplicamos la lógica de filtrado
+        if (!is_null($idPeriodoContable)) {
+            // Buscar el periodo contable para determinar si es anual o mensual
+            $periodoContable = PeriodosContablesEntity::find($idPeriodoContable);
+
+            if ($periodoContable) {
+                if ($periodoContable->id_tipo_periodo === 1) {
+                    // Periodo mensual: filtrar por el id_periodo_contable específico
+                    $query->where('ac.id_periodo_contable', $idPeriodoContable);
+                } elseif ($periodoContable->id_tipo_periodo === 2) {
+                    // Periodo anual: filtrar por todos los asientos del año usando join
+                    $anio = $periodoContable->anio_periodo;
+                    $query->join('tb_cont_periodos_contables as pc_anio', 'ac.id_periodo_contable', '=', 'pc_anio.id_periodo_contable')
+                        ->where('pc_anio.anio_periodo', $anio);
+                }
+            }
+        }
+
+        // incluir relaciones para el mapeo posterior
+        $query = $query->orderBy('ac.fecha_asiento')->orderBy('ac.numero');
+
+        // obtener detalles luego cargar relaciones para facilitar consumo
+        $detalles = $query->get();
+
+        // eager load relations on collection
+        $detalles->load(['asientoContable', 'planCuenta', 'proveedorCuentaContable.proveedor', 'formaPagoCuentaContable.formaPago']);
+
+        return $detalles;
+    }
+
     public function findBySaldoAnterior($idDetallePlan, $fechaDesde, $idPeriodoContable = null)
     {
         $query = DetalleAsientosContablesEntity::join('tb_cont_asientos_contables as ac', 'tb_cont_asientos_contables_detalle.id_asiento_contable', '=', 'ac.id_asiento_contable')
             ->where('tb_cont_asientos_contables_detalle.id_detalle_plan', $idDetallePlan)
-            ->where('ac.fecha_asiento', '<', $fechaDesde)
-            // aceptar distintos valores históricos para "activo"
             ->whereIn('ac.vigente', ['ACTIVO', 'S', '1']);
 
+        // Si tenemos período contable, usar la fecha de inicio del período
         if (!is_null($idPeriodoContable)) {
-            $query->where('ac.id_periodo_contable', $idPeriodoContable);
+            $periodoContable = PeriodosContablesEntity::find($idPeriodoContable);
+
+            if ($periodoContable) {
+                if ($periodoContable->id_tipo_periodo === 1) {
+                    // Período mensual: saldo anterior = todo antes del inicio del período
+                    $query->where('ac.fecha_asiento', '<', $periodoContable->periodo_inicio);
+                } elseif ($periodoContable->id_tipo_periodo === 2) {
+                    // Período anual: saldo anterior = todo antes del año
+                    $anio = $periodoContable->anio_periodo;
+                    $query->where('ac.fecha_asiento', '<', $anio . '-01-01');
+                }
+            }
+        } else {
+            // Si no hay período, usar la fecha proporcionada
+            if (!is_null($fechaDesde) && $fechaDesde !== '') {
+                $query->where('ac.fecha_asiento', '<', $fechaDesde);
+            } else {
+                // Sin fecha ni período, no hay saldo anterior
+                return [
+                    'total_debe' => 0,
+                    'total_haber' => 0,
+                    'saldo_anterior' => 0
+                ];
+            }
         }
 
         $saldos = $query->selectRaw('
@@ -180,11 +256,24 @@ class LibroMayorRepository
             // Calcular saldo anterior si se solicitó
             $saldoAnterior = null;
             if ($saldoAnteriorFlag === 'SI') {
-                $saldoAnterior = $this->findBySaldoAnterior(
-                    $cuenta->id_detalle_plan,
-                    $fechaDesde,
-                    $idPeriodo
-                );
+                // Para saldo anterior con período, usar la fecha de inicio del período o la fecha proporcionada
+                $fechaParaSaldo = $fechaDesde;
+
+                if (!is_null($idPeriodo) && (is_null($fechaDesde) || $fechaDesde === '')) {
+                    // Si tenemos período pero no fecha, calcular saldo anterior con período
+                    $saldoAnterior = $this->findBySaldoAnterior(
+                        $cuenta->id_detalle_plan,
+                        null,
+                        $idPeriodo
+                    );
+                } else {
+                    // Si tenemos fecha o ambos, usar la fecha
+                    $saldoAnterior = $this->findBySaldoAnterior(
+                        $cuenta->id_detalle_plan,
+                        $fechaParaSaldo,
+                        $idPeriodo
+                    );
+                }
             }
 
             $saldoAnteriorValor = $saldoAnterior['saldo_anterior'] ?? 0;
@@ -206,44 +295,6 @@ class LibroMayorRepository
         }
 
         return $resultado;
-    }
-
-    private function findByMovimientosCuenta($idDetallePlan, $fechaDesde, $fechaHasta, $idPeriodoContable = null)
-    {
-        // Normalizar fechas/periodo (tratar '' como null)
-        if ($fechaDesde === '')
-            $fechaDesde = null;
-        if ($fechaHasta === '')
-            $fechaHasta = null;
-        if ($idPeriodoContable === '')
-            $idPeriodoContable = null;
-
-        // Usar JOIN para filtrar y ordenar por la tabla de asientos (ac)
-        $query = DetalleAsientosContablesEntity::select('tb_cont_asientos_contables_detalle.*')
-            ->join('tb_cont_asientos_contables as ac', 'tb_cont_asientos_contables_detalle.id_asiento_contable', '=', 'ac.id_asiento_contable')
-            ->where('tb_cont_asientos_contables_detalle.id_detalle_plan', $idDetallePlan)
-            // aceptar distintos valores históricos para "vigente" en asientos
-            ->whereIn('ac.vigente', ['ACTIVO', 'S', '1', 'CONTRAASIENTO'])
-        ;
-
-        if (!is_null($fechaDesde) && !is_null($fechaHasta)) {
-            $query->whereBetween('ac.fecha_asiento', [$fechaDesde, $fechaHasta]);
-        }
-
-        if (!is_null($idPeriodoContable)) {
-            $query->where('ac.id_periodo_contable', $idPeriodoContable);
-        }
-
-        // incluir relaciones para el mapeo posterior
-        $query = $query->orderBy('ac.fecha_asiento')->orderBy('ac.numero');
-
-        // obtener detalles luego cargar relaciones para facilitar consumo
-        $detalles = $query->get();
-
-        // eager load relations on collection
-        $detalles->load(['asientoContable', 'planCuenta', 'proveedorCuentaContable.proveedor', 'formaPagoCuentaContable.formaPago']);
-
-        return $detalles;
     }
 
     public function findByReporteLibroMayor($params, $empresa = null)

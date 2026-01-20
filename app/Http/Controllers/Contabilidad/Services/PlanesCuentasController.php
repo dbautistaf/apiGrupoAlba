@@ -25,7 +25,7 @@ class PlanesCuentasController extends Controller
                 DB::commit();
                 return response()->json(["message" => "El Plan se registro con éxito."], 200);
             } else {
-                $repo->findByUpdate($request, $request->id_periodo_contable);
+                $repo->findByUpdate($request, $request->id_plan_cuenta);
                 DB::commit();
                 return response()->json(["message" => "El Plan se modifico con éxito."], 200);
             }
@@ -87,7 +87,7 @@ class PlanesCuentasController extends Controller
             null,
             null,
             $cuentaCabecera->plan_cuenta,
-            $cuentaCabecera->id_periodo_contable
+            null
         );
 
         if ($repo->findByCountMatrizPlanCuenta($request->id_plan_cuenta) > 0) {

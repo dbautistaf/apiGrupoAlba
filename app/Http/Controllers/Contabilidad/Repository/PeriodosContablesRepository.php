@@ -171,4 +171,9 @@ class PeriodosContablesRepository
         $periodo->fecha_modifica = $this->fechaActual;
         $periodo->save();
     }
+
+    public function findById($id)
+    {
+        return PeriodosContablesEntity::find($id);
+    }
 }

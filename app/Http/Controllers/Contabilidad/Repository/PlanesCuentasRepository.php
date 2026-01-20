@@ -23,8 +23,6 @@ class PlanesCuentasRepository
     public function findByCreate($params)
     {
         return PlanesCuentaEntity::create([
-            // 'id_periodo_contable' => $params->id_periodo_contable,
-            'id_periodo_contable' => null,
             'id_tipo_plan_cuenta' => $params->id_tipo_plan_cuenta,
             'plan_cuenta' => $params->plan_cuenta,
             'cod_usuario_crea' => $this->user->cod_usuario,
@@ -36,8 +34,6 @@ class PlanesCuentasRepository
     public function findByUpdate($params, $id)
     {
         $plan = PlanesCuentaEntity::find($id);
-        // $plan->id_periodo_contable = $params->id_periodo_contable;
-        $plan->id_periodo_contable = null;
         $plan->id_tipo_plan_cuenta = $params->id_tipo_plan_cuenta;
         $plan->plan_cuenta = $params->plan_cuenta;
         $plan->cod_usuario_modifica = $this->user->cod_usuario;
@@ -49,13 +45,13 @@ class PlanesCuentasRepository
 
     public function findByList($params)
     {
-        return PlanesCuentaEntity::with(['periodo', 'tipo'])
+        return PlanesCuentaEntity::with(['tipo'])
             ->get();
     }
 
     public function findById($id)
     {
-        return PlanesCuentaEntity::with(['periodo', 'tipo'])
+        return PlanesCuentaEntity::with(['tipo'])
             ->find($id);
     }
 
@@ -101,8 +97,6 @@ class PlanesCuentasRepository
             'cuenta' => $params->cuenta,
             'id_nivel_padre' => $params->id_nivel_padre,
             'id_tipo_cuenta' => $params->id_tipo_cuenta,
-            // 'id_periodo_contable' => $params->id_periodo_contable,
-            'id_periodo_contable' => null,
             'vigente' => '1',
             'grupo' => $params->grupo,
             'subgrupo' => $params->subgrupo,
@@ -161,7 +155,6 @@ class PlanesCuentasRepository
             $subgrupo,
             $params->id_detalle_nivel,
             $params->codigo_cuenta,
-            // $params->id_periodo_contable,
             null,
             $labelGrupo,
             $params->cuenta,
@@ -207,16 +200,13 @@ class PlanesCuentasRepository
 
     public function findByDetalleCuentasPlanesPrincipal($idNivel)
     {
-        return DetallePlanCuentasEntity::with(['periodo', 'tipo', 'plan'])
+        return DetallePlanCuentasEntity::with(['tipo', 'plan'])
             ->where('id_nivel_plan_cuenta', $idNivel)
-            // ->whereHas('periodo', function ($query) use ($idNivel) {
-            //     $query->where('activo', '1');
-            // })
             ->get();
     }
     public function findByDetalleCuentasPlanesCompleto($search = null)
     {
-        $query = DetallePlanCuentasEntity::with(['periodo', 'tipo', 'plan']);
+        $query = DetallePlanCuentasEntity::with(['tipo', 'plan']);
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -227,6 +217,4 @@ class PlanesCuentasRepository
 
         return $query->get();
     }
-
-
 }

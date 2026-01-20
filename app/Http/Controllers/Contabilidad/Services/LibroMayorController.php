@@ -28,20 +28,34 @@ class LibroMayorController extends Controller
     public function getLibroMayor(Request $request)
     {
         try {
-            // El frontend manda id_periodo_contable requerido; si no lo hace aceptamos rango de fechas
-            if (empty($request->id_periodo_contable) && (empty($request->desde) || empty($request->hasta))) {
+            // Validar que se especifique al menos un criterio de filtro temporal
+            if (is_null($request->id_periodo_contable) && (is_null($request->desde) || is_null($request->hasta))) {
                 return response()->json([
                     'message' => 'Debe especificar un período contable o un rango de fechas para generar el libro mayor.'
                 ], 422);
             }
 
-            // Si no se especifica período pero sí fechas, usar el período activo
-            // if (empty($request->id_periodo_contable) && !empty($request->desde)) {
-            //     $periodoActivo = $this->periodoContableRepositorio->findByPeriodoContableActivo();
-            //     if ($periodoActivo) {
-            //         $request->merge(['id_periodo_contable' => $periodoActivo->id_periodo_contable]);
-            //     }
-            // }
+            // Si viene período contable, obtener sus fechas para el cálculo del saldo anterior
+            if (!is_null($request->id_periodo_contable)) {
+                $periodo = $this->periodoContableRepositorio->findById($request->id_periodo_contable);
+
+                if ($periodo) {
+                    // Mantener el período para los movimientos, pero establecer fechas para saldo anterior
+                    if ($periodo->id_tipo_periodo === 1) {
+                        // Período mensual: usar fechas del mes
+                        $request->merge([
+                            'fecha_inicio_periodo' => $periodo->periodo_inicio,
+                            'fecha_fin_periodo' => $periodo->periodo_fin
+                        ]);
+                    } elseif ($periodo->id_tipo_periodo === 2) {
+                        // Período anual: usar fechas del año
+                        $request->merge([
+                            'fecha_inicio_periodo' => $periodo->anio_periodo . '-01-01',
+                            'fecha_fin_periodo' => $periodo->anio_periodo . '-12-31'
+                        ]);
+                    }
+                }
+            }
 
             // Generar el libro mayor agrupado por cuenta
             $libroMayor = $this->libroMayorRepository->findByResumenPorCuenta($request);
