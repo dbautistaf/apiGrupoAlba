@@ -39,9 +39,13 @@ class EmailLiquidacionesDebitosController extends Controller
             // Escribimos encabezado
             $mpdf->WriteHTML(view('debito.rpt_debito_liquidacion_header', ['factura' => $datos])->render());
 
+            $solodebito = 0;
+            if ($data->debito) {
+                $solodebito = 1;
+            }
             // Dividimos el detalle en partes
             foreach (array_chunk($detalle, 2000) as $chunk) {
-                $htmlChunk = view('debito.rpt_debito_liquidacion_detalle', ['detalle' => $chunk])->render();
+                $htmlChunk = view('debito.rpt_debito_liquidacion_detalle', ['detalle' => $chunk,'debito'=>$solodebito])->render();
                 $mpdf->WriteHTML($htmlChunk);
             }
 

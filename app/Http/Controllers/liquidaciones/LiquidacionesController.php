@@ -199,11 +199,13 @@ class LiquidacionesController extends Controller
                                 ld.coseguro AS total_coseguro,
                                 usu.nombre_apellidos AS usuario,
                                 ld.estado AS estado,
-                                ld.costo_practica
+                                ld.costo_practica,
+                                pr.nombre_practica
                             FROM tb_liquidaciones_detalle ld
                             JOIN tb_liquidaciones l ON ld.id_liquidacion = l.id_liquidacion
                             JOIN tb_facturacion_datos fa ON l.id_factura = fa.id_factura
                             JOIN tb_padron afi ON l.id_afiliado = afi.id
+                            JOIN tb_practicas_matriz pr ON ld.id_identificador_practica = pr.id_identificador_practica
                             LEFT JOIN tb_locatorio loc ON afi.id_locatario = loc.id_locatorio
                             LEFT JOIN tb_usuarios usu ON l.cod_usuario = usu.cod_usuario
                             where fa.id_factura = ?", [$request->id_factura]);

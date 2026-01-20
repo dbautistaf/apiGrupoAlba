@@ -183,6 +183,8 @@ class PadronController extends Controller
         if (!empty($request->dni)) {
             $query->where(function ($q) use ($request) {
                 $q->where('dni', 'like', $request->dni . '%')
+                    ->orWhere('cuil_tit', 'like', '%' . $request->dni . '%')
+                    ->orWhere('cuil_benef', 'like', '%' . $request->dni . '%')
                     ->orWhere('nombre', 'like', '%' . $request->dni . '%')
                     ->orWhere('apellidos', 'like', '%' . $request->dni . '%');
             });
@@ -1062,7 +1064,7 @@ class PadronController extends Controller
     {
         $Afiliados = AfiliadoPadronEntity::where('cuil_tit', $request->cuil_tit)->get();
         $relacionLaboral = RelacionLaboralModelo::where('id_padron', $request->dni)->get();
-        $plan = AfiliadoDetalleTipoPlanEntity::where('id', $request->dni)->get();
+        $plan = AfiliadoDetalleTipoPlanEntity::where('id_padron', $request->dni)->get();
         if ($Afiliados) {
             foreach ($Afiliados as $afiliado) {
 

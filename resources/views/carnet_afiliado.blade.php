@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Mesa entrada</title>
+    <title>Credencial Usuario</title>
     <style>
         * {
             margin: 4px;
@@ -38,6 +38,16 @@
             width: 800px;
             text-align: left;
             color: #fff;
+        }
+        
+        .alba {
+            position: absolute;
+            margin-top: 3cm;
+            float: left;
+            padding-left: 5cm;
+            width: 800px;
+            text-align: left;
+            color: #000;
         }
 
         .nombre,
@@ -72,12 +82,11 @@
         $tipoPrincipal = $plan[0]->detalleplan[0]->addplan->tipo ?? null;
         $dniTitular=null;
     @endphp
-    @foreach ($data as $padron)
-        @if ($padron->id_parentesco == '00')
+    @foreach ($data as $padron)        
             @php
-                $dniTitular = $padron->dni;
+                $dniTitular = strlen($padron->cuil_tit) > 3 ? substr($padron->cuil_tit, 2, -1) : $padron->cuil_tit;
             @endphp
-        @endif
+        @if ($padron->activo == 1)
         <div class="contenedor">
             <div class="img">
                 @if ($padron->id_locatario == 1)
@@ -87,13 +96,13 @@
                 @elseif ($padron->id_locatario == 3)
                     <img src="{{ storage_path('app/public/images/CREDENCIAL_BENE.png') }}">
                 @else
-                    <h1>No tiene un modelo de carnet definido</h1>
+                    <img src="{{ storage_path('app/public/images/credencial_alba.jpeg') }}">
                 @endif
-                <div class="datos">
+                <div class="{{ $padron->id_locatario > 3 ? 'alba' : 'datos' }}" >
                     <p class="nombre">APELLIDOS Y NOMBRES:<b> {{ $padron->apellidos . ' ' . $padron->nombre }} </b></p>
                     <p class="filial">FILIACIÓN:<b class="parentezco">
                             {{ $padron['tipoParentesco']['parentesco'] ?? 'Titular' }} </b></p>
-                    <p class="cuil">N° DE AFILIADO:<b> {{ $dniTitular . ' /0' . $loop->iteration -1 }} </b></p>
+                    <p class="cuil">N° DE AFILIADO:<b> {{ $dniTitular . ' /0' . $padron->correlativo }} </b></p>
                     <!-- <p class="plan">TIPO PLAN:<b> {{ $padron->detalleplan[0]->addplan->tipo ?? $tipoPrincipal }} </b>  -->
                     <p class="cuil">DNI:<b> {{ $padron->dni }} </b></p>
                     <p class="plan">TIPO PLAN:<b> PLAN ÚNICO </b>
@@ -108,9 +117,9 @@
 
             </div>
         </div>
-        </div>
         @if (!$loop->last)
             <div class="page-break"></div>
+        @endif
         @endif
     @endforeach
 </body>

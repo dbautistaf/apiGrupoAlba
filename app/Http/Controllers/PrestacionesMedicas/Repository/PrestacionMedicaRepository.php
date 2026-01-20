@@ -64,6 +64,7 @@ class PrestacionMedicaRepository
         $prestacion->cod_internacion = (!empty($params->cod_internacion) ? $params->cod_internacion : null);
         $prestacion->id_detalle_tramite = $datosTramite->id_detalle_tramite;
         $prestacion->observacion_interna = $params->observacion_interna;
+        $prestacion->usuario_registra = $this->user->cod_usuario;
         $prestacion->fecha_modifica = $this->fechaActual;
 
         $prestacion->update();
