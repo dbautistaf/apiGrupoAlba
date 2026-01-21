@@ -1,9 +1,10 @@
 <?php
+
 namespace App\Http\Controllers\Auth\Repository;
 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
+use Firebase\JWT\JWT;
 
 class AuthrnticateRepository
 {
@@ -25,7 +26,7 @@ class AuthrnticateRepository
             $user = $this->findByIsAuthenticate();
             $perfil = $user->cod_perfil;
             $menu = DB::select(
-                "SELECT * FROM vw_menu_acceso_usuario WHERE menu_estado = 1 AND  menu_principal = ? AND cod_perfil = ? AND estado_acceso = ? ORDER BY  menu_orden ASC",
+                "SELECT * FROM vw_menu_acceso_usuario WHERE menu_estado = 1 AND  menu_principal = ? AND cod_perfil = ? AND estado_acceso = ? ORDER BY  menu_descripcion ASC",
                 [1, $perfil, 1]
             );
 
@@ -87,7 +88,7 @@ class AuthrnticateRepository
             'exp' => time() + 7200
         ];
 
-        $token = JWTAuth::encode($payload, $key, 'HS256');
+        $token = JWT::encode($payload, $key, 'HS256');
         return $token;
     }
 }
