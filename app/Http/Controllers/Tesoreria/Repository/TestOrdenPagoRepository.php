@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Tesoreria\Repository;
 
 use App\Models\Tesoreria\TesEstadoOrdenPagoEntity;
+use App\Models\Tesoreria\TesOrdenPagoDetalleEntity;
 use App\Models\Tesoreria\TesOrdenPagoEntity;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class TestOrdenPagoRepository
 {
@@ -127,7 +129,7 @@ class TestOrdenPagoRepository
             'estado',
             'factura',
             'factura.razonSocial',
-            'factura.comprobantes', 
+            'factura.comprobantes',
             'proveedor',
             'prestador',
             'pagoFecha.fechaprobablepagos'
@@ -209,7 +211,7 @@ class TestOrdenPagoRepository
 
     public function findByCreate($param)
     {
-        return TesOrdenPagoEntity::create([
+        $opa = TesOrdenPagoEntity::create([
             'id_proveedor' => $param->id_proveedor,
             'id_prestador' => $param->id_prestador,
             'monto_orden_pago' => $param->monto_orden_pago,
@@ -225,6 +227,14 @@ class TestOrdenPagoRepository
             'id_factura' => $param->id_factura,
             'tipo_factura' => $param->tipo_factura
         ]);
+
+        TesOrdenPagoDetalleEntity::create([
+            'id_orden_pago' => $opa,
+            'id_factura' => $param->id_factura,
+            'monto_factura' => $param->monto_orden_pago,
+            'tipo_factura' => $param->tipo_factura
+        ]);
+        return $opa;
     }
 
     public function findByUpdateOpaFactura($param)
@@ -323,5 +333,46 @@ class TestOrdenPagoRepository
             $opa->update();
         }
         return $opa ?? null;
+    }
+
+    public function findByIdFacturaMultiple($idFacturas)
+    {
+        $detalleOpa = TesOrdenPagoDetalleEntity::whereIn('id_factura', $idFacturas)->get();
+        $idOrdenes = $detalleOpa->pluck('id_orden_pago')->toArray();
+
+        $opa = TesOrdenPagoEntity::whereIn('id_orden_pago', $idOrdenes)->get();
+
+        $first = $opa->first();
+
+        $totalMonto = $opa->sum('monto_orden_pago');
+        if ($first != null) {
+            $newOpa = TesOrdenPagoEntity::create([
+                'id_proveedor' => $first->id_proveedor ?? null,
+                'id_prestador' => $first->id_prestador,
+                'monto_orden_pago' => $totalMonto,
+                'id_moneda' => $first->id_moneda,
+                'fecha_emision' => $first->fecha_emision,
+                'fecha_vencimiento' => $first->fecha_vencimiento,
+                'fecha_probable_pago' => $first->fecha_probable_pago,
+                'id_estado_orden_pago' => $first->id_estado_orden_pago,
+                'monto_anticipado' => $first->monto_anticipado,
+                'observaciones' => $first->observaciones,
+                'cod_usuario' => $this->user->cod_usuario,
+                'fecha_genera' => $this->fechaActual
+            ]);
+
+            foreach ($detalleOpa as $det) {
+                TesOrdenPagoDetalleEntity::create([
+                    'id_orden_pago' => $newOpa->id_orden_pago,
+                    'id_factura' => $det->id_factura,
+                    'monto_factura' => $det->monto_factura,
+                    'tipo_factura' => $det->tipo_factura
+                ]);
+            }
+            return $newOpa;
+        }
+
+
+        
     }
 }
