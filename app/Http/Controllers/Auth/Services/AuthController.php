@@ -44,9 +44,9 @@ class AuthController extends Controller
             ], 401);
         }
 
-        if ($user->cod_perfil == '25') {
+        /* if ($user->cod_perfil == '25') {
             return response()->json(['success' => false, 'message' => 'No cuenta con los permisos suficientes para ingresar a esta plataforma'], 401);
-        }
+        } */
 
         $ip = request()->ip();
         $agent = request()->header('User-Agent');

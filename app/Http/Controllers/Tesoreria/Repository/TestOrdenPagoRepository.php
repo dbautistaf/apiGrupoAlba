@@ -229,7 +229,7 @@ class TestOrdenPagoRepository
         ]);
 
         TesOrdenPagoDetalleEntity::create([
-            'id_orden_pago' => $opa,
+            'id_orden_pago' => $opa->id_orden_pago,
             'id_factura' => $param->id_factura,
             'monto_factura' => $param->monto_orden_pago,
             'tipo_factura' => $param->tipo_factura
@@ -341,7 +341,6 @@ class TestOrdenPagoRepository
         $idOrdenes = $detalleOpa->pluck('id_orden_pago')->toArray();
 
         $opa = TesOrdenPagoEntity::whereIn('id_orden_pago', $idOrdenes)->get();
-
         $first = $opa->first();
 
         $totalMonto = $opa->sum('monto_orden_pago');
