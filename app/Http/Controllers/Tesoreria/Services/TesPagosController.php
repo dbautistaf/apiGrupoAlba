@@ -232,6 +232,7 @@ class TesPagosController extends Controller
             //         'cuit' => $proveedorPrestador->cuit ?? 'S/CUIT',
             //         'nombre' => $proveedorPrestador->razon_social ?? 'S/NOMBRE',
             //         'numero_pago' => "PAGO-" . $pagoDb->num_pago,
+            // 'fecha_registra' => $pagoDb->fecha_registra,
             //         // 'monto_pago' => $monto_Validar,
             //         'id_cuenta_bancaria' => $params->id_cuenta_bancaria,
             //         'id_metodo_pago' => $params->id_forma_pago,

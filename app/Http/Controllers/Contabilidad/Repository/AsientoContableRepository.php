@@ -265,7 +265,8 @@ class AsientoContableRepository
         // Crear leyenda: CUIT - NOMBRE - NUMERO_FACTURA
         $leyenda = ' FACTURA- ' . $datosFactura['cuit'] . ' - ' .
             $datosFactura['nombre'] . ' - ' .
-            $datosFactura['numero_factura'];
+            $datosFactura['numero_factura'] . ' - ' .
+            'FECHA: ' . $datosFactura['fecha_registra'];
 
         // Obtener siguiente número correlativo
         $numeroCorrelativo = $this->obtenerSiguienteNumeroAsiento();
@@ -326,7 +327,8 @@ class AsientoContableRepository
         // Crear leyenda: CUIT - NOMBRE - NUMERO_PAGO
         $leyenda = $datosPago['cuit'] . ' - ' .
             $datosPago['nombre'] . ' - ' .
-            $datosPago['numero_pago'];
+            $datosPago['numero_pago'] . ' - ' .
+            'FECHA: ' . $datosPago['fecha_registra'];
 
         // Obtener siguiente número correlativo
         $numeroCorrelativo = $this->obtenerSiguienteNumeroAsiento();
@@ -405,7 +407,8 @@ class AsientoContableRepository
             (!empty($datosTransaccion['id_cuenta_bancaria_destino']) ?
                 ' → Destino: ' . $datosTransaccion['id_cuenta_bancaria_destino'] : '') .
             ' | Monto: $' . number_format($montoOperacion, 2) .
-            (!empty($datosTransaccion['num_factura']) ? ' | Factura: ' . $datosTransaccion['num_factura'] : '');
+            (!empty($datosTransaccion['num_factura']) ? ' | Factura: ' . $datosTransaccion['num_factura'] : '') .
+            ' | Fecha: ' . $datosTransaccion['fecha_operacion'];
 
         // Obtener número correlativo
         $numeroCorrelativo = $this->obtenerSiguienteNumeroAsiento();

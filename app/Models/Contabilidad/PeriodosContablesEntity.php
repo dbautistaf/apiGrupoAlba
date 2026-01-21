@@ -13,10 +13,11 @@ class PeriodosContablesEntity extends Model
     public $timestamps = false;
 
     protected $fillable = [
+        'id_tipo_periodo',
         'periodo',
-        'periodo_contable',
         'anio_periodo',
         'mes',
+        'periodo_contable',
         'periodo_inicio',
         'periodo_fin',
         'cod_usuario_crea',

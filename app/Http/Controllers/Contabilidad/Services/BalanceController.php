@@ -28,16 +28,32 @@ class BalanceController extends Controller
     public function getBalanceSaldo(Request $request)
     {
         try {
-            // validar periodo
-            if (empty($request->id_periodo_contable)) {
-                return response()->json(['message' => 'Seleccione el Período Contable antes de buscar'], 422);
+            // Validar que se especifique al menos un criterio de filtro temporal
+            if (is_null($request->id_periodo_contable) && (is_null($request->desde) || is_null($request->hasta))) {
+                return response()->json([
+                    'message' => 'Debe especificar un período contable o un rango de fechas para generar el balance.'
+                ], 422);
             }
 
-            // normalizar period activo si es necesario
-            if (empty($request->id_periodo_contable) && !empty($request->desde)) {
-                $periodoActivo = $this->periodoContableRepositorio->findByPeriodoContableActivo();
-                if ($periodoActivo) {
-                    $request->merge(['id_periodo_contable' => $periodoActivo->id_periodo_contable]);
+            // Si viene período contable, obtener sus fechas para el cálculo del saldo anterior
+            if (!is_null($request->id_periodo_contable)) {
+                $periodo = $this->periodoContableRepositorio->findById($request->id_periodo_contable);
+
+                if ($periodo) {
+                    // Mantener el período para los movimientos, pero establecer fechas para saldo anterior
+                    if ($periodo->id_tipo_periodo === 1) {
+                        // Período mensual: usar fechas del mes
+                        $request->merge([
+                            'fecha_inicio_periodo' => $periodo->periodo_inicio,
+                            'fecha_fin_periodo' => $periodo->periodo_fin
+                        ]);
+                    } elseif ($periodo->id_tipo_periodo === 2) {
+                        // Período anual: usar fechas del año
+                        $request->merge([
+                            'fecha_inicio_periodo' => $periodo->anio_periodo . '-01-01',
+                            'fecha_fin_periodo' => $periodo->anio_periodo . '-12-31'
+                        ]);
+                    }
                 }
             }
 
@@ -76,8 +92,39 @@ class BalanceController extends Controller
     public function getExportarBalanceSaldo(Request $request)
     {
         try {
-            if (empty($request->id_periodo_contable) && (empty($request->desde) || empty($request->hasta))) {
-                return response()->json(['message' => 'Debe especificar un período contable o un rango de fechas'], 422);
+            // Validar que se especifique al menos un criterio de filtro temporal
+            if (is_null($request->id_periodo_contable) && (is_null($request->desde) || is_null($request->hasta))) {
+                return response()->json([
+                    'message' => 'Debe especificar un período contable o un rango de fechas para generar el balance.'
+                ], 422);
+            }
+
+            // Si viene período contable, obtener sus fechas para el cálculo del saldo anterior
+            $periodoInfo = null;
+            if (!is_null($request->id_periodo_contable)) {
+                $periodo = $this->periodoContableRepositorio->findById($request->id_periodo_contable);
+
+                if ($periodo) {
+                    $periodoInfo = $periodo;
+                    // Mantener el período para los movimientos, pero establecer fechas para saldo anterior
+                    if ($periodo->id_tipo_periodo === 1) {
+                        // Período mensual: usar fechas del mes
+                        $request->merge([
+                            'fecha_inicio_periodo' => $periodo->periodo_inicio,
+                            'fecha_fin_periodo' => $periodo->periodo_fin,
+                            'desde' => $periodo->periodo_inicio,
+                            'hasta' => $periodo->periodo_fin
+                        ]);
+                    } elseif ($periodo->id_tipo_periodo === 2) {
+                        // Período anual: usar fechas del año
+                        $request->merge([
+                            'fecha_inicio_periodo' => $periodo->anio_periodo . '-01-01',
+                            'fecha_fin_periodo' => $periodo->anio_periodo . '-12-31',
+                            'desde' => $periodo->anio_periodo . '-01-01',
+                            'hasta' => $periodo->anio_periodo . '-12-31'
+                        ]);
+                    }
+                }
             }
 
             // Crear un array con todos los parámetros del request
@@ -102,27 +149,24 @@ class BalanceController extends Controller
                 }
             }
 
-            // Obtener el periodo activo si no viene en el request
-            // $periodoActivo = null;
-            // if (empty($request->id_periodo_contable) && !empty($request->desde)) {
-            //     $periodoActivo = $this->periodoContableRepositorio->findByPeriodoContableActivo();
-            //     if ($periodoActivo) {
-            //         $filtros['id_periodo_contable'] = $periodoActivo->id_periodo_contable;
-            //         $filtros['anio_periodo'] = $periodoActivo->anio_periodo;
-            //     }
-            // } else if (!empty($request->id_periodo_contable)) {
-            //     $periodoActivo = \App\Models\Contabilidad\PeriodosContablesEntity::find($request->id_periodo_contable);
-            //     if ($periodoActivo) {
-            //         $filtros['anio_periodo'] = $periodoActivo->anio_periodo;
-            //     }
-            // }
+            // Establecer las fechas para el encabezado del reporte
+            if ($periodoInfo) {
+                // Si es por período, usar las fechas del período
+                $filtros['desde_reporte'] = $periodoInfo->periodo_inicio;
+                $filtros['hasta_reporte'] = $periodoInfo->periodo_fin;
+                $filtros['anio_periodo'] = $periodoInfo->anio_periodo;
+                $filtros['periodo_contable'] = $periodoInfo->periodo_contable;
+            } else {
+                // Si es por fechas, usar las fechas originales
+                $filtros['desde_reporte'] = $request->desde;
+                $filtros['hasta_reporte'] = $request->hasta;
+            }
 
             // Pasar todos los filtros al repositorio
             $reporte = $this->balanceRepository->findByReporteBalance($filtros);
 
             // Si no hay cuentas, retorna PDF vacío o mensaje
             if (empty($reporte['cuentas'])) {
-                // Puedes retornar un PDF con mensaje o un JSON, aquí ejemplo PDF con mensaje
                 $html = '<h3>No existen cuentas con movimiento para los filtros seleccionados.</h3>';
                 $mpdf = new \Mpdf\Mpdf([
                     'default_font' => 'quicksand',

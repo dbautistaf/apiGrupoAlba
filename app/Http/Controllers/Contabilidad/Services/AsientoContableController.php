@@ -79,7 +79,7 @@ class AsientoContableController extends Controller
                     $cuentaBancaria = $this->asientoContableRepository->obtenerCuentaBancariaPorPlanContable($key['id_detalle_plan']);
 
                     // Si hay cuenta bancaria, verificar que tenga cuenta contable asociada
-                    if ($cuentaBancaria) {
+                    if ($cuentaBancaria && $request->id_tipo_asiento != '5') {
                         if (!$this->asientoContableRepository->verificarCuentaBancariaTieneCuentaContable($cuentaBancaria->id_cuenta_bancaria)) {
                             DB::rollBack();
                             return response()->json([

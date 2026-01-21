@@ -6,6 +6,7 @@ use App\Models\Contabilidad\DetalleAsientosContablesEntity;
 use App\Models\Contabilidad\DetallePlanCuentasEntity;
 use App\Models\Contabilidad\TipoPlanOrganicoCuentaEntity;
 use App\Models\Contabilidad\NivelesPlanCuentaEntity;
+use App\Models\Contabilidad\PeriodosContablesEntity;
 use Illuminate\Support\Facades\DB;
 
 class BalanceRepository
@@ -134,12 +135,27 @@ class BalanceRepository
             ->where('tb_cont_asientos_contables_detalle.id_detalle_plan', $idDetallePlan)
             ->whereIn('ac.vigente', ['ACTIVO', 'S', '1', 'CONTRAASIENTO']);
 
+        // Si vienen las fechas, aplicamos el filtro de rango
         if (!is_null($fechaDesde) && !is_null($fechaHasta)) {
             $query->whereBetween('ac.fecha_asiento', [$fechaDesde, $fechaHasta]);
         }
 
+        // Si viene el periodo contable, aplicamos la lógica de filtrado
         if (!is_null($idPeriodoContable)) {
-            $query->where('ac.id_periodo_contable', $idPeriodoContable);
+            // Buscar el periodo contable para determinar si es anual o mensual
+            $periodoContable = PeriodosContablesEntity::find($idPeriodoContable);
+
+            if ($periodoContable) {
+                if ($periodoContable->id_tipo_periodo === 1) {
+                    // Periodo mensual: filtrar por el id_periodo_contable específico
+                    $query->where('ac.id_periodo_contable', $idPeriodoContable);
+                } elseif ($periodoContable->id_tipo_periodo === 2) {
+                    // Periodo anual: filtrar por todos los asientos del año usando join
+                    $anio = $periodoContable->anio_periodo;
+                    $query->join('tb_cont_periodos_contables as pc_anio', 'ac.id_periodo_contable', '=', 'pc_anio.id_periodo_contable')
+                        ->where('pc_anio.anio_periodo', $anio);
+                }
+            }
         }
 
         $detalles = $query->orderBy('ac.fecha_asiento')->orderBy('ac.numero')->get();
@@ -157,12 +173,32 @@ class BalanceRepository
             ->where('tb_cont_asientos_contables_detalle.id_detalle_plan', $idDetallePlan)
             ->whereIn('ac.vigente', ['ACTIVO', 'S', '1', 'CONTRAASIENTO']);
 
-        if (!is_null($fechaDesde)) {
-            $query->where('ac.fecha_asiento', '<', $fechaDesde);
-        }
-
+        // Si tenemos período contable, usar la fecha de inicio del período
         if (!is_null($idPeriodoContable)) {
-            $query->where('ac.id_periodo_contable', $idPeriodoContable);
+            $periodoContable = PeriodosContablesEntity::find($idPeriodoContable);
+
+            if ($periodoContable) {
+                if ($periodoContable->id_tipo_periodo === 1) {
+                    // Período mensual: saldo anterior = todo antes del inicio del período
+                    $query->where('ac.fecha_asiento', '<', $periodoContable->periodo_inicio);
+                } elseif ($periodoContable->id_tipo_periodo === 2) {
+                    // Período anual: saldo anterior = todo antes del año
+                    $anio = $periodoContable->anio_periodo;
+                    $query->where('ac.fecha_asiento', '<', $anio . '-01-01');
+                }
+            }
+        } else {
+            // Si no hay período, usar la fecha proporcionada
+            if (!is_null($fechaDesde)) {
+                $query->where('ac.fecha_asiento', '<', $fechaDesde);
+            } else {
+                // Sin fecha ni período, retornar saldo cero
+                return [
+                    'total_debe' => 0.0,
+                    'total_haber' => 0.0,
+                    'saldo_anterior' => 0.0
+                ];
+            }
         }
 
         $saldos = $query->selectRaw('SUM(monto_debe) as total_debe, SUM(monto_haber) as total_haber')->first();
@@ -199,10 +235,11 @@ class BalanceRepository
             'encabezado' => [
                 'empresa' => $empresa ?? ['nombre' => 'Mi Empresa'],
                 'filtros' => [
-                    'id_periodo_contable' => $params['id_periodo_contable'] ?? "No especificado",
+                    'id_periodo_contable' => $params['id_periodo_contable'] ?? null,
                     'anio_periodo' => $params['anio_periodo'] ?? null,
-                    'desde' => $params['desde'] ?? null,
-                    'hasta' => $params['hasta'] ?? null,
+                    'periodo_contable' => $params['periodo_contable'] ?? null,
+                    'desde' => $params['desde_reporte'] ?? $params['desde'] ?? null,
+                    'hasta' => $params['hasta_reporte'] ?? $params['hasta'] ?? null,
                     'tipo_cuenta' => $params['tipo_cuenta'] ?? null,
                     'nivel' => $params['nivel'] ?? null,
                     'cuentas_a_listar' => $params['cuentas_a_listar'] ?? null,

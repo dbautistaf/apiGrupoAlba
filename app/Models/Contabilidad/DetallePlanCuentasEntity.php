@@ -19,7 +19,6 @@ class DetallePlanCuentasEntity extends Model
         'cuenta',
         'id_nivel_padre',
         'id_tipo_cuenta',
-        'id_periodo_contable',
         'vigente',
         'imputable',
         'grupo',
@@ -33,11 +32,6 @@ class DetallePlanCuentasEntity extends Model
     public function tipo()
     {
         return $this->hasOne(TipoPlanOrganicoCuentaEntity::class, 'id_tipo_cuenta', 'id_tipo_cuenta');
-    }
-
-    public function periodo()
-    {
-        return $this->hasOne(PeriodosContablesEntity::class, 'id_periodo_contable', 'id_periodo_contable');
     }
 
     public function plan()

@@ -13,7 +13,6 @@ class PlanesCuentaEntity extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'id_periodo_contable',
         'id_tipo_plan_cuenta',
         'plan_cuenta',
         'cod_usuario_crea',
@@ -23,10 +22,6 @@ class PlanesCuentaEntity extends Model
         'activo'
     ];
 
-    public function periodo()
-    {
-        return $this->hasOne(PeriodosContablesEntity::class, 'id_periodo_contable', 'id_periodo_contable');
-    }
 
     public function tipo()
     {

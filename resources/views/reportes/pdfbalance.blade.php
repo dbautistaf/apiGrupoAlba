@@ -89,9 +89,13 @@
 
     <table class="filters small">
         <tr>
-            <td><strong>Período:</strong> {{ $reporte['encabezado']['filtros']['anio_periodo'] ?? '-' }}</td>
-            <td><strong>Desde:</strong> {{ $reporte['encabezado']['filtros']['desde'] ?? '-' }}</td>
-            <td><strong>Hasta:</strong> {{ $reporte['encabezado']['filtros']['hasta'] ?? '-' }}</td>
+            @if($reporte['encabezado']['filtros']['periodo_contable'])
+                <td colspan="3"><strong>Período:</strong> {{ $reporte['encabezado']['filtros']['periodo_contable'] }}</td>
+            @else
+                <td><strong>Desde:</strong> {{ $reporte['encabezado']['filtros']['desde'] ?? '-' }}</td>
+                <td><strong>Hasta:</strong> {{ $reporte['encabezado']['filtros']['hasta'] ?? '-' }}</td>
+                <td><strong>Año:</strong> {{ $reporte['encabezado']['filtros']['anio_periodo'] ?? '-' }}</td>
+            @endif
         </tr>
     </table>
 
