@@ -152,4 +152,23 @@ class FacturasPrestadoresController extends Controller
     {
         return Excel::download(new FacturaProveedorExport($request), 'facturacionProveedor.xlsx');
     }
+
+    public function getGenerarMultipleOpa(
+        TestOrdenPagoRepository $opa,
+        Request $request
+    ) {
+        try {
+            DB::beginTransaction();
+                $opa->findByIdFacturaMultiple($request->facturas);
+            DB::commit();
+            return response()->json(["message" => "Se genero múltiples facturas para un solo orden de pago"]);
+        } catch (\Throwable $th) {
+            //throw $th;
+            DB::rollBack();
+            return response()->json([
+                'code' => $th->getCode(),
+                'message' => $th->getMessage()
+            ], 500);
+        }
+    }
 }
