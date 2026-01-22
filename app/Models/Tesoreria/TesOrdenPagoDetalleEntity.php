@@ -2,6 +2,7 @@
 
 namespace App\Models\Tesoreria;
 
+use App\Models\facturacion\FacturacionDatosEntity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -18,4 +19,9 @@ class TesOrdenPagoDetalleEntity extends Model
         'monto_factura',
         'tipo_factura'
     ];
+
+    public function detallefc()
+    {
+        return $this->hasOne(FacturacionDatosEntity::class, 'id_factura','id_factura');
+    }
 }

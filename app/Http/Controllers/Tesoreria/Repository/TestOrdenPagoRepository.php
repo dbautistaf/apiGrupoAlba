@@ -127,16 +127,21 @@ class TestOrdenPagoRepository
     {
         $query = TesOrdenPagoEntity::with([
             'estado',
-            'factura',
-            'factura.razonSocial',
-            'factura.comprobantes',
+            'opadetalle.detallefc.razonSocial',
+            'opadetalle.detallefc.comprobantes',
             'proveedor',
             'prestador',
-            'pagoFecha.fechaprobablepagos'
+            'pagoFecha.fechaprobablepagos',
+            'opadetalle',
+            'opadetalle.detallefc',
         ]);
 
         if (!is_null($params->tipo)) {
-            $query->where('tipo_factura', $params->tipo);
+            $query->where(function ($q) use ($params) {
+                $q->whereHas('opadetalle.detallefc', function ($subQuery) use ($params) {
+                    $subQuery->where('tipo_factura', $params->tipo);
+                });
+            });
         }
 
         if (!is_null($params->estado)) {
@@ -163,7 +168,7 @@ class TestOrdenPagoRepository
 
         if (!is_null($params->id_locatorio)) {
             $query->where(function ($q) use ($params) {
-                $q->whereHas('factura', function ($subQuery) use ($params) {
+                $q->whereHas('opadetalle.detallefc', function ($subQuery) use ($params) {
                     $subQuery->where('id_locatorio', $params->id_locatorio);
                 });
             });
@@ -171,7 +176,7 @@ class TestOrdenPagoRepository
 
         if (!is_null($params->id_tipo_imputacion)) {
             $query->where(function ($q) use ($params) {
-                $q->whereHas('factura', function ($subQuery) use ($params) {
+                $q->whereHas('opadetalle.detallefc', function ($subQuery) use ($params) {
                     $subQuery->where('id_tipo_imputacion_sintetizada', $params->id_tipo_imputacion);
                 });
             });
@@ -183,7 +188,7 @@ class TestOrdenPagoRepository
 
         if (!is_null($params->n_factura)) {
             $query->where(function ($q) use ($params) {
-                $q->whereHas('factura', function ($subQuery) use ($params) {
+                $q->whereHas('opadetalle.detallefc', function ($subQuery) use ($params) {
                     $subQuery->where('numero', $params->n_factura);
                 });
             });
@@ -368,10 +373,9 @@ class TestOrdenPagoRepository
                     'tipo_factura' => $det->tipo_factura
                 ]);
             }
+            TesOrdenPagoDetalleEntity::whereIn('id_orden_pago', $idOrdenes)->delete();
+            TesOrdenPagoEntity::whereIn('id_orden_pago', $idOrdenes)->delete();
             return $newOpa;
         }
-
-
-        
     }
 }

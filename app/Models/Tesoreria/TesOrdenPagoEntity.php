@@ -53,12 +53,7 @@ class TesOrdenPagoEntity extends Model
     {
         return $this->hasOne(PrestadorEntity::class, 'cod_prestador', 'id_prestador');
     }
-
-    public function factura()
-    {
-        return $this->hasOne(FacturacionDatosEntity::class, 'id_factura', 'id_factura');
-    }
-
+    
     public function pagos()
     {
         return $this->hasMany(TesPagoEntity::class, 'id_orden_pago');
@@ -72,5 +67,9 @@ class TesOrdenPagoEntity extends Model
     public function fechapagos()
     {
         return $this->hasOne(TesPagoEntity::class, 'id_orden_pago','id_orden_pago');
+    }
+    public function opadetalle()
+    {
+        return $this->hasMany(TesOrdenPagoDetalleEntity::class, 'id_orden_pago','id_orden_pago');
     }
 }
