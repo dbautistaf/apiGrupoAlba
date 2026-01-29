@@ -432,7 +432,7 @@ class PadronController extends Controller
                 $nombresDeColumnas = Schema::getColumnListing($nombreTabla);
 
                 $query = AfiliadoPadronEntity::where('id', $titular->id)->first();
-                if ($query->id_parentesco == '00') {
+                /* if ($query->id_parentesco == '00') {
                     $select_familiar = AfiliadoPadronEntity::where('cuil_tit', $query->cuil_tit)->get();
                     foreach ($select_familiar as $familia) {
                         $familia->domicilio_postal = $titular->domicilio_postal;
@@ -452,7 +452,7 @@ class PadronController extends Controller
                             }
                         }
                     }
-                }
+                } */
 
                 foreach ($nombresDeColumnas as $nombreColumna) {
                     // Evitar error si alguna columna no existe en $titular
@@ -686,8 +686,8 @@ class PadronController extends Controller
                                 'cod_perfil' => 25,
                                 'actualizo_datos' => 0
                             ]);
-                            $afiliado = AfiliadoPadronEntity::with(['obrasocial', 'tipoParentesco', 'origen'])->where('dni', $padron->dni)->first();
-                            Mail::to($afiliado->email)->send(new NotificarUsuario($afiliado));
+                            //$afiliado = AfiliadoPadronEntity::with(['obrasocial', 'tipoParentesco', 'origen'])->where('dni', $padron->dni)->first();
+                            //Mail::to($afiliado->email)->send(new NotificarUsuario($afiliado));
                         }
                     }
                     $msg = 'Datos registrados correctamente';
@@ -1077,11 +1077,11 @@ class PadronController extends Controller
 
                     if ($plan && count($plan) > 0) {
                         AfiliadoDetalleTipoPlanEntity::where('id_padron', $afiliado->dni)->delete();
-                        foreach ($plan as $plan) {
+                        foreach ($plan as $planes) {
                             AfiliadoDetalleTipoPlanEntity::create([
-                                'fecha_alta' => $plan->fecha_alta,
-                                'fecha_baja' => $plan->fecha_baja ?? null,
-                                'id_tipo_plan' => $plan->id_tipo_plan,
+                                'fecha_alta' => $planes->fecha_alta,
+                                'fecha_baja' => $planes->fecha_baja ?? null,
+                                'id_tipo_plan' => $planes->id_tipo_plan,
                                 'id_padron' => $afiliado->dni
                             ]);
                         }

@@ -84,7 +84,9 @@ class TesPagosRepository
                 'comprobantes',
                 'pagosParciales',
                 'pagosParciales.formaPago',
-                'fechaprobablepagos'
+                'fechaprobablepagos',
+                'detalleopa.detallefc',
+                'detalleopa.detallefc.razonSocial'
             ]);
             $jquery->where('tipo_factura', 'PROVEEDOR');
         } else {
@@ -98,7 +100,9 @@ class TesPagosRepository
                 'comprobantes',
                 'pagosParciales',
                 'pagosParciales.formaPago',
-                'fechaprobablepagos'
+                'fechaprobablepagos',
+                'detalleopa.detallefc',
+                'detalleopa.detallefc.razonSocial'
             ]);
             $jquery->where('tipo_factura', 'PRESTADOR');
         }
@@ -123,25 +127,25 @@ class TesPagosRepository
         }
 
         if (!is_null($params->id_locatario)) {
-            $jquery->whereHas('opa.factura', function ($query) use ($params) {
+            $jquery->whereHas('detalleopa.detallefc', function ($query) use ($params) {
                 $query->where('id_locatorio', $params->id_locatario);
             });
         }
 
         if (!is_null($params->id_tipo_imputacion)) {
-            $jquery->whereHas('opa.factura', function ($query) use ($params) {
+            $jquery->whereHas('detalleopa.detallefc', function ($query) use ($params) {
                 $query->where('id_tipo_imputacion_sintetizada', $params->id_tipo_imputacion);
             });
         }
 
         if (!is_null($params->numero)) {
-            $jquery->whereHas('opa.factura', function ($query) use ($params) {
+            $jquery->whereHas('detalleopa.detallefc', function ($query) use ($params) {
                 $query->where('numero', $params->numero);
             });
         }
 
         if (!is_null($params->id_tipo) && $params->id_tipo !== '') {
-            $jquery->whereHas('opa.factura', function ($query) use ($params) {
+            $jquery->whereHas('detalleopa.detallefc', function ($query) use ($params) {
                 $query->where('id_tipo_factura', '=', (int) $params->id_tipo);
             });
         }

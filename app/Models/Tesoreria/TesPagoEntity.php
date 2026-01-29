@@ -76,4 +76,9 @@ class TesPagoEntity extends Model
     {
         return $this->hasMany(TesFechaProbablePagoEntity::class, 'id_pago', 'id_pago');
     }
+
+    public function detalleopa()
+    {
+        return $this->hasMany(TesOrdenPagoDetalleEntity::class, 'id_orden_pago', 'id_orden_pago');
+    }
 }
