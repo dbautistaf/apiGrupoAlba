@@ -12,6 +12,8 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\Log;
+
 
 class TesOrdenPagoController extends Controller
 {
@@ -66,41 +68,43 @@ class TesOrdenPagoController extends Controller
     {
         $query = TesOrdenPagoEntity::with([
             'estado',
-            'factura.razonSocial',
-            'factura.tipoComprobante',
+            'opadetalle',
+            'opadetalle.detallefc',
+            'opadetalle.detallefc.razonSocial',
             'proveedor.datosBancarios',
             'proveedor.tipoIva',
             'prestador.datosBancarios',
             'prestador.tipoIva',
+            'pagos',
             'pagos.formaPago',
             'pagos.cuenta.entidadBancaria',
-            'pagos.pagosParciales'
-        ])->whereRelation('factura', 'id_factura', $id)
+            'pagos.pagosParciales',
+            'pagos.fechaprobablepagos',
+        ])->where('id_orden_pago', $id)
             ->first();
-
+        Log::info('Request completo', $query->toArray());
         Carbon::setLocale('es');
-        $fecha = Carbon::parse($query?->factura?->periodo);
-
+        $debito = 0;
+        foreach ($query?->opadetalle as $detalle) {
+            $debito = $debito + $detalle->detallefc->total_debitado_liquidacion;
+        }
         $datos = [
             "comprobante_nro" => $query?->num_orden_pago,
             "fecha_emision" => $query?->fecha_emision,
-            "cuit_proveedor" => $query?->proveedor ? $query->proveedor->cuit : $query?->prestador->cuit,
-            "nombre_proveedor" => $query?->proveedor ? $query->proveedor->razon_social : $query?->prestador->razon_social,
-            "cbu_proveedor" => $query?->proveedor ? $query->proveedor->datosBancarios?->cbu_cuenta : $query?->prestador->datosBancarios?->cbu_cuenta,
-            "iva_proveedor" => $query?->proveedor ? $query->proveedor->tipoIva->descripcion_iva : $query?->prestador->tipoIva->descripcion_iva,
-            "domicilio_proveedor" => $query?->proveedor ? $query->proveedor->direccion : $query?->prestador->direccion,
-            "tipo_comprobante" => $query?->factura?->tipoComprobante?->descripcion,
-            "numero_comprobante" => $query?->factura?->numero,
-            "facturas" => [$query?->factura],
+            "cuit_proveedor" => $query?->proveedor ? $query?->proveedor?->cuit : $query?->prestador?->cuit,
+            "nombre_proveedor" => $query?->proveedor ? $query?->proveedor?->razon_social : $query?->prestador?->razon_social,
+            "cbu_proveedor" => $query?->proveedor ? $query?->proveedor?->datosBancarios?->cbu_cuenta : $query?->prestador?->datosBancarios?->cbu_cuenta,
+            "iva_proveedor" => $query?->proveedor ? $query?->proveedor?->tipoIva?->descripcion_iva : $query?->prestador?->tipoIva?->descripcion_iva,
+            "domicilio_proveedor" => $query?->proveedor ? $query?->proveedor?->direccion : $query?->prestador?->direccion,
+            "facturas" => $query?->opadetalle,
             "total" => $query?->monto_orden_pago,
             "pagos" => $query?->pagos,
             "fecha_pago" => $query?->fecha_confirma_pago,
-            "debito" => $query?->factura?->total_debitado_liquidacion,
+            "debito" => $debito,
             "totalPagos" => !empty($query?->pagos) && count($query?->pagos) > 0
                 ? number_format((float) $query?->monto_orden_pago, 2, '.', '')
                 : '0.00',
-            "razon_social" => $query?->factura->razonSocial,
-            "observaciones" => 'PRESTACIÓN ' . strtoupper($fecha->translatedFormat('F')) . ' ' . $fecha->year,
+            "razon_social" => "PRUEBA",
             "pagosParciales" => $query->pagos->pluck('pagosParciales')->flatten()
         ];
 

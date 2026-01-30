@@ -204,9 +204,10 @@ class FacturasPrestadoresRepository
                 'comprobantes' => function ($query) {
                     $query->where('estado', 1);
                 },
-                'opa'
+                'opa',
+                'detalleopa'
             ])
-                ->whereHas('opa', function ($query) use ($factura) {
+                ->whereHas('detalleopa', function ($query) use ($factura) {
                     $query->where('id_factura', $factura->id_factura);
                 })
                 ->get();
