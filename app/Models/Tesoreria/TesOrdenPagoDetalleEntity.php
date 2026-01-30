@@ -17,7 +17,8 @@ class TesOrdenPagoDetalleEntity extends Model
         'id_orden_pago',
         'id_factura',
         'monto_factura',
-        'tipo_factura'
+        'tipo_factura',
+        'factura_unida'
     ];
 
     public function detallefc()

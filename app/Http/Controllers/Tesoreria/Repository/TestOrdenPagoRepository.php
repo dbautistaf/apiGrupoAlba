@@ -237,7 +237,8 @@ class TestOrdenPagoRepository
             'id_orden_pago' => $opa->id_orden_pago,
             'id_factura' => $param->id_factura,
             'monto_factura' => $param->monto_orden_pago,
-            'tipo_factura' => $param->tipo_factura
+            'tipo_factura' => $param->tipo_factura,
+            'factura_unida' => 0
         ]);
         return $opa;
     }
@@ -366,11 +367,13 @@ class TestOrdenPagoRepository
             ]);
 
             foreach ($detalleOpa as $det) {
+
                 TesOrdenPagoDetalleEntity::create([
                     'id_orden_pago' => $newOpa->id_orden_pago,
                     'id_factura' => $det->id_factura,
                     'monto_factura' => $det->monto_factura,
-                    'tipo_factura' => $det->tipo_factura
+                    'tipo_factura' => $det->tipo_factura,
+                    'factura_unida' => 1
                 ]);
             }
             TesOrdenPagoDetalleEntity::whereIn('id_orden_pago', $idOrdenes)->delete();

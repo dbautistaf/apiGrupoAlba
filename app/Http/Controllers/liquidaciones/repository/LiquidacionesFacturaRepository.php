@@ -144,6 +144,7 @@ class LiquidacionesFacturaRepository
                     $row->tipo_prestador,
                     $row->tipo_proveedor,
                     $row->fecha_registra_factura,
+                    $row->factura_unida,
                 );
             });
     }

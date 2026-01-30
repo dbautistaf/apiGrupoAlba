@@ -38,8 +38,9 @@ class LiquidacionesFacturaDto
     public $tipo_prestador;
     public $tipo_proveedor;
     public $fecha_registra;
+    public $factura_unida;
 
-    public function __construct($cuit,  $prestador,  $num_liquidacion,  $fecha_recepcion,  $fecha_vencimiento,  $fecha_liquidacion,  $comprobante,  $refacturacion,  $prestacion_externa,  $imputacion_contable,  $subtotal,  $total_iva,  $total_neto,  $total_debito,  $delegacion,  $periodo,  $tipo_carga_detalle,  $id_factura,  $id_tipo_factura,  $cod_sindicato,  $id_tipo_comprobante,  $id_tipo_imputacion_sintetizada,  $id_prestador,  $id_locatorio,  $estado,  $email_prestador,  $id_estado_orden_pago,  $id_orden_pago,  $id_estado_pago, $locatario, $razon_social, $tipo_prestador, $tipo_proveedor, $fecha_registra)
+    public function __construct($cuit,  $prestador,  $num_liquidacion,  $fecha_recepcion,  $fecha_vencimiento,  $fecha_liquidacion,  $comprobante,  $refacturacion,  $prestacion_externa,  $imputacion_contable,  $subtotal,  $total_iva,  $total_neto,  $total_debito,  $delegacion,  $periodo,  $tipo_carga_detalle,  $id_factura,  $id_tipo_factura,  $cod_sindicato,  $id_tipo_comprobante,  $id_tipo_imputacion_sintetizada,  $id_prestador,  $id_locatorio,  $estado,  $email_prestador,  $id_estado_orden_pago,  $id_orden_pago,  $id_estado_pago, $locatario, $razon_social, $tipo_prestador, $tipo_proveedor, $fecha_registra,$factura_unida)
     {
         $this->cuit = $cuit;
         $this->prestador = $prestador;
@@ -75,5 +76,6 @@ class LiquidacionesFacturaDto
         $this->tipo_prestador = $tipo_prestador;
         $this->tipo_proveedor = $tipo_proveedor;
         $this->fecha_registra = $fecha_registra;
+        $this->factura_unida = $factura_unida;
     }
 }
