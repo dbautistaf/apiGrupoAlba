@@ -198,6 +198,10 @@ class PadronController extends Controller
             $query->where('id_comercial_caja', $request->id_comercial_caja);
         }
 
+        if (!empty($request->persona)) {
+            $query->where('id_usuario', $request->persona);
+        }
+
         if (!empty($request->desde) && !empty($request->hasta)) {
             $query->whereBetween('fecha_carga', [$request->desde, $request->hasta]);
         }

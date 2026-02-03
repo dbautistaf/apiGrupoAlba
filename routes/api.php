@@ -227,7 +227,7 @@ Route::group([
     Route::get('getListComercialAfiliado', [App\Http\Controllers\PadronComercialController::class, 'getPadronComercial']);
     Route::get('getListComercialAfiliadoBaja/{id}', [App\Http\Controllers\PadronComercialController::class, 'getPadronComercialBaja']);
     Route::post('postdeletePadronComercial', [App\Http\Controllers\PadronComercialController::class, 'deletePadronComercial']);
-    Route::get('getLikePadronComercial/{dni}', [App\Http\Controllers\PadronComercialController::class, 'getLikePadronComercial']);
+    Route::get('getLikePadronComercial', [App\Http\Controllers\PadronComercialController::class, 'getLikePadronComercial']);
     Route::post('saveFamiliarComercialAfiliado', [App\Http\Controllers\GrupoFamiliarComercialController::class, 'savePadronFamiliarComercial']);
     Route::get('getListFamiliarComercialAfiliado/{cuil_tit}', [App\Http\Controllers\GrupoFamiliarComercialController::class, 'getFamiliarAfiliadoComercial']);
     Route::get('getIdFamiliarPadron/{id}', [App\Http\Controllers\GrupoFamiliarComercialController::class, 'getIDFamiliarPadronComercial']);

@@ -94,8 +94,8 @@ class PrestacionMedicaController  extends Controller
                 }
             } else if (is_string($request->search)) {
                 $data =  $data = $repoFiltro->findByListFechaRegistraBetweenAndNombresAfiliadoLike($request->desde, $request->hasta, $request->search, $request->tramite);
-            } else if (!empty($request->estado)) {
-                $data =  $data = $repoFiltro->findByListEstado($request->estado);
+            } else if (!empty($request->estado) || !empty($request->persona)) {
+                $data =  $data = $repoFiltro->findByListEstado($request->estado, $request->persona);
             } else {
                 $data =  $repoFiltro->findByListFechaRegistraBetweenAndLimit($request->desde, $request->hasta, 200, $request->tramite);
             }

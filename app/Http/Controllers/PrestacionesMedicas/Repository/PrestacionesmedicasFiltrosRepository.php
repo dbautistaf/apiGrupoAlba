@@ -78,12 +78,21 @@ class PrestacionesmedicasFiltrosRepository
         return $results;
     }
 
-    public function findByListEstado($estado)
+    public function findByListEstado($estado, $usuario)
     {
-        return PrestacionesPracticaLaboratorioEntity::with($this->allRelations)
-            ->where('cod_tipo_estado', $estado)
-            ->orderByDesc('fecha_registra')
+        $query = PrestacionesPracticaLaboratorioEntity::with($this->allRelations);
+
+        if (!is_null($estado)) {
+            $query->where('cod_tipo_estado', $estado);
+        }
+
+        if (!is_null($usuario)) {
+            $query->where('usuario_registra', $usuario);
+        }
+
+        $results = $query->orderByDesc('fecha_registra')
             ->get();
+        return $results;
     }
 
     public function findByListFechaRegistraBetweenAndLimit($desde, $hasta, $limit, $tramite)
