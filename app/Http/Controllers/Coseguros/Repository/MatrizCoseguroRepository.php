@@ -15,6 +15,7 @@ class MatrizCoseguroRepository
     public function findByUpdate($item)
     {
         $coseguro = MatrizCosegurosEntity::find($item->id_coseguro);
+        $coseguro->periodo_desde = $item->periodo_desde;
         $coseguro->monto_regimen_general = $item->monto_regimen_general;
         $coseguro->monto_monotr_autonomo = $item->monto_monotr_autonomo;
         $coseguro->monto_monotr_social = $item->monto_monotr_social;

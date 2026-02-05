@@ -1077,6 +1077,9 @@ class PadronController extends Controller
                     $afiliado->id_comercial_origen = $request->id_comercial_origen;
                     $afiliado->id_locatario = $request->id_locatario;
                     $afiliado->domicilio_postal = $request->domicilio_postal;
+                    $afiliado->celular = $request->celular;
+                    $afiliado->telefono = $request->telefono;
+                    $afiliado->domicilio_laboral = $request->domicilio_laboral;
                     $afiliado->save();
 
                     if ($plan && count($plan) > 0) {
