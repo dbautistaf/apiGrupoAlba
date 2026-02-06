@@ -522,6 +522,7 @@ class PadronController extends Controller
                 $query->id_comercial_origen = $titular->id_comercial_origen;
                 $query->id_comercial_caja = $titular->id_comercial_caja;
                 $query->discapacidad = $titular->discapacidad;
+                $query->orden_grupo = $titular->orden_grupo;
                 $query->save();
                 $this->postSavePadronComercial($titular);
                 //AfiliadoDetalleTipoPlanEntity::where('id_padron', $request->id)->delete();
@@ -627,7 +628,8 @@ class PadronController extends Controller
                         'file_dni' => '',
                         'id_comercial_origen' => $titular->id_comercial_origen,
                         'id_comercial_caja' => $titular->id_comercial_caja,
-                        'discapacidad' => $titular->discapacidad
+                        'discapacidad' => $titular->discapacidad,
+                        'orden_grupo' => $titular->orden_grupo,
                     ]);
                     AuditoriaPadronModelo::create([
                         'fecha' => $now->format('Y-m-d H:i:s'),
