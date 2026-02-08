@@ -754,6 +754,11 @@ class PadronComercialController extends Controller
 
     public function exportPadronComercial(Request $request)
     {
-        return Excel::download(new PadronComercialExport($request), 'padronComercial.xlsx');
-    }
+        $user = Auth::user();
+        if ($user->cod_perfil == 2 || $user->cod_perfil == 15) {
+            return Excel::download(new PadronComercialExport($request), 'padronComercial.xlsx');
+        } else {
+            return response()->json(['message' => 'No tiene permisos para descargar'], 403);
+        }
+    }   
 }

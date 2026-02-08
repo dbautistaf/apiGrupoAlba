@@ -781,10 +781,15 @@ class PadronController extends Controller
 
     public function exportPadron(Request $request)
     {
-        if ($request->tipo == '1') {
-            return Excel::download(new PadronLiquidacionExport, 'padron.xlsx');
+        $user = Auth::user();
+        if ($user->cod_perfil == 2 || $user->cod_perfil == 15) {
+            if ($request->tipo == '1') {
+                return Excel::download(new PadronLiquidacionExport, 'padron.xlsx');
+            } else {
+                return Excel::download(new PadronExport($request->tipoPadron), 'padron.xlsx');
+            }
         } else {
-            return Excel::download(new PadronExport($request->tipoPadron), 'padron.xlsx');
+            return response()->json(['message' => 'No tiene permisos para descargar'], 403);
         }
     }
 
