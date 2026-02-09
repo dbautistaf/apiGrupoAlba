@@ -114,20 +114,48 @@ class PadronComercialController extends Controller
         return response()->json(['message' => 'Estado cambiado correctamente'], 200);
     }
 
-    public function getLikePadronComercial($dni)
+    public function getLikePadronComercial(Request $request)
     {
-        $query = PadronComercialModelo::with(['Autorizacion', 'locatario', 'tipoParentesco', 'origen'])
-            ->where(function ($query) use ($dni) {
-                $query->whereHas('origen', function ($queryOrigin) use ($dni) {
-                    $queryOrigin->where('detalle_comercial_origen', 'LIKE', "$dni%");
-                });
-            })
-            ->orWhere('dni', 'LIKE', "$dni%")->orWhere('nombre', 'LIKE', "$dni%")
-            ->orWhere('cuil_tit', 'LIKE', "$dni%")->get();
+        $query = PadronComercialModelo::with([
+            'Autorizacion',
+            'locatario',
+            'tipoParentesco',
+            'origen'
+        ]);
 
+        if (!empty($request->dni)) {
+            $query->where(function ($q) use ($request) {
+                $q->where('dni', 'like', $request->dni . '%')
+                    ->orWhere('cuil_tit', 'like', '%' . $request->dni . '%')
+                    ->orWhere('cuil_benef', 'like', '%' . $request->dni . '%')
+                    ->orWhere('nombre', 'like', '%' . $request->dni . '%')
+                    ->orWhere('apellidos', 'like', '%' . $request->dni . '%');
+            });
+        }
 
+        if (!empty($request->id_estado_autorizacion)) {
+            $query->whereHas('Autorizacion', function ($q) use ($request) {
+                $q->where(
+                    'id_estado_autorizacion',
+                    $request->id_estado_autorizacion
+                );
+            });
+        }
 
-        foreach ($query as $file) {
+        if (!empty($request->persona)) {
+            $query->where('id_usuario', $request->persona);
+        }
+
+        if (!empty($request->desde) && !empty($request->hasta)) {
+            $query->whereBetween('fecha_carga', [
+                $request->desde,
+                $request->hasta
+            ]);
+        }
+
+        $datos = $query->limit(50)->get();
+
+        foreach ($datos as $file) {
             $familia = PadronComercialModelo::with(['Autorizacion', 'locatario', 'tipoParentesco', 'origen'])
                 ->where('cuil_tit', '=', $file->cuil_tit)->where('id', '!=', $file->id)->get();
             foreach ($familia as $f_file) {
@@ -140,7 +168,7 @@ class PadronComercialController extends Controller
             $file->id_tipo_plan = $plan;
             $file->familia = $familia;
         }
-        return response()->json($query, 200);
+        return response()->json($datos, 200);
     }
 
     public function getPadronComercialFamiliar($cuit_titular)
@@ -726,6 +754,11 @@ class PadronComercialController extends Controller
 
     public function exportPadronComercial(Request $request)
     {
-        return Excel::download(new PadronComercialExport($request), 'padronComercial.xlsx');
-    }
+        $user = Auth::user();
+        if ($user->cod_perfil == 2 || $user->cod_perfil == 15) {
+            return Excel::download(new PadronComercialExport($request), 'padronComercial.xlsx');
+        } else {
+            return response()->json(['message' => 'No tiene permisos para descargar'], 403);
+        }
+    }   
 }

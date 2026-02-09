@@ -39,6 +39,8 @@ class InternacionesController  extends Controller
             $data = $repoInternacionFiltro->findByListEstado($request->estado);
         } elseif (!empty($request->interestado)) {
             $data = $repoInternacionFiltro->findByListNewEstado($request->interestado);
+        } elseif (!empty($request->persona)) {
+            $data = $repoInternacionFiltro->findByListUsuario($request->persona);
         } else {
             $data = $repoInternacionFiltro->findByList();
         }

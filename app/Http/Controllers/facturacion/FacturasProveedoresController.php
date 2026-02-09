@@ -127,10 +127,11 @@ class FacturasProveedoresController extends Controller
                 'comprobantes' => function ($query) {
                     $query->where('estado', 1);
                 },
-                'opa'
+                'opa',
+                'detalleopa'
             ])
                 ->where('tipo_factura', 'PROVEEDOR')
-                ->whereHas('opa', function ($query) use ($factura) {
+                ->whereHas('detalleopa', function ($query) use ($factura) {
                     $query->where('id_factura', $factura->id_factura);
                 })
                 ->get();
@@ -143,7 +144,6 @@ class FacturasProveedoresController extends Controller
                 if ($pago->opa && !$id_orden_pago) {
                     $id_orden_pago = $pago->opa->id_orden_pago;
                 }
-
                 foreach ($pago->comprobantes as $comprobante) {
                     $comprobantes[] = [
                         'id_comprobante' => $comprobante->id_comprobante,

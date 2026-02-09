@@ -118,6 +118,14 @@ class InternacionFiltrosRepository
             ->get();
     }
 
+    public function findByListUsuario($estado)
+    {
+        return InternacionesEntity::with($this->relaciones)
+            ->where('cod_usuario_registra',  $estado)
+            ->orderBy('fecha_internacion', 'desc')
+            ->get();
+    }
+
     public function findByList()
     {
         return InternacionesEntity::with($this->relaciones)

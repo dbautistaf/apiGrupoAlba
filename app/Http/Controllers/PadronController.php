@@ -198,6 +198,10 @@ class PadronController extends Controller
             $query->where('id_comercial_caja', $request->id_comercial_caja);
         }
 
+        if (!empty($request->persona)) {
+            $query->where('id_usuario', $request->persona);
+        }
+
         if (!empty($request->desde) && !empty($request->hasta)) {
             $query->whereBetween('fecha_carga', [$request->desde, $request->hasta]);
         }
@@ -518,6 +522,7 @@ class PadronController extends Controller
                 $query->id_comercial_origen = $titular->id_comercial_origen;
                 $query->id_comercial_caja = $titular->id_comercial_caja;
                 $query->discapacidad = $titular->discapacidad;
+                $query->orden_grupo = $titular->orden_grupo;
                 $query->save();
                 $this->postSavePadronComercial($titular);
                 //AfiliadoDetalleTipoPlanEntity::where('id_padron', $request->id)->delete();
@@ -623,7 +628,8 @@ class PadronController extends Controller
                         'file_dni' => '',
                         'id_comercial_origen' => $titular->id_comercial_origen,
                         'id_comercial_caja' => $titular->id_comercial_caja,
-                        'discapacidad' => $titular->discapacidad
+                        'discapacidad' => $titular->discapacidad,
+                        'orden_grupo' => $titular->orden_grupo,
                     ]);
                     AuditoriaPadronModelo::create([
                         'fecha' => $now->format('Y-m-d H:i:s'),
@@ -775,10 +781,15 @@ class PadronController extends Controller
 
     public function exportPadron(Request $request)
     {
-        if ($request->tipo == '1') {
-            return Excel::download(new PadronLiquidacionExport, 'padron.xlsx');
+        $user = Auth::user();
+        if ($user->cod_perfil == 2 || $user->cod_perfil == 15) {
+            if ($request->tipo == '1') {
+                return Excel::download(new PadronLiquidacionExport, 'padron.xlsx');
+            } else {
+                return Excel::download(new PadronExport($request->tipoPadron), 'padron.xlsx');
+            }
         } else {
-            return Excel::download(new PadronExport($request->tipoPadron), 'padron.xlsx');
+            return response()->json(['message' => 'No tiene permisos para descargar'], 403);
         }
     }
 
@@ -1073,6 +1084,9 @@ class PadronController extends Controller
                     $afiliado->id_comercial_origen = $request->id_comercial_origen;
                     $afiliado->id_locatario = $request->id_locatario;
                     $afiliado->domicilio_postal = $request->domicilio_postal;
+                    $afiliado->celular = $request->celular;
+                    $afiliado->telefono = $request->telefono;
+                    $afiliado->domicilio_laboral = $request->domicilio_laboral;
                     $afiliado->save();
 
                     if ($plan && count($plan) > 0) {
