@@ -782,7 +782,7 @@ class PadronController extends Controller
     public function exportPadron(Request $request)
     {
         $user = Auth::user();
-        if ($user->cod_perfil == 2 || $user->cod_perfil == 15) {
+        if ($user->cod_usuario == 23 || $user->cod_usuario == 25) {
             if ($request->tipo == '1') {
                 return Excel::download(new PadronLiquidacionExport, 'padron.xlsx');
             } else {
