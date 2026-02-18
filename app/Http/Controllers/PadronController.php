@@ -102,22 +102,27 @@ class PadronController extends Controller
 
     public function getListPadronEstado($estado)
     {
+        $user = Auth::user();
         $files = [];
-        if ($estado == 4) {
-            $padron = AfiliadoPadronEntity::join('tb_escolaridad', 'tb_padron.id', '=', 'tb_escolaridad.id_padron')
-                ->select('tb_padron.*', 'tb_escolaridad.nivel_estudio')
-                ->get();
-        } else if ($estado == 5) {
-            $padron = AfiliadoPadronEntity::join('tb_discapaciodad', 'tb_padron.id', '=', 'tb_discapaciodad.id_padron')
-                ->join('tb_tipo_discapacidad', 'tb_tipo_discapacidad.id_tipo_discapacidad', '=', 'tb_discapaciodad.id_tipo_discapacidad')
-                ->select('tb_padron.*', 'tb_tipo_discapacidad.tipo_discapacidad')
-                ->get();
-        } else if ($estado == 6) {
-            $padron = AfiliadoPadronEntity::join('tb_credencial', 'tb_padron.id', '=', 'tb_credencial.id_padron')
-                ->select('tb_padron.*', 'tb_credencial.num_carnet')
-                ->get();
+        if ($user->cod_usuario == 23 || $user->cod_usuario == 25 || $user->cod_usuario == 2) {
+            if ($estado == 4) {
+                $padron = AfiliadoPadronEntity::join('tb_escolaridad', 'tb_padron.id', '=', 'tb_escolaridad.id_padron')
+                    ->select('tb_padron.*', 'tb_escolaridad.nivel_estudio')
+                    ->get();
+            } else if ($estado == 5) {
+                $padron = AfiliadoPadronEntity::join('tb_discapaciodad', 'tb_padron.id', '=', 'tb_discapaciodad.id_padron')
+                    ->join('tb_tipo_discapacidad', 'tb_tipo_discapacidad.id_tipo_discapacidad', '=', 'tb_discapaciodad.id_tipo_discapacidad')
+                    ->select('tb_padron.*', 'tb_tipo_discapacidad.tipo_discapacidad')
+                    ->get();
+            } else if ($estado == 6) {
+                $padron = AfiliadoPadronEntity::join('tb_credencial', 'tb_padron.id', '=', 'tb_credencial.id_padron')
+                    ->select('tb_padron.*', 'tb_credencial.num_carnet')
+                    ->get();
+            } else {
+                $padron =  AfiliadoPadronEntity::where('activo', '=', $estado)->get();
+            }
         } else {
-            $padron =  AfiliadoPadronEntity::where('activo', '=', $estado)->get();
+            return response()->json(['message' => 'No tiene permisos para realizar el filtro'], 403);
         }
 
         foreach ($padron as $file) {
@@ -172,6 +177,7 @@ class PadronController extends Controller
 
     public function getLikePadron(Request $request)
     {
+        $user = Auth::user();
         $query = AfiliadoPadronEntity::with([
             'origen',
             'user',
@@ -179,8 +185,11 @@ class PadronController extends Controller
             'detalleplan.tipoPlan',
             'documentos.tipoDocumentacion' // Relación para obtener la descripción del tipo de documentación
         ]);
+        $hayFiltro = false;
 
         if (!empty($request->dni)) {
+            $hayFiltro = true;
+
             $query->where(function ($q) use ($request) {
                 $q->where('dni', 'like', $request->dni . '%')
                     ->orWhere('cuil_tit', 'like', '%' . $request->dni . '%')
@@ -190,22 +199,32 @@ class PadronController extends Controller
             });
         }
 
-        if (!empty($request->cuil)) {
-            $query->where('cuil_tit', 'like', '%' . $request->cuil . '%');
+        if ($user->cod_usuario == 23 || $user->cod_usuario == 25 || $user->cod_usuario == 2) {
+
+            if (!empty($request->cuil)) {
+                $hayFiltro = true;
+                $query->where('cuil_tit', 'like', '%' . $request->cuil . '%');
+            }
+
+            if (!empty($request->id_comercial_caja)) {
+                $hayFiltro = true;
+                $query->where('id_comercial_caja', $request->id_comercial_caja);
+            }
+
+            if (!empty($request->persona)) {
+                $hayFiltro = true;
+                $query->where('id_usuario', $request->persona);
+            }
+
+            if (!empty($request->desde) && !empty($request->hasta)) {
+                $hayFiltro = true;
+                $query->whereBetween('fecha_carga', [$request->desde, $request->hasta]);
+            }
         }
 
-        if (!empty($request->id_comercial_caja)) {
-            $query->where('id_comercial_caja', $request->id_comercial_caja);
+        if (!$hayFiltro) {
+            return response()->json([], 200);
         }
-
-        if (!empty($request->persona)) {
-            $query->where('id_usuario', $request->persona);
-        }
-
-        if (!empty($request->desde) && !empty($request->hasta)) {
-            $query->whereBetween('fecha_carga', [$request->desde, $request->hasta]);
-        }
-
         $files = $query
             ->limit(50)
             ->get()

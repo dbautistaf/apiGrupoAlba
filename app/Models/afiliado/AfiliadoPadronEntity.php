@@ -69,6 +69,7 @@ class AfiliadoPadronEntity extends Model
         'id_comercial_origen',
         'id_comercial_caja',
         'discapacidad',
+        'orden_grupo'
     ];
 
     public function detalleplan()
