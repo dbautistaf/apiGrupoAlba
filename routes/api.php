@@ -458,6 +458,10 @@ Route::group([
     Route::post('postsaveHospital', [App\Http\Controllers\prestadores\HospitalPublicoController::class, 'saveHospital']);
     Route::get('getIdHospital/{id}', [App\Http\Controllers\prestadores\HospitalPublicoController::class, 'getIdHospital']);
     Route::get('filterHospital', [App\Http\Controllers\prestadores\HospitalPublicoController::class, 'getListaHospital']);
+
+
+    Route::get('/facturas-impagas/excel', [App\Http\Controllers\prestadores\ReportesPrestadorController::class, 'exportarExcelFacturasImpagas']);
+    Route::get('/facturas-impagas/resumen/excel', [App\Http\Controllers\prestadores\ReportesPrestadorController::class, 'exportarExcelResumenFacturasImpagas']);
 });
 
 Route::group([
@@ -828,8 +832,6 @@ Route::group([
     Route::get('comprobante_relacionado', [App\Http\Controllers\facturacion\FacturacionProcesosController::class, 'selectComprobanteRelacionado']);
 
     Route::post('generar-multiple_fc', [App\Http\Controllers\facturacion\FacturasPrestadoresController::class, 'getGenerarMultipleOpa']);
-    
-    
 });
 
 Route::group([
@@ -1306,7 +1308,7 @@ Route::group(
         Route::get('getListAcuerdosPago', [App\Http\Controllers\Fiscalizacion\AcuerdoPagoController::class, 'getListAcuerdosPago']);
         Route::delete('eliminarAcuerdo/{id}', [App\Http\Controllers\Fiscalizacion\AcuerdoPagoController::class, 'eliminarAcuerdo']);
         // Route::get('acuerdo-pago/{id}', [App\Http\Controllers\Fiscalizacion\AcuerdoPagoController::class, 'getAcuerdoPagoById']);
-    
+
         // Rutas para tb_fisca_cobranza_periodo
         Route::get('cobranzas-periodo', [App\Http\Controllers\Fiscalizacion\CobranzaPeriodoController::class, 'getListCobranzasPeriodo']);
         Route::get('cobranza-periodo/{id}', [App\Http\Controllers\Fiscalizacion\CobranzaPeriodoController::class, 'getCobranzaPeriodoById']);

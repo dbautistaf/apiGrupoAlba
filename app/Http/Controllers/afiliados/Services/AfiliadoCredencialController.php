@@ -105,12 +105,18 @@ class AfiliadoCredencialController extends Controller
     public function getListar(Request $request)
     {
         $data = [];
-        $query = AfiliadoCredencialEntity::with(['afiliado']);
+        $query = AfiliadoCredencialEntity::with(['afiliado.obrasocial']);
 
         if (!is_null($request->searchs)) {
             $query->whereHas('afiliado', function ($subQuery) use ($request) {
                 $subQuery->where('dni', 'LIKE', "%$request->searchs%")
                     ->orWhere('apellidos', 'LIKE', "%$request->searchs%");
+            });
+        }
+
+        if (!is_null($request->id_locatorio)) {
+            $query->whereHas('afiliado', function ($subQuery) use ($request) {
+                $subQuery->where('id_locatario', "$request->id_locatorio");
             });
         }
 
@@ -125,7 +131,7 @@ class AfiliadoCredencialController extends Controller
 
     public function getId(Request $request)
     {
-        $escolaridad = AfiliadoCredencialEntity::with(['afiliado'])->where('dni',$request->id)->first();
+        $escolaridad = AfiliadoCredencialEntity::with(['afiliado'])->where('dni', $request->id)->first();
         return response()->json($escolaridad, 200);
     }
 }
