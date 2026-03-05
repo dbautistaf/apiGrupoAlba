@@ -2,6 +2,7 @@
 
 namespace App\Models\prestadores;
 
+use App\Models\facturacion\FacturacionDatosEntity;
 use App\Models\ubigeo\UbigeoLocalidadesEntity;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -71,6 +72,11 @@ class PrestadorEntity extends Model
     public function tiposImputaciones()
     {
         return $this->hasMany(PrestadorImputacionesContablesEntity::class, 'cod_prestador', 'cod_prestador');
+    }
+
+     public function facturas()
+    {
+        return $this->hasMany(FacturacionDatosEntity::class, 'id_prestador');
     }
 
     public function usuario()

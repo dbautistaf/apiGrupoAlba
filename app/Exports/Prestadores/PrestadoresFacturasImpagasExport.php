@@ -105,7 +105,7 @@ class PrestadoresFacturasImpagasExport implements FromCollection, WithHeadings, 
             $row->prestador->razon_social,
             $row->factura->periodo ?? '--',
             $comprobante,
-            'S/ ' . number_format($row->factura->total_neto ?? 0, 2),
+            'S/ ' . number_format($row->factura->total_neto ?? 0, 2, ',', '.'),
             $diasVencidos
         ];
     }

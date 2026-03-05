@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\prestadores\repository;
 
-use App\Models\Prestadores\PrestadorEntity;
+use App\Models\prestadores\PrestadorEntity;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
