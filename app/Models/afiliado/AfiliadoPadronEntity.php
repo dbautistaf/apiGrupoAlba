@@ -5,10 +5,14 @@ namespace App\Models\afiliado;
 use App\Models\ComercialCajaModel;
 use App\Models\PadronComercialModelo;
 use App\Models\ComercialOrigenModel;
+use App\Models\DeledagosModelo;
 use App\Models\DetalleTipoDocAfiliadoModelo;
 use App\Models\LocalidadModelo;
 use App\Models\LocatorioModelos;
 use App\Models\MotivosBajaModel;
+use App\Models\PartidosModelo;
+use App\Models\ProvinciasModelo;
+use App\Models\RelacionLaboralModelo;
 use App\Models\SexoModelo;
 use App\Models\TransaccionesModel;
 use App\Models\User;
@@ -135,5 +139,25 @@ class AfiliadoPadronEntity extends Model
     public function sexo()
     {
         return $this->hasOne(SexoModelo::class, 'id_sexo', 'id_sexo');
+    }
+
+    public function delegacion()
+    {
+        return $this->hasOne(DeledagosModelo::class, 'id', 'id_delegacion');
+    }
+
+    public function empresadetalle()
+    {
+        return $this->hasMany(RelacionLaboralModelo::class, 'id_padron');
+    }
+
+    public function provincia()
+    {
+        return $this->hasOne(ProvinciasModelo::class, 'id_provincia', 'id_provincia');
+    }
+
+    public function partido()
+    {
+        return $this->hasOne(PartidosModelo::class, 'id_partido', 'id_partido');
     }
 }

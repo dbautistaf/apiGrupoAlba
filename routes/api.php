@@ -77,6 +77,10 @@ Route::group([
     Route::post('saveFamiliar', [App\Http\Controllers\PadronController::class, 'postSaveDatosFamiliar']);
     Route::post('saveFileAfiliado', [App\Http\Controllers\PadronController::class, 'addFilesAfiliados']);
     Route::post('deleteDetalleDoc', [App\Http\Controllers\PadronController::class, 'deleteDetalleTipoDoc']);
+
+    Route::get('getReportesAfil', [App\Http\Controllers\PadronController::class, 'srvReportesAfiliado']);
+    Route::get('getReportesCuadroAfil', [App\Http\Controllers\PadronController::class, 'srvReportesCuadroAfiliado']);
+    Route::post('postExportMemo', [App\Http\Controllers\PadronController::class, 'exportarMemo']);
 });
 
 Route::group([
@@ -278,6 +282,7 @@ Route::group([
     Route::get('filterComercialcaja', [App\Http\Controllers\filtros\AlimentadoresController::class, 'getListaComercialCaja']);
     Route::get('filterComercialorigen/{id}', [App\Http\Controllers\filtros\AlimentadoresController::class, 'getListaComercialOrigen']);
     Route::get('getListamotivobaja', [App\Http\Controllers\FiltersController::class, 'srvListaMotivoBaja']);
+    Route::get('getlistOrigen', [App\Http\Controllers\FiltersController::class, 'getListOrigen']);
 });
 
 Route::group([
@@ -316,6 +321,11 @@ Route::group([
 
     Route::post('importar-compras-afip', [App\Http\Controllers\Afip\Services\ComprobantesAfipCompraController::class, 'getImportarComprobantes']);
     Route::post('importar-facturas-afip', [App\Http\Controllers\Afip\Services\FacturasAfipController::class, 'getImportar']);
+
+    Route::post('getTableroAfip', [App\Http\Controllers\AfipController::class, 'filterTablero']);
+    Route::get('getTipoAporte', [App\Http\Controllers\AfipController::class, 'getListTipoAporte']);
+    Route::post('getTableroAfipDeudores', [App\Http\Controllers\AfipController::class, 'filterTableroDeudores']);
+    Route::get('getListComisiones', [App\Http\Controllers\AfipController::class, 'getListComisiones']);
 });
 
 Route::group([

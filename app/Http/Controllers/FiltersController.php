@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\afiliado\AfiliadoPadronEntity;
+use App\Models\ComercialOrigenModel;
 use App\Models\MotivosBajaModel;
 use App\Models\PracticasDiscaPacidadModel;
 use App\Models\prestadores\PrestadorEntity;
@@ -129,5 +130,10 @@ class FiltersController extends AuthController
     {
         $data = MotivosBajaModel::get();
         return response()->json($data, 200);
+    }
+
+    public function getListOrigen()
+    {
+        return ComercialOrigenModel::orderBy('detalle_comercial_origen')->get();
     }
 }

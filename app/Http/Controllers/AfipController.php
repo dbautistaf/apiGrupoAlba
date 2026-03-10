@@ -14,6 +14,7 @@ use App\Models\SubsidioSuma70Modelo;
 use App\Models\SubsidioSumaModelo;
 use App\Models\SubsidioSumarteModelo;
 use App\Models\TransferenciasModelo;
+use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
@@ -554,5 +555,150 @@ class AfipController extends Controller
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    public function filterTablero(Request $request)
+    {
+
+        $desde = $request->desde;
+        $hasta = $request->hasta;
+
+        list($y1, $m1) = explode('-', $desde);
+        $desdeDB = substr($y1, 2, 2) . $m1;
+
+        list($y2, $m2) = explode('-', $hasta);
+        $hastaDB = substr($y2, 2, 2) . $m2;
+
+        $empresas = $request->empresa;
+        $model = TransferenciasModelo::select(
+            'cuitcont',
+            'periodo',
+            DB::raw('SUM(importe) as total_importe')
+        )
+            ->whereBetween('periodo', [$desdeDB, $hastaDB])
+            ->where(function ($q) use ($empresas) {
+                foreach (array_chunk($empresas, 1000) as $chunk) {
+                    $q->orWhereIn('cuitcont', $chunk);
+                }
+            });
+
+        // si viene tipo, lo aplicas
+        if ($request->tipo != null) {
+            if ($request->tipo == "381" || $request->tipo == "401") {
+                $model->where('codconc', $request->tipo);
+            } else {
+                $model->where('inddbcr', $request->tipo);
+            }
+        }
+        $model = $model
+            ->with('Empresa')
+            ->groupBy('cuitcont', 'periodo')
+            ->orderBy('periodo')
+            ->get();
+
+        return response()->json($model, 200);
+    }
+
+    public function filterTableroDeudores(Request $request)
+    {
+
+        $desde = $request->desde;
+        $hasta = $request->hasta;
+
+        list($y1, $m1) = explode('-', $desde);
+        $desdeDB = substr($y1, 2, 2) . $m1;
+
+        list($y2, $m2) = explode('-', $hasta);
+        $hastaDB = substr($y2, 2, 2) . $m2;
+
+        $empresas = $request->empresa;
+        $ddjjSinTransferencias = DB::table('tb_declaraciones_juradas as d')
+            ->join('tb_empresa as e', 'e.cuit', '=', 'd.cuit')
+            ->select('d.cuit', 'e.razon_social', 'd.periodo')
+            ->whereIn('d.cuit', $request->empresa)
+            ->whereBetween('d.periodo', [$desdeDB, $hastaDB])
+            ->whereNotExists(function ($q) use ($desdeDB, $hastaDB, $request) {
+                $q->select(DB::raw(1))
+                    ->from('tb_transferencias as t')
+                    ->whereColumn('t.cuitcont', 'd.cuit')
+                    ->whereBetween('t.periodo', [$desdeDB, $hastaDB]);
+
+                if ($request->tipo != null) {
+                    if ($request->tipo == "381" || $request->tipo == "401") {
+                        $q->where('t.codconc', $request->tipo);
+                    } else {
+                        $q->where('t.inddbcr', $request->tipo);
+                    }
+                }
+            })
+            ->groupBy('d.cuit', 'e.razon_social', 'd.periodo')
+            ->get();
+
+        $deudores = [];
+        foreach ($ddjjSinTransferencias as $ddjj) {
+            $deudores[] = [
+                'total_importe' => 0,
+                'periodo' => $ddjj->periodo,
+                'empresa' => $ddjj
+            ];
+        }
+
+        return response()->json($deudores, 200);
+    }
+
+    public function getListTipoAporte()
+    {
+        return TransferenciasModelo::select('inddbcr')
+            ->distinct()
+            ->orderBy('inddbcr')
+            ->get();
+    }
+
+    public function getListComisiones(Request $request)
+    {
+
+        $periodo = CarbonPeriod::create($request->desde, $request->hasta);
+
+        $fechas = [];
+
+        foreach ($periodo as $fecha) {
+            $fechas[] = $fecha->format('Y-m-d');
+        }
+
+        $selectFechas = [];
+
+        foreach ($fechas as $fecha) {
+            $selectFechas[] = DB::raw("
+        SUM(CASE 
+            WHEN DATE(t.fecrec) = '$fecha'
+            THEN t.importe 
+            ELSE 0 
+        END) as `$fecha`
+    ");
+        }
+        $query = DB::table('tb_transferencias as t')
+            ->join('tb_codigos_imputacion_os as c', 'c.codigo', '=', 't.codconc')
+            ->select(
+                'c.codigo',
+                'c.descripcion',
+                'c.imputacion',
+                ...$selectFechas
+            )
+            ->where('t.inddbcr', 'C')
+            ->whereBetween('t.fecrec', [$request->desde, $request->hasta]);
+
+        if ($request->tipo == 'gasto') {
+            $query->whereIn('c.codigo', ['C02', 'C03', 'D01', 'D18']);
+        }
+        if ($request->tipo == 'concepto') {
+            $query->whereNotIn('c.codigo', ['C02', 'C03', 'D01', 'D18']);
+        }
+
+        $transferencias = $query
+            ->groupBy('c.codigo', 'c.descripcion', 'c.imputacion')
+            ->orderBy('c.descripcion')
+            ->get();
+
+        return $transferencias;
     }
 }

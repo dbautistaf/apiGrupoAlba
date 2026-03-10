@@ -1149,4 +1149,170 @@ class PadronController extends Controller
 
         return response()->json(['message' => 'Archivo eliminado'], 200);
     }
+
+    public function srvReportesAfiliado(Request $request)
+    {
+        $query = AfiliadoPadronEntity::with(['obrasocial', 'tipoParentesco', 'delegacion', 'baja', 'empresadetalle.relacionEmpresa', 'provincia', 'partido', 'localidad','origen']);
+
+        if ($request->id_filial != null) {
+            $query->whereIn('id_delegacion', $request->id_filial);
+        }
+
+        if ($request->id_locatario != null) {
+            $query->whereIn('id_locatario', $request->id_locatario);
+        }
+
+        if ($request->id_origen != null) {
+            $query->whereIn('id_comercial_origen', $request->id_origen);
+        }
+
+        $query->when($request->boolean('grupo'), function ($q) {
+            $q->where('id_parentesco', '00');
+        });
+
+        if ($request->id_empresa != null) {
+            $query->whereHas('empresadetalle', function ($q) use ($request) {
+                $q->whereIn('id_empresa', $request->id_empresa);
+            });
+        }
+
+        if ($request->tipo == 'alta') {
+            if ($request->desde != null && $request->hasta != null) {
+                $query->whereBetween('fe_alta', [$request->desde, $request->hasta]);
+            }
+        }
+        if ($request->tipo == 'baja') {
+            if ($request->id_baja != null) {
+                $query->whereIn('id_baja_motivos', $request->id_baja);
+            }
+
+            if ($request->desde != null && $request->hasta != null) {
+                $query->whereBetween('fe_baja', [$request->desde, $request->hasta]);
+            }
+        }
+
+        $model = $query
+            ->orderBy('cuil_tit')
+            ->orderBy('id_parentesco')
+            ->get();
+        return response()->json($model, 200);
+    }
+
+    public function srvReportesCuadroAfiliado(Request $request)
+    {
+        $query = AfiliadoPadronEntity::select(
+            'tb_delegacion.id as id_filial',
+            'tb_delegacion.delegacion',
+
+            DB::raw('COUNT(tb_padron.dni) as total_afiliados'),
+
+            DB::raw("COUNT(CASE 
+                WHEN tb_padron.id_parentesco = '00' 
+                THEN 1 END) as total_titulares"),
+
+            DB::raw("COUNT(CASE 
+                WHEN tb_padron.id_parentesco IN ('01','02') 
+                THEN 1 END) as total_conyugue"),
+
+            DB::raw("COUNT(CASE 
+                WHEN tb_padron.id_parentesco IN ('08') 
+                THEN 1 END) as total_familiar"),
+
+            DB::raw("COUNT(CASE 
+                WHEN tb_padron.id_parentesco = '10' 
+                THEN 1 END) as total_adherente"),
+
+            DB::raw("COUNT(CASE 
+                WHEN tb_padron.id_parentesco = '99' 
+                THEN 1 END) as sin_identificar"),
+
+            DB::raw("COUNT(CASE 
+                WHEN tb_padron.id_parentesco NOT IN ('00','01','02','10','99','08') 
+                THEN 1 END) as total_hijos")
+
+        )
+
+            ->join('tb_delegacion', 'tb_delegacion.id', '=', 'tb_padron.id_delegacion')
+            ->groupBy('tb_delegacion.id', 'tb_delegacion.delegacion');
+
+        if ($request->tipo == 'alta') {
+            if ($request->desde != null && $request->hasta != null) {
+                $query->whereBetween('fe_alta', [$request->desde, $request->hasta]);
+            }
+        }
+
+        if ($request->tipo == 'baja') {
+            if ($request->desde != null && $request->hasta != null) {
+                $query->whereBetween('fe_baja', [$request->desde, $request->hasta]);
+            }
+        }
+
+        $model = $query
+            ->get();
+        return response()->json($model, 200);
+    }
+
+    public function exportarMemo(Request $request)
+    {
+        if ($request->tipo == 'general') {
+            $query2 = AfiliadoPadronEntity::select(
+                'tb_locatorio.id_locatorio',
+                'tb_locatorio.locatorio',
+                'tb_delegacion.id as id_filial',
+                'tb_delegacion.delegacion',
+                DB::raw('COUNT(tb_padron.dni) as total_afiliados')
+            )
+                ->join('tb_locatorio', 'tb_locatorio.id_locatorio', '=', 'tb_padron.id_locatario')
+                ->join('tb_delegacion', 'tb_delegacion.id', '=', 'tb_padron.id_delegacion')
+                ->groupBy(
+                    'tb_locatorio.id_locatorio',
+                    'tb_locatorio.locatorio',
+                    'tb_delegacion.id',
+                'tb_delegacion.delegacion',
+                )
+                ->orderBy('tb_locatorio.id_locatorio')
+                ->orderBy('tb_delegacion.id')
+                ->get()
+                ->groupBy('locatorio');
+
+            $pdf = Pdf::loadView('memorando.memorando_general', ["tipo" => $request->tipo, "locatarios" => $query2]);
+            $pdf->setPaper('A4');
+            return $pdf->download('memorando.pdf');
+        } else {
+            $query = AfiliadoPadronEntity::select(
+                'tb_delegacion.id as id_filial',
+                'tb_delegacion.delegacion',
+                DB::raw('COUNT(tb_padron.dni) as total_afiliados')
+            )
+                ->join('tb_delegacion', 'tb_delegacion.id', '=', 'tb_padron.id_delegacion')
+                ->groupBy('tb_delegacion.id', 'tb_delegacion.delegacion');
+
+            if ($request->tipo == 'alta') {
+
+                $inicioMes = Carbon::now()->startOfMonth()->toDateString();
+                $finMes    = Carbon::now()->endOfMonth()->toDateString();
+
+                $query->whereBetween('fe_alta', [$inicioMes, $finMes]);
+            }
+
+            if ($request->tipo == 'baja' && $request->desde) {
+
+                $inicio = Carbon::createFromFormat('Y-m', $request->desde)
+                    ->startOfMonth()
+                    ->toDateString();
+
+                $fin = Carbon::createFromFormat('Y-m', $request->desde)
+                    ->endOfMonth()
+                    ->toDateString();
+
+                $query->whereBetween('fe_baja', [$inicio, $fin]);
+            }
+
+            $model = $query
+                ->get();
+            $pdf = Pdf::loadView('memorando.memorando', ["data" => $model, "tipo" => $request->tipo, "periodo" => $request->desde]);
+            $pdf->setPaper('A4');
+            return $pdf->download('memorando.pdf');
+        }
+    }
 }
