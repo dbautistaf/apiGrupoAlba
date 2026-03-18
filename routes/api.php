@@ -212,6 +212,8 @@ Route::group([
     Route::post('updateEstado', [App\Http\Controllers\AccesosController::class, 'estadoMenu']);
     Route::get('validarActualizacionDatos', [App\Http\Controllers\AccesosController::class, 'validarActualizacionDatos']);
     Route::get('getDatosUserDni', [App\Http\Controllers\PadronController::class, 'getDatosUserDashboar']);
+    Route::post('otorgar-permiso', [App\Http\Controllers\AccesosController::class, 'otorgarPermiso']);
+    Route::get('modulos-perfil', [App\Http\Controllers\AccesosController::class, 'menuAccesoPerfil']);
 });
 
 Route::group([

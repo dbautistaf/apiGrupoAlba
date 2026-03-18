@@ -125,8 +125,90 @@ class AccesosController extends Controller
     {
         $user = Auth::user();
         if ($user->actualizo_datos != 1 && $user->cod_perfil == 25) {
-            return response()->json(["isUpdateData" => 'NO',"User"=>$user->cod_perfil], 200);
+            return response()->json(["isUpdateData" => 'NO', "User" => $user->cod_perfil], 200);
         }
         return response()->json(["isUpdateData" => 'SI'], 200);
+    }
+
+    public function menuAccesoPerfil(Request $request)
+    {
+        $modulos = MenuModelo::where('menu_grupo',  $request->grupo)
+            ->where('menu_estado', 1)
+            ->orderBy('menu_orden')
+            ->get();
+        $array = [];
+        foreach ($modulos as $value) {
+            $estado = 0;
+            $query = MenuAccesoUsuarioModelo::where('cod_perfil', $request->perfil)
+                ->where('cod_menu', $value->cod_menu)
+                ->first();
+
+            if ($query) {
+                $estado = 1;
+            }
+
+            $array[] = array(
+                "cod_menu" => $value->cod_menu,
+                "menu_descripcion" => $value->menu_descripcion,
+                "menu_estado" =>  $value->menu_estado,
+                "menu_grupo" =>  $value->menu_grupo,
+                "menu_icono" =>   $value->menu_icono,
+                "menu_link" =>  $value->menu_link,
+                "menu_orden" =>  $value->menu_orden,
+                "menu_principal" =>  $value->menu_principal,
+                "tipo_ruta" =>  $value->tipo_ruta,
+                "asignado" => $estado,
+                "escritura" => $query->estado_escritura ?? 0,
+                "eliminar" => $query->estado_eliminar ?? 0
+            );
+        }
+        $array = collect($array);
+        $array = $array->sortByDesc('menu_principal')->values();
+        return response()->json($array);
+    }
+
+    public function otorgarPermiso(Request $request)
+    {
+        $menu = MenuAccesoUsuarioModelo::where('cod_perfil', $request->perfil)
+            ->where('cod_menu', '=', $request->cod_menu)->first();
+
+        $menuPrincipal =  MenuAccesoUsuarioModelo::with(['menu'])
+            ->whereHas('menu', function ($sql) use ($request) {
+                $sql->where('menu_principal', '1')
+                    ->where('menu_grupo', $request->menu_grupo);
+            })
+            ->where('cod_perfil', $request->perfil)
+            ->first();
+
+        if (is_null($menuPrincipal)) {
+            $menuItemPrincipal = MenuModelo::where('menu_principal', '1')
+                ->where('menu_grupo', $request->menu_grupo)
+                ->first();
+            MenuAccesoUsuarioModelo::create([
+                'cod_menu' => $menuItemPrincipal->cod_menu,
+                'cod_perfil' => $request->perfil,
+                'estado_acceso' => 1,
+                'estado_escritura' => 1,
+                'estado_eliminar' => 0
+            ]);
+        }
+
+
+        if (!is_null(value: $menu)) {
+            $menu->estado_escritura = $request->escritura;
+            $menu->estado_eliminar = $request->eliminar;
+            $menu->update();
+        } else {
+            if ($request->principal == '0') {
+                MenuAccesoUsuarioModelo::create([
+                    'cod_menu' => $request->cod_menu,
+                    'cod_perfil' => $request->perfil,
+                    'estado_acceso' => 1,
+                    'estado_escritura' => $request->escritura,
+                    'estado_eliminar' => $request->eliminar
+                ]);
+            }
+        }
+        return response()->json(['message' => 'Acceso modificado con éxito'], 200);
     }
 }
