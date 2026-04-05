@@ -35,7 +35,7 @@ class FacturasPrestadoresRepository
         }
 
         if (!is_null($params->id_locatario)) {
-            $query->where('id_locatorio', $params->id_locatario);
+            $query->where('id_razon', $params->id_locatario);
         }
 
         if (!is_null($params->num_comprobante)) {
@@ -160,7 +160,7 @@ class FacturasPrestadoresRepository
         }
 
         if (!is_null($params->id_locatario)) {
-            $query->where('id_locatorio', $params->id_locatario);
+            $query->where('id_razon', $params->id_locatario);
         }
 
         if (!is_null($params->num_comprobante)) {

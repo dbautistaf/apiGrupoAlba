@@ -85,7 +85,7 @@ class FacturasProveedoresController extends Controller
         }
 
         if (!is_null($request->id_locatario)) {
-            $query->where('id_locatorio', $request->id_locatario);
+            $query->where('id_razon', $request->id_locatario);
         }
 
         if (!is_null($request->num_comprobante)) {

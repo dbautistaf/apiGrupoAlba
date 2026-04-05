@@ -108,8 +108,8 @@ class TesPagosRepository
         }
 
 
-        if (!is_null($params->desde) && !is_null($params->hasta)) {            
-             $jquery->whereHas('fechaprobablepagos', function ($query) use ($params) {
+        if (!is_null($params->desde) && !is_null($params->hasta)) {
+            $jquery->whereHas('fechaprobablepagos', function ($query) use ($params) {
                 $query->whereBetween(DB::raw('DATE(fecha_probable_pago)'), [$params->desde, $params->hasta]);
             });
         }
@@ -117,6 +117,12 @@ class TesPagosRepository
         /*  if (!is_null($params->monto_desde) && !is_null($params->monto_hasta)) {
             $jquery->whereBetween('monto_pago', [$params->monto_desde, $params->monto_hasta]);
         } */
+
+        if (!is_null($params->numero_opa)) {
+            $jquery->whereHas('opa', function ($query) use ($params) {
+                $query->where('num_orden_pago', $params->numero);
+            });
+        }
 
         if (!is_null($params->estado)) {
             $jquery->where('id_estado_orden_pago', $params->estado);

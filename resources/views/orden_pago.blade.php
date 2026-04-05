@@ -217,11 +217,11 @@
         <table>
             <thead>
                 <tr>
-                    <th style="border: 2px solid #333; padding: 10px 0; text-align: center; font-size: 11px;" width="70%">
+                    <th style="border: 2px solid #333; padding: 15px 0; text-align: center; font-size: 11px;" width="70%">
                         Descripción
                     </th>
-                    <th style="border: 2px solid #333; padding: 10px 0; text-align: center; font-size: 11px;" width="30%">
-                        Importe descontando el débito
+                    <th style="border: 2px solid #333; padding: 15px 0; text-align: center; font-size: 11px;" width="30%">
+                        Importe
                     </th>
                 </tr>
             </thead>
@@ -233,7 +233,7 @@
                 @endphp
 
                 @foreach ($pagos as $item)
-                <tr style="border: 2px solid #333; font-size: 11px; height: 25px;">
+                <!-- <tr style="border: 2px solid #333; font-size: 11px; height: 25px;">
                     <td style="height: 25px;">
                         @if ($item?->id_forma_pago == 1)
                         {{ $item?->formaPago?->tipo_pago }} -
@@ -252,25 +252,24 @@
                     <td style="height: 25px; text-align: center;">
                         {{ number_format(($item->monto_pago ?? 0) - ($debito ?? 0), 2, ',', '.') }}
                     </td>
-                </tr>
-                @php $totalFilas++; @endphp
+                </tr> -->
+                {{-- @php $totalFilas++; @endphp --}}
                 @foreach ($item->pagosParciales as $pagosP)
                 <tr style="border: 2px solid #333; font-size: 11px; height: 25px;">
-                    <td colspan="2" style="height: 25px;">
-                        Fecha probable de Pago:
-                        {{ $item->fechaprobablepagos[$loop->index]?->fecha_probable_pago }}
-                        | Fecha de Pago:
-                        {{ $pagosP?->fecha_confirma_pago }}
+                    <td style="height: 25px;">
+                        {{ $pagosP?->formaPago?->tipo_pago }}: {{$item->cuenta?->nombre_cuenta}}
                     </td>
+                    <td style=" text-align: center">${{ number_format($pagosP?->monto_pago ?? 0, 2, ',', '.') }}</td>
                 </tr>
                 @php $totalFilas++; @endphp
+                @endforeach
 
+                {{-- FECHAS --}}
+                @foreach ($item->pagosParciales as $pagosP)
                 <tr style="border: 2px solid #333; font-size: 11px; height: 25px;">
-                    <td colspan="2" style="height: 25px;">
-                        Forma de Pago:
-                        {{ $pagosP?->formaPago?->tipo_pago }}
-                        | Monto de Pago:
-                        {{ number_format($pagosP?->monto_pago ?? 0, 2, ',', '.') }}
+                    <td style="height: 25px;" colspan="2">
+                        Fecha de Pago:
+                        {{ $pagosP?->fecha_confirma_pago }}
                     </td>
                 </tr>
                 @php $totalFilas++; @endphp
