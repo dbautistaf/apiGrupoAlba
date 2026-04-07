@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth\Repository;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Firebase\JWT\JWT;
+use Illuminate\Support\Facades\Log;
 
 class AuthrnticateRepository
 {
@@ -91,4 +92,5 @@ class AuthrnticateRepository
         $token = JWT::encode($payload, $key, 'HS256');
         return $token;
     }
+
 }

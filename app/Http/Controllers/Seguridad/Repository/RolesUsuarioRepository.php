@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Seguridad\PermisoBotonesEntity;
 use App\Models\Seguridad\RolesUsuarioEntity;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class RolesUsuarioRepository
 {
@@ -17,21 +19,23 @@ class RolesUsuarioRepository
 
         $array = [];
         foreach ($btnAsignado as $value) {
-            $estado = 0;
+            $asignado = 0;
             $query = RolesUsuarioEntity::where('cod_usuario', $request->cod_usuario)
-                ->where('cod_menu', $value->cod_permisos)
-                ->first();
+                ->where('cod_permisos', $value->cod_permisos)->first();
 
             if ($query) {
-                $estado = 1;
+                $asignado = 1;
             }
 
             $array[] = array(
+                'cod_roles' =>$query->cod_roles??null,
                 'descripcion' => $value->descripcion,
                 'cod_menu' => $value->cod_menu,
-                "cod_usuario" => $query->cod_usuario,
-                "cod_permisos" => $query->cod_permisos,
-                "asignado" => $estado
+                "cod_usuario" => $request->cod_usuario??null,
+                "cod_permisos" => $value->cod_permisos??null,
+                "asignado" => $asignado,
+                "estado" =>  $value->estado,
+                "estado_rol" =>  $query->estado??null,
             );
         }
 
@@ -51,9 +55,28 @@ class RolesUsuarioRepository
 
     public function findBySaveRolesUser($request)
     {
-        return RolesUsuarioEntity::create([
-            'cod_usuario' => $request->descripcion,
-            'cod_permisos' => $request->cod_menu
-        ]);
+        if ($request->cod_roles == null) {
+            RolesUsuarioEntity::create([
+                'cod_usuario' => $request->cod_usuario,
+                'cod_permisos' => $request->cod_permisos,
+                'estado' => 1
+            ]);
+            return ["message" => "Nuevo Rol asignado con éxito"];
+        } else {
+            RolesUsuarioEntity::where('cod_roles', $request->cod_roles)->delete();
+            return ["message" => "Se quitó el rol con éxito"];
+        }
+    }
+    
+    public function findByRolesPermisos()
+    {
+        $user = Auth::user();
+        $permiso = DB::table('tb_roles_usuario as tr')
+            ->join('tb_permiso_roles as tp', 'tp.cod_permisos', '=', 'tr.cod_permisos')
+            ->where('tr.cod_usuario', 2)
+            ->where('tp.estado', 1)
+            ->select('tp.validar_btn')
+            ->get();
+        return $permiso;
     }
 }

@@ -16,6 +16,7 @@ Route::group([
     Route::get('obtener-acceso-modulos', [App\Http\Controllers\Auth\Services\AuthController::class, 'getObtenerAcceso']);
     Route::post('verificar-cuenta', [App\Http\Controllers\Auth\Services\RecuperarContraseniaController::class, 'getVerificarCuenta']);
     Route::post('actualizar-clave-verificada', [App\Http\Controllers\Auth\Services\RecuperarContraseniaController::class, 'getCambiarClave']);
+    Route::get('obtener-roles', [App\Http\Controllers\Auth\Services\AuthController::class, 'getRolesUsuarios']);
 });
 
 Route::group([
@@ -1016,6 +1017,9 @@ Route::group([
     Route::post('deshabilitar-cuenta-usuario', [App\Http\Controllers\Seguridad\AdministrarUsuariosController::class, 'getDeshabilitarCuenta']);
 
     Route::delete('eliminar-perfil', [App\Http\Controllers\Seguridad\AdminstrarPerfilesController::class, 'getEliminarPerfil']);
+    Route::get('listar-roles', [App\Http\Controllers\Seguridad\RolesUsuarioController::class, 'getListarRoles']);
+    Route::post('save-roles', [App\Http\Controllers\Seguridad\RolesUsuarioController::class, 'postSaveRolesPermisos']);
+    Route::get('obtener-roles', [App\Http\Controllers\Seguridad\RolesUsuarioController::class, 'getRolesUsuarios']);
 });
 
 Route::group([

@@ -14,6 +14,7 @@ class PermisoBotonesEntity extends Model
 
     protected $fillable = [
         'descripcion',
+        'validar_btn',
         'cod_menu',
         'estado'
     ];

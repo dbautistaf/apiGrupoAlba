@@ -56,7 +56,7 @@ class User extends Authenticatable implements JWTSubject
 
     public function getJWTCustomClaims()
     {
-        $accesos = app(\App\Http\Controllers\AuthController::class)->srvMenuAcceso($this->cod_perfil);
+        //$accesos = app(\App\Http\Controllers\AuthController::class)->srvMenuAcceso($this->cod_perfil);
         $query = AfiliadoPadronEntity::where('dni', $this->documento)->first();
        
         return [
@@ -64,7 +64,7 @@ class User extends Authenticatable implements JWTSubject
             'email' => $this->email,
             'perfil' => $this->perfil->nombre_perfil,
             'id_perfil'=>$this->perfil->cod_perfil,
-            'acceso' => $accesos,
+            //'acceso' => $accesos,
             'locatario' => $query->id_locatario ?? null,
         ];
     }

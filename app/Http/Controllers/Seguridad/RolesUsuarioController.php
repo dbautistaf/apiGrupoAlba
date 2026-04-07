@@ -10,9 +10,9 @@ use Illuminate\Routing\Controller as RoutingController;
 class RolesUsuarioController extends RoutingController
 {
     //
-    public function getListarRoles(RolesUsuarioRepository $repo, Request $request)
+     public function getListarRoles(RolesUsuarioRepository $repo, Request $request)
     {
-        return response()->json($repo->findByListRolesPermisos($request->cod_menu));
+        return response()->json($repo->findByListRolesPermisos($request));
     }
 
     public function postSaveNewPermisos(RolesUsuarioRepository $repo, Request $request)
@@ -23,9 +23,11 @@ class RolesUsuarioController extends RoutingController
 
     public function postSaveRolesPermisos(RolesUsuarioRepository $repo, Request $request)
     {
-        response()->json($repo->findBySaveRolesUser($request));
-        return response()->json(["message" => "Nuevo Rol asignado con éxito"]);
+        return response()->json($repo->findBySaveRolesUser($request));
     }
 
-
+    public function getRolesUsuarios(RolesUsuarioRepository $repo)
+    {
+        return response()->json($repo->findByRolesPermisos());
+    }
 }
