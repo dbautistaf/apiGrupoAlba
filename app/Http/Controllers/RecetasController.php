@@ -321,7 +321,7 @@ class RecetasController extends Controller
     {
         $user = Auth::user();
         if ($user->cod_perfil == 2) {
-            $listUser = User::get();
+            $listUser = User::where('cod_perfil','!=','25')->get();
             return response()->json($listUser, 200);
         }
     }

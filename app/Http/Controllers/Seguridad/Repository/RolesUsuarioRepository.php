@@ -73,7 +73,7 @@ class RolesUsuarioRepository
         $user = Auth::user();
         $permiso = DB::table('tb_roles_usuario as tr')
             ->join('tb_permiso_roles as tp', 'tp.cod_permisos', '=', 'tr.cod_permisos')
-            ->where('tr.cod_usuario', 2)
+            ->where('tr.cod_usuario', $user->cod_usuario)
             ->where('tp.estado', 1)
             ->select('tp.validar_btn')
             ->get();
