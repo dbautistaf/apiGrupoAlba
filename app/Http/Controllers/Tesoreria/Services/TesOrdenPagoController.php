@@ -82,12 +82,15 @@ class TesOrdenPagoController extends Controller
             'pagos.fechaprobablepagos',
         ])->where('id_orden_pago', $id)
             ->first();
-        Log::info('Request completo', $query->toArray());
+
         Carbon::setLocale('es');
         $debito = 0;
-        foreach ($query?->opadetalle as $detalle) {
-            $debito = $debito + $detalle->detallefc->total_debitado_liquidacion;
+        if ($query && $query->opadetalle) {
+            foreach ($query->opadetalle as $detalle) {
+                $debito += $detalle->detallefc->total_debitado_liquidacion ?? 0;
+            }
         }
+
         $datos = [
             "comprobante_nro" => $query?->num_orden_pago,
             "fecha_emision" => $query?->fecha_emision,
@@ -96,16 +99,16 @@ class TesOrdenPagoController extends Controller
             "cbu_proveedor" => $query?->proveedor ? $query?->proveedor?->datosBancarios?->cbu_cuenta : $query?->prestador?->datosBancarios?->cbu_cuenta,
             "iva_proveedor" => $query?->proveedor ? $query?->proveedor?->tipoIva?->descripcion_iva : $query?->prestador?->tipoIva?->descripcion_iva,
             "domicilio_proveedor" => $query?->proveedor ? $query?->proveedor?->direccion : $query?->prestador?->direccion,
-            "facturas" => $query?->opadetalle,
+            "facturas" => $query?->opadetalle ?? null,
             "total" => $query?->monto_orden_pago,
-            "pagos" => $query?->pagos,
+            "pagos" => $query?->pagos ?? null,
             "fecha_pago" => $query?->fecha_confirma_pago,
             "debito" => $debito,
             "totalPagos" => !empty($query?->pagos) && count($query?->pagos) > 0
                 ? number_format((float) $query?->monto_orden_pago, 2, '.', '')
                 : '0.00',
             "razon_social" => "PRUEBA",
-            "pagosParciales" => $query->pagos->pluck('pagosParciales')->flatten()
+            "pagosParciales" => $query?->pagos?->pluck('pagosParciales')?->flatten() ?? collect()
         ];
 
         $pdf = PDF::loadView('orden_pago', $datos);

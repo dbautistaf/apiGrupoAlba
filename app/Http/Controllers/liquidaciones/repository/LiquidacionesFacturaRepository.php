@@ -51,18 +51,22 @@ class LiquidacionesFacturaRepository
         $placeholder = implode(',', array_fill(0, count($arrayEstados), '?'));
         $sql = DB::table('vw_liquidacion_factura_unica')
             ->whereBetween('fecha_registra_factura', [$desde, $hasta])
-            ->whereIn('estado', $arrayEstados);
-        if (is_numeric($cuitPrestador)) {
-            $sql->where('cuit', 'LIKE', $cuitPrestador . '%');
-        } else {
-            $sql->where('prestador', 'LIKE', '%' . $cuitPrestador . '%')
-                ->orWhere('prestador_fantasia', 'LIKE', '%' . $cuitPrestador . '%');
-        }
-        $sql->orderByDesc('id_factura');
-        $sql->limit($top);
+            ->whereIn('estado', $arrayEstados)
+            ->when($cuitPrestador, function ($query) use ($cuitPrestador) {
+
+                if (is_numeric($cuitPrestador)) {
+                    $query->where('cuit', 'LIKE', $cuitPrestador . '%');
+                } else {
+                    $query->where(function ($q) use ($cuitPrestador) {
+                        $q->where('prestador', 'LIKE', '%' . $cuitPrestador . '%')
+                            ->orWhere('prestador_fantasia', 'LIKE', '%' . $cuitPrestador . '%');
+                    });
+                } 
+            })
+            ->orderByDesc('id_factura')
+            ->limit($top);
 
         $data = $sql->get();
-
 
         return $this->collectAlls($data);
     }
