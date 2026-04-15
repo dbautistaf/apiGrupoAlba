@@ -7,333 +7,394 @@
     <title>Orden de Pago - {{ $comprobante_nro }}</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
             margin: 0;
-            color: #333;
+            color: #334155;
+            font-size: 10px;
+            background-color: #ffffff;
         }
 
-        .document-info {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 20px;
+        table { width: 100%; border-collapse: collapse; }
+        th, td { text-align: left; padding: 2px 4px; }
+        
+        .header-container {
+            background-color: #f8fafc;
+            border-bottom: 3px solid #388E3C;
+            padding: 8px 15px;
+            margin-bottom: 10px;
         }
 
-        .client-info {
-            margin-bottom: 20px;
+        .text-blue { color: #388E3C; }
+        .text-dark { color: #0f172a; }
+        .text-white { color: #ffffff; }
+        .text-red { color: #dc2626; }
+        
+        .font-bold { font-weight: bold; }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        
+        .badge {
+            background-color: #388E3C;
+            color: #ffffff;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 10px;
+            letter-spacing: 0.5px;
         }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        table,
-        th,
-        td {
-            border: 0px;
-        }
-
-        th,
-        td {
-            padding: 0px;
-            text-align: left;
-        }
-
-        .footer {
-            margin-top: 30px;
+        .doc-type {
+            border: 2px solid #388E3C;
+            color: #388E3C;
+            width: 35px;
+            height: 35px;
+            margin: 0 auto;
             text-align: center;
-            border: 2px solid #333;
-            width: 40%;
-            float: right;
-            padding: 5px;
-            font-size: 12px;
+            line-height: 35px;
+            font-size: 24px;
+            font-weight: 800;
+            background-color: #ffffff;
+        }
 
+        .card {
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            background-color: #f1f5f9;
+            padding: 5px 10px;
+            border-bottom: 1px solid #cbd5e1;
+            font-weight: bold;
+            color: #0f172a;
+            text-transform: uppercase;
+            font-size: 9px;
+            letter-spacing: 0.5px;
+        }
+
+        .card-body {
+            padding: 5px 10px;
+        }
+
+        .info-grid {
+            width: 100%;
+        }
+        .info-grid td {
+            vertical-align: top;
+            padding: 4px 8px 4px 0;
+            line-height: 1.3;
+            border-bottom: 1px dashed #e2e8f0;
+        }
+        .info-grid tr:last-child td {
+            border-bottom: none;
+        }
+
+        .modern-table {
+            border: none;
+            margin-bottom: 0;
+            width: 100%;
+        }
+        .modern-table th {
+            background-color: #388E3C;
+            color: #ffffff;
+            text-transform: uppercase;
+            font-size: 9px;
+            padding: 6px 4px;
+            text-align: center;
+            border-top: none;
+            border-bottom: 2px solid #388E3C;
+        }
+        .modern-table td {
+            padding: 5px;
+            border-bottom: 1px solid #e2e8f0;
+            border-right: 1px solid #e2e8f0;
+            vertical-align: middle;
+        }
+        .modern-table td:last-child {
+            border-right: none;
+        }
+
+        .modern-table tr.total-row td {
+            background-color: #f8fafc;
+            font-weight: bold;
+            color: #0f172a;
+            font-size: 11px;
+            text-transform: uppercase;
+            border-top: 2px solid #cbd5e1;
+            border-bottom: none;
+            padding: 6px 5px;
+        }
+
+        .modern-table tr.total-final-row td {
+            background-color: #0f172a;
+            color: #ffffff;
+            font-weight: bold;
+            font-size: 12px;
+            padding: 8px 5px;
+            border: none;
+        }
+
+        .debit-amount {
+            color: #dc2626;
+            font-weight: bold;
         }
     </style>
 </head>
 
 <body>
-    <table style="width: 100%; border-collapse: collapse">
-        <tbody>
-            <tr style="border: 2px solid #333">
-                <td width="43%" style="font-size: 11px; padding-left: 10px">
-                    <div style="text-align: center; margin-bottom: 10px; font-size:20px">
-                        @if ($facturas[0]?->detallefc->razonSocial->id_razon == 1)
-                        <img src="{{ storage_path('app/public/images/alba.png') }}" width="120px">
-                        @elseif ($facturas[0]?->detallefc->razonSocial?->id_razon == 2)
-                        <img src="{{ storage_path('app/public/images/bon_baja.jpeg') }}" width="90px">
-                        @elseif ($facturas[0]?->detallefc->razonSocial?->id_razon == 3)
-                        <img src="{{ storage_path('app/public/images/alba.png') }}" width="120px">
-                        @elseif ($facturas[0]?->detallefc->razonSocial?->id_razon == 5)
-                        <img src="{{ storage_path('app/public/images/alba.jpeg') }}" width="120px">
-                        @elseif ($facturas[0]?->detallefc->razonSocial?->id_razon == 6)
-                        <img src="{{ storage_path('app/public/images/bene_baja.jpeg') }}" width="120px">
-                        @else
-                        <img src="{{ storage_path('app/public/images/sembrar_baja.jpeg') }}" width="120px">
-                        @endif
-                    </div>
-                    <div><strong>Razón Social:</strong> {{ $facturas[0]?->detallefc->razonSocial?->razon_social }}</div>
-                    <div>
-                        <strong>Condición frente al IVA:</strong> {{ $facturas[0]?->detallefc->razonSocial?->iva }}
-                    </div>
-                    <div>
-                        <strong>Domicilio Comercial:</strong> {{ $facturas[0]?->detallefc->razonSocial?->domicilio }}
-                    </div>
-                </td>
-                <td style="padding: 0px; width: 14%">
-                    <div style="
-                                border: 2px solid #333;
-                                text-align: center;
-                                margin-top: -1px;
-                                line-height: 11px;
-                            ">
-                        <h1>O</h1>
-                        <p style="font-size: 11px;">Cod. {{ $comprobante_nro }}</p>
-                    </div>
-                    <div style="
-                                text-align: center;
-                                padding: 0;
-                                margin: 0;
-                                line-height: 15px;
-                            ">
-                        |<br />|<br />|<br />
-                    </div>
-                </td>
-                <td width="43%" style="
-              font-size: 11px;
-              padding: 10px 10px 0px 20px;
-            ">
-                    <div style="font-size: 14px;">ORDEN DE PAGO:</div>
-                    <div style="font-size: 15px;">Comp. Nro: {{ substr($comprobante_nro, 4) }}</div>
-                    <div>
-                        <strong>Fecha de Emisión:</strong> {{ $fecha_emision }}
-                    </div>
-                    <div><strong>CUIT:</strong> {{$facturas[0]?->detallefc->razonSocial?->cuit }}</div>
-                    <div><strong>Ingresos Brutos:</strong> Exento</div>
-                    <div><strong>Fecha de inicio de Actividades:</strong> 01/11/2007</div>
-                </td>
-            </tr>
-        </tbody>
+
+    <!-- Modern Header -->
+    <table class="header-container">
+        <tr>
+            <td width="40%" style="vertical-align: middle;">
+                <div style="margin-bottom: 6px;">
+                    @if (isset($facturas[0]) && $facturas[0]->detallefc->razonSocial->id_razon == 1)
+                        <img src="{{ storage_path('app/public/images/alba.png') }}" width="90px">
+                    @elseif (isset($facturas[0]) && $facturas[0]->detallefc->razonSocial?->id_razon == 2)
+                        <img src="{{ storage_path('app/public/images/bon_baja.jpeg') }}" width="75px">
+                    @elseif (isset($facturas[0]) && $facturas[0]->detallefc->razonSocial?->id_razon == 3)
+                        <img src="{{ storage_path('app/public/images/alba.png') }}" width="90px">
+                    @elseif (isset($facturas[0]) && $facturas[0]->detallefc->razonSocial?->id_razon == 5)
+                        <img src="{{ storage_path('app/public/images/alba.jpeg') }}" width="90px">
+                    @elseif (isset($facturas[0]) && $facturas[0]->detallefc->razonSocial?->id_razon == 6)
+                        <img src="{{ storage_path('app/public/images/bene_baja.jpeg') }}" width="90px">
+                    @else
+                        <img src="{{ storage_path('app/public/images/sembrar_baja.jpeg') }}" width="90px">
+                    @endif
+                </div>
+                <div class="font-bold text-dark" style="font-size: 12px; margin-bottom: 2px;">
+                    {{ $facturas[0]?->detallefc->razonSocial?->razon_social ?? 'Empresa' }}
+                </div>
+                <div style="color: #64748b; font-size: 9px;">
+                    IVA: {{ $facturas[0]?->detallefc->razonSocial?->iva }} <br>
+                    Domicilio: {{ $facturas[0]?->detallefc->razonSocial?->domicilio }}
+                </div>
+            </td>
+
+            <td width="20%" style="text-align: center; vertical-align: middle;">
+                <div class="doc-type">O</div>
+                <div style="margin-top: 4px; font-weight: bold; color: #475569; font-size: 9px;">
+                    COD. {{ substr($comprobante_nro ?? '000', 0, 3) }}
+                </div>
+            </td>
+
+            <td width="40%" style="text-align: right; vertical-align: middle;">
+                <div style="font-size: 17px; font-weight: 800; color: #0f172a; margin-bottom: 8px; letter-spacing: 0.5px;">ORDEN DE PAGO</div>
+                <div style="margin-bottom: 8px;">
+                    <span class="badge">NRO: {{ substr($comprobante_nro, 4) }}</span>
+                </div>
+                <div style="color: #475569; line-height: 1.4; font-size: 9px;">
+                    <span class="font-bold text-dark">Emisión:</span> {{ $fecha_emision }} <br>
+                    <span class="font-bold text-dark">CUIT:</span> {{ $facturas[0]?->detallefc->razonSocial?->cuit }} <br>
+                    <span class="font-bold text-dark">Ingresos Brutos:</span> Exento <br>
+                    <span class="font-bold text-dark">Inic. Actividades:</span> 01/11/2007
+                </div>
+            </td>
+        </tr>
     </table>
 
-    <div style="border: 2px solid #333; margin-top: -1.5px; padding: 10px 10px; font-size: 12px;">
-        <div style="line-height: 1.5rem">
-            <span>
-                CUIT: &nbsp; {{ $cuit_proveedor }}
-            </span>
-            <span style="margin-left: 20px;">Apellido y Nombre / Razón Social: &nbsp; {{ $nombre_proveedor }}</span>
+    <!-- Provider Details Card -->
+    <div class="card" style="border-left: 3px solid #388E3C;">
+        <div class="card-header text-blue">
+            Datos del Proveedor / Beneficiario
         </div>
-        <div style="line-height: 1.5rem;">
-            <span>Condición frente al IVA: &nbsp; {{ $iva_proveedor }}</span>
-            <span style="margin-left: 20px;">Domicilio Comercial: &nbsp; {{ $domicilio_proveedor }}</span>
+        <div class="card-body">
+            <table class="info-grid">
+                <tr>
+                    <td width="15%" class="font-bold text-dark">Razón Social:</td>
+                    <td width="35%" style="color: #334155; font-size: 11px; font-weight: bold;">{{ $nombre_proveedor }}</td>
+                    <td width="15%" class="font-bold text-dark">CUIT:</td>
+                    <td width="35%" style="color: #334155;">{{ $cuit_proveedor }}</td>
+                </tr>
+                <tr>
+                    <td class="font-bold text-dark">Condición IVA:</td>
+                    <td style="color: #334155;">{{ $iva_proveedor }}</td>
+                    <td class="font-bold text-dark">Domicilio:</td>
+                    <td style="color: #334155;">{{ $domicilio_proveedor }}</td>
+                </tr>
+            </table>
         </div>
     </div>
-    <table>
-        <tbody>
-            <tr style="font-size: 11px;">
-                <td width="50%" style="padding: 20px">Aplicado a:</td>
-                <td width="50%" style="padding: 20px">
-                    Se entregaron los siguientes valores
-                </td>
-            </tr>
-        </tbody>
-    </table>
 
-    <table>
-        <tbody>
-            <tr>
-                <td style="width: 45%; padding: 0px;">
-                    <table style="position: static;">
+    <!-- Main Payment Data -->
+    <table style="margin-bottom: 10px;">
+        <tr>
+            <!-- Columna Izquierda: Aplicado a -->
+            <td width="48.5%" style="vertical-align: top; padding: 0;">
+                <div class="card" style="border-top: 3px solid #0f172a; margin-bottom: 0;">
+                    <div class="card-header" style="background-color: #f8fafc;">
+                        Aplicado a (Comprobantes)
+                    </div>
+                    @php
+                        $countLeft = is_iterable($facturas) ? count($facturas) : 0;
+                        $countRight = 0;
+                        if (is_iterable($pagos)) {
+                            foreach ($pagos as $pagoItem) {
+                                if (isset($pagoItem->pagosParciales) && is_iterable($pagoItem->pagosParciales)) {
+                                    $countRight += count($pagoItem->pagosParciales) * 2;
+                                }
+                                $countRight += 3;
+                            }
+                        }
+                        $maxFilasTarget = max($countLeft, $countRight, 8);
+                    @endphp
+                    <table class="modern-table">
                         <thead>
-                            <tr style="font-size: 11px;">
-                                <th style="border: 2px solid #333; padding: 15px 0; text-align: center; width: 50%;">
-                                    Detalle / Factura
-                                </th>
-                                <th style="border: 2px solid #333; padding: 15px 0; text-align: center; width: 18%;">
-                                    Cuota Nº
-                                </th>
-                                <th style="border: 2px solid #333; padding: 15px 0; text-align: center; width: 25%;">
-                                    Importe
-                                </th>
+                            <tr>
+                                <th width="50%">Detalle</th>
+                                <th width="20%">Cuota</th>
+                                <th width="30%">Importe</th>
                             </tr>
                         </thead>
-
                         <tbody>
                             @php
-                            $totalFilas = 0;
-                            $maxFilas = 20;
+                                $totalFilas = 0;
                             @endphp
-
-                            {{-- FACTURAS --}}
                             @foreach ($facturas as $item)
-                            <tr style="border: 2px solid #333; font-size: 11px;">
-                                <td style="height: 25px;">
-                                    FAC{{ $item?->detallefc?->tipo_letra }}
-                                    {{ $item?->detallefc?->sucursal }}-
-                                    {{ str_pad($item?->detallefc?->numero, 8, '0', STR_PAD_LEFT) }}
-                                    - (LIQ N° {{ $item?->detallefc?->num_liquidacion }})
+                            <tr>
+                                <td style="font-size: 9px;">
+                                    <strong class="text-dark">FAC{{ $item?->detallefc?->tipo_letra }} {{ $item?->detallefc?->sucursal }}-{{ str_pad($item?->detallefc?->numero, 8, '0', STR_PAD_LEFT) }}</strong><br>
+                                    <span style="color: #64748b;">(LIQ Nº {{ $item?->detallefc?->num_liquidacion }})</span>
                                 </td>
-                                <td style="text-align: center; height: 25px;">
-                                    {{ $loop->iteration }}
-                                </td>
-                                <td style="text-align: center; height: 25px;">
-                                    {{ number_format($item?->detallefc?->total_neto ?? 0, 2, ',', '.') }}
-                                </td>
+                                <td class="text-center font-bold">{{ $loop->iteration }}</td>
+                                <td class="text-right font-bold text-dark">${{ number_format($item?->detallefc?->total_neto ?? 0, 2, ',', '.') }}</td>
                             </tr>
                             @php $totalFilas++; @endphp
                             @endforeach
 
-                            @while ($totalFilas < $maxFilas)
-                                <tr style="border: 2px solid #333;">
-                                <td style="height: 25px;" colspan="3"></td>
-            </tr>
-            @php $totalFilas++; @endphp
-            @endwhile
+                            @while ($totalFilas < $maxFilasTarget)
+                            <tr><td style="height: 18px;"></td><td></td><td></td></tr>
+                            @php $totalFilas++; @endphp
+                            @endwhile
 
-        </tbody>
+                            <tr class="total-row">
+                                <td colspan="2" class="text-right text-red">SUB-TOTAL DÉBITO</td>
+                                <td class="text-right text-red">${{ number_format($debito ?? 0, 2, ',', '.') }}</td>
+                            </tr>
+                            <tr class="total-final-row">
+                                <td colspan="2" class="text-right">A PAGAR</td>
+                                <td class="text-right">${{ number_format(($total ?? 0) - ($debito ?? 0), 2, ',', '.') }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </td>
+
+            <td width="3%"></td>
+
+            <!-- Columna Derecha: Valores -->
+            <td width="48.5%" style="vertical-align: top; padding: 0;">
+                <div class="card" style="border-top: 3px solid #388E3C; margin-bottom: 0;">
+                    <div class="card-header" style="background-color: #f8fafc;">
+                        Valores Entregados
+                    </div>
+                    <table class="modern-table">
+                        <thead>
+                            <tr>
+                                <th width="50%">Detalle</th>
+                                <th width="20%">Cuota</th>
+                                <th width="30%">Importe</th>
+                        </thead>
+                        <tbody>
+                            @php
+                                $totalFilas2 = 0;
+                            @endphp
+
+                            @foreach ($pagos as $item)
+                                @foreach ($item->pagosParciales as $pagosP)
+                                <tr>
+                                    <td class="font-bold text-dark" style="font-size: 9px;">
+                                        {{ $pagosP?->formaPago?->tipo_pago }}<br>
+                                        <span style="font-weight: normal; font-size: 8px; color: #64748b;">{{ $item->cuenta?->nombre_cuenta }}</span>
+                                    </td>
+                                    <td class="text-center font-bold">{{ $loop->iteration }}</td>
+                                    <td class="text-right font-bold text-dark">${{ number_format($pagosP?->monto_pago ?? 0, 2, ',', '.') }}</td>
+                                </tr>
+                                @php $totalFilas2++; @endphp
+                                @endforeach
+
+                                @foreach ($item->pagosParciales as $pagosP)
+                                <tr>
+                                    <td colspan="3" style="font-size: 9px;">
+                                        <span class="font-bold">Fecha de Pago:</span> <span class="text-blue">{{ $pagosP?->fecha_confirma_pago }}</span>
+                                    </td>
+                                </tr>
+                                @php $totalFilas2++; @endphp
+                                @endforeach
+
+                                @if ($item?->id_forma_pago == 1)
+                                <tr>
+                                    <td colspan="3" style="background-color: #f8fafc; padding: 6px;">
+                                        <div class="font-bold text-dark" style="font-size: 9px;">DESTINATARIO (DEPÓSITO/TRANSF)</div>
+                                        <div style="font-size: 9px; color: #475569; margin-top: 2px;">
+                                            CUIT: {{ $cuit_proveedor }} <br>
+                                            CBU: {{ $cbu_proveedor }}
+                                        </div>
+                                    </td>
+                                </tr>
+                                @php $totalFilas2++; @endphp
+                                @else
+                                    @for ($i = 0; $i < 3; $i++)
+                                    <tr><td colspan="3" style="height: 18px;"></td></tr>
+                                    @endfor
+                                    @php $totalFilas2 += 3; @endphp
+                                @endif
+                            @endforeach
+
+                            @while ($totalFilas2 < $maxFilasTarget)
+                            <tr><td style="height: 18px;"></td><td></td><td></td></tr>
+                            @php $totalFilas2++; @endphp
+                            @endwhile
+
+                            <tr class="total-row">
+                                <td colspan="2"lass="text-right text-red">SUB-TOTAL DÉBITO</td>
+                                <td class="text-right text-red">${{ number_format($debito ?? 0, 2, ',', '.') }}</td>
+                            </tr>
+                            <tr class="total-final-row" style="background-color: #065933;">
+                                <td colspan="2" class="text-right" style="background-color: #065933;">TOTAL VALORES</td>
+                                <td class="text-right" style="background-color: #065933;">${{ number_format(($total ?? 0) - ($debito ?? 0), 2, ',', '.') }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </td>
+        </tr>
     </table>
-    <div style="
-                border: 2px solid #333;
-                margin-top: 4px;
-                padding: 5px;
-                text-align: right;
-                font-size: 12px;
-              ">
-        Débito: &nbsp; &nbsp; &nbsp; ${{ number_format($debito ?? 0, 2, ',', '.') }}
-    </div>
-    <div style="
-                border: 2px solid #333;
-                margin-top: 4px;
-                padding: 8px;
-                text-align: right;
-                font-size: 12px;
-              ">
-        Total a Pagar: &nbsp; &nbsp; &nbsp;
-        ${{ number_format(($total ?? 0) - ($debito ?? 0), 2, ',', '.') }}
-    </div>
-    </td>
-    <td width="2%"></td>
-    <td width="60%">
-        <table>
-            <thead>
-                <tr>
-                    <th style="border: 2px solid #333; padding: 15px 0; text-align: center; font-size: 11px;" width="70%">
-                        Descripción
-                    </th>
-                    <th style="border: 2px solid #333; padding: 15px 0; text-align: center; font-size: 11px;" width="30%">
-                        Importe
-                    </th>
-                </tr>
-            </thead>
 
-            <tbody>
-                @php
-                $totalFilas = 0;
-                $maxFilas = 20;
-                @endphp
-
-                @foreach ($pagos as $item)
-                <!-- <tr style="border: 2px solid #333; font-size: 11px; height: 25px;">
-                    <td style="height: 25px;">
-                        @if ($item?->id_forma_pago == 1)
-                        {{ $item?->formaPago?->tipo_pago }} -
-                        {{ $item?->cuenta?->nombre_cuenta }}
-                        {{ $item?->cuenta?->entidadBancaria?->descripcion_banco }}
-                        @elseif ($item?->id_forma_pago == 2)
-                        {{ $item?->formaPago?->tipo_pago }} -
-                        {{ $item?->num_cheque }}
-                        @else
-                        {{ $item?->formaPago?->tipo_pago }} -
-                        {{ $item?->cuenta?->nombre_cuenta }}
-                        {{ $item?->cuenta?->entidadBancaria?->descripcion_banco }}
+    <!-- Footer: Detalle de Débitos -->
+    @if(($debito ?? 0) > 0)
+    <div class="card" style="border-left: 3px solid #dc2626;">
+        <div class="card-header" style="background-color: #fef2f2; color: #dc2626; border-bottom: 1px solid #fecaca; font-size: 9px;">
+            Detalle Analítico de Débitos Aplicados
+        </div>
+        <div class="card-body" style="padding: 0;">
+            <table class="data-table" style="width: 100%; border-collapse: collapse;">
+                <tbody>
+                    @foreach ($facturas as $item)
+                        @php 
+                            $debitoFac = $item?->detallefc?->total_debitado_liquidacion ?? 0; 
+                        @endphp
+                        @if($debitoFac > 0)
+                            <tr>
+                                <td style="padding: 5px 10px; border-bottom: 1px solid #f8fafc;">
+                                    <span class="font-bold text-dark">Comprobante:</span>
+                                    FAC{{ $item?->detallefc?->tipo_letra }} {{ $item?->detallefc?->sucursal }}-{{ str_pad($item?->detallefc?->numero, 8, '0', STR_PAD_LEFT) }}
+                                    <span style="color: #64748b; margin-left: 10px;">(LIQ Nº {{ $item?->detallefc?->num_liquidacion }})</span>
+                                </td>
+                                <td style="padding: 5px 10px; text-align: right; width: 30%; border-bottom: 1px solid #f8fafc;">
+                                    <span class="font-bold text-dark">Monto Detraído:</span> &nbsp;
+                                    <span class="debit-amount">${{ number_format($debitoFac, 2, ',', '.') }}</span>
+                                </td>
+                            </tr>
                         @endif
-                    </td>
-
-                    <td style="height: 25px; text-align: center;">
-                        {{ number_format(($item->monto_pago ?? 0) - ($debito ?? 0), 2, ',', '.') }}
-                    </td>
-                </tr> -->
-                {{-- @php $totalFilas++; @endphp --}}
-                @foreach ($item->pagosParciales as $pagosP)
-                <tr style="border: 2px solid #333; font-size: 11px; height: 25px;">
-                    <td style="height: 25px;">
-                        {{ $pagosP?->formaPago?->tipo_pago }}: {{$item->cuenta?->nombre_cuenta}}
-                    </td>
-                    <td style=" text-align: center">${{ number_format($pagosP?->monto_pago ?? 0, 2, ',', '.') }}</td>
-                </tr>
-                @php $totalFilas++; @endphp
-                @endforeach
-
-                {{-- FECHAS --}}
-                @foreach ($item->pagosParciales as $pagosP)
-                <tr style="border: 2px solid #333; font-size: 11px; height: 25px;">
-                    <td style="height: 25px;" colspan="2">
-                        Fecha de Pago:
-                        {{ $pagosP?->fecha_confirma_pago }}
-                    </td>
-                </tr>
-                @php $totalFilas++; @endphp
-                @endforeach
-                @if ($item?->id_forma_pago == 1)
-                <tr style="border: 2px solid #333; font-size: 11px; height: 25px;">
-                    <td colspan="2" style="height: 25px;">Destinatario</td>
-                </tr>
-                <tr style="border: 2px solid #333; font-size: 11px; height: 25px;">
-                    <td colspan="2" style="height: 25px;">CUIT Destinatario: {{ $cuit_proveedor }}</td>
-                </tr>
-                <tr style="border: 2px solid #333; font-size: 11px; height: 25px;">
-                    <td colspan="2" style="height: 25px;">CBU Destinatario: {{ $cbu_proveedor }}</td>
-                </tr>
-                @php $totalFilas += 3; @endphp
-                @else
-                @for ($i = 0; $i < 3; $i++)
-                    <tr style="border: 2px solid #333; font-size: 11px; height: 25px;">
-                    <td colspan="2" style="height: 25px;"></td>
-                    </tr>
-                    @endfor
-                    @php $totalFilas += 3; @endphp
-                    @endif
-
                     @endforeach
-                    @while ($totalFilas < $maxFilas)
-                        <tr style="border: 2px solid #333; height: 25px;">
-                        <td colspan="2" style="height: 25px;"></td>
-                        </tr>
-                        @php $totalFilas++; @endphp
-                        @endwhile
-
-            </tbody>
-        </table>
-        <div style="
-                border: 2px solid #333;
-                margin-top: 4px;
-                padding: 5px;
-                text-align: right;
-                font-size: 12px;
-              ">
-            Débito: &nbsp; &nbsp; &nbsp; ${{ number_format($debito ?? 0, 2, ',', '.') }}
+                </tbody>
+            </table>
         </div>
-        <div style="
-                border: 2px solid #333;.
-                margin-top: 10px;
-                padding: 8px;
-                text-align: right;
-                font-size: 12px;
-              ">
-            Total: &nbsp; &nbsp; &nbsp;${{ number_format(($total ?? 0) - ($debito ?? 0), 2, ',', '.') }}
-        </div>
-    </td>
-    </tr>
-    </tbody>
+    </div>
+    @endif
 
-    </table>
-
-    {{-- <div>
-        <p>
-            <span style="font-size: 12px; text-decoration: underline">Observaciones:</span>
-            {{ $observaciones }}
-    </p>
-    </div> --}}
 </body>
-
 </html>
