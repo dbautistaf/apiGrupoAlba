@@ -46,9 +46,11 @@ class LiquidacionesFacturaRepository
         }
 
         if (!empty($params->cuit_prestador)) {
-            $query->where('cuit', 'like', '%' . $params->cuit_prestador . '%')
-                ->OrWhere('prestador', '%' . $params->cuit_prestador . '%')
-                ->OrWhere('prestador_fantasia', '%' . $params->cuit_prestador . '%');
+            $query->where(function ($q) use ($params) {
+                $q->where('cuit', 'like', "%$params->cuit_prestador%")
+                    ->orWhere('prestador', 'like', "%$params->cuit_prestador%")
+                    ->orWhere('prestador_fantasia', 'like', "%$params->cuit_prestador%");
+            });
         }
 
         // orden + límite
