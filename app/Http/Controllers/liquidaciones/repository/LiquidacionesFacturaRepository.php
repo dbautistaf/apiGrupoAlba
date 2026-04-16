@@ -20,92 +20,44 @@ class LiquidacionesFacturaRepository
         return $this->collectCabecera($data);
     }
 
-    public function findTopByFechaRecepcionBetweenAndEstado($desde, $hasta, $arrayEstados, $top)
+    public function findTopByFechaRecepcionBetweenAndEstadoAndNumFacturaLike($params)
     {
-        $placeholder = implode(',', array_fill(0, count($arrayEstados), '?'));
 
-        $data = DB::select(
-            "SELECT * FROM vw_liquidacion_factura_unica WHERE fecha_registra_factura
-            BETWEEN ? AND ? AND estado IN ($placeholder) ORDER BY prestador_fantasia, total_neto DESC LIMIT $top ",
-            array_merge([$desde, $hasta], $arrayEstados)
-        );
+        $query = DB::table('vw_liquidacion_factura_unica');
 
-        return $this->collectAlls($data);
-    }
+        if (!empty($params->num_factura)) {
+            $query->where('comprobante', 'like', '%' . $params->num_factura . '%');
+        }
 
-    public function findTopByFechaRecepcionBetweenAndLocatario($desde, $hasta, $arrayEstados, $top, $locatario)
-    {
-        $placeholder = implode(',', array_fill(0, count($arrayEstados), '?'));
+        if (!empty($params->desde) && !empty($params->hasta)) {
+            $query->whereBetween('fecha_registra_factura', [$params->desde, $params->hasta]);
+        }
 
-        $data = DB::select(
-            "SELECT * FROM vw_liquidacion_factura_unica WHERE fecha_registra_factura
-            BETWEEN ? AND ? AND id_locatorio= ? AND estado IN ($placeholder) ORDER BY prestador_fantasia, total_neto DESC LIMIT $top ",
-            array_merge([$desde, $hasta, $locatario], $arrayEstados)
-        );
+        if (!empty($params->periodo)) {
+            $query->where('periodo', $params->periodo);
+        }
 
-        return $this->collectAlls($data);
-    }
+        if (!empty($params->estado)) {
+            $query->where('estado', $params->estado);
+        }
 
-    public function findTopByFechaRecepcionBetweenAndEstadoAndCuitPrestadorLike($desde, $hasta, $arrayEstados, $cuitPrestador, $top)
-    {
-        $placeholder = implode(',', array_fill(0, count($arrayEstados), '?'));
-        $sql = DB::table('vw_liquidacion_factura_unica')
-            ->whereBetween('fecha_registra_factura', [$desde, $hasta])
-            ->whereIn('estado', $arrayEstados)
-            ->when($cuitPrestador, function ($query) use ($cuitPrestador) {
+        if (!empty($params->id_locatario)) {
+            $query->where('id_locatorio', $params->id_locatario);
+        }
 
-                if (is_numeric($cuitPrestador)) {
-                    $query->where('cuit', 'LIKE', $cuitPrestador . '%');
-                } else {
-                    $query->where(function ($q) use ($cuitPrestador) {
-                        $q->where('prestador', 'LIKE', '%' . $cuitPrestador . '%')
-                            ->orWhere('prestador_fantasia', 'LIKE', '%' . $cuitPrestador . '%');
-                    });
-                } 
-            })
-            ->orderByDesc('id_factura')
-            ->limit($top);
+        if (!empty($params->cuit_prestador)) {
+            $query->where('cuit', 'like', '%' . $params->cuit_prestador . '%')
+                ->OrWhere('prestador', '%' . $params->cuit_prestador . '%')
+                ->OrWhere('prestador_fantasia', '%' . $params->cuit_prestador . '%');
+        }
 
-        $data = $sql->get();
+        // orden + límite
+        $data = $query
+            ->orderBy('prestador_fantasia')
+            ->orderByDesc('total_neto')
+            ->limit(100)
+            ->get();
 
-        return $this->collectAlls($data);
-    }
-
-    public function findTopByFechaRecepcionBetweenAndEstadoAndNumFacturaLike($desde, $hasta, $arrayEstados, $numComprobante, $top)
-    {
-        $placeholder = implode(',', array_fill(0, count($arrayEstados), '?'));
-
-        $data = DB::select(
-            "SELECT * FROM vw_liquidacion_factura_unica WHERE fecha_registra_factura
-            BETWEEN ? AND ? AND comprobante LIKE ? AND estado IN ($placeholder) ORDER BY prestador_fantasia, total_neto DESC LIMIT $top ",
-            array_merge([$desde, $hasta, '%' . $numComprobante . '%'], $arrayEstados)
-        );
-
-        return $this->collectAlls($data);
-    }
-
-    public function findTopByFechaRecepcionBetweenAndPeriodo($desde, $hasta, $arrayEstados, $periodo, $top)
-    {
-        $placeholder = implode(',', array_fill(0, count($arrayEstados), '?'));
-
-        $data = DB::select(
-            "SELECT * FROM vw_liquidacion_factura_unica WHERE fecha_registra_factura
-            BETWEEN ? AND ? AND periodo=? AND estado IN ($placeholder) ORDER BY prestador_fantasia, total_neto DESC LIMIT $top ",
-            array_merge([$desde, $hasta, $periodo], $arrayEstados)
-        );
-
-        return $this->collectAlls($data);
-    }
-
-    public function findTopByFechaRecepcionBetweenAndUsuarioLike($desde, $hasta, $arrayEstados, $usuario, $top)
-    {
-        $placeholder = implode(',', array_fill(0, count($arrayEstados), '?'));
-
-        $data = DB::select(
-            "SELECT * FROM vw_liquidacion_factura_unica WHERE fecha_registra_factura
-            BETWEEN ? AND ? AND cod_usuario = ? AND estado IN ($placeholder) ORDER BY prestador_fantasia, total_neto DESC LIMIT $top ",
-            array_merge([$desde, $hasta, $usuario], $arrayEstados)
-        );
         return $this->collectAlls($data);
     }
 

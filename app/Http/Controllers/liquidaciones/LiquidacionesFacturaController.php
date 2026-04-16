@@ -13,33 +13,7 @@ class LiquidacionesFacturaController extends Controller
 
     public function getFacturaLiquidaciones(LiquidacionesFacturaRepository $repo, Request $request)
     {
-        $data = [];
-        $arrayEstados = ($request->estado === '9')
-            ? ['0', '1', '2', '3', '4', '5', '6', '7']
-            : [$request->estado];
-
-        $params = [
-            'desde' => $request->desde,
-            'hasta' => $request->hasta,
-            'estado' => $arrayEstados,
-            'limit' => 1000
-        ];
-
-        if (!is_null($request->cuit_prestador) && is_null($request->num_factura) && is_null($request->periodo)) {
-            $data = $repo->findTopByFechaRecepcionBetweenAndEstadoAndCuitPrestadorLike($params['desde'], $params['hasta'], $params['estado'], $request->cuit_prestador, $params['limit']);
-        } elseif (is_null($request->cuit_prestador) && !is_null($request->num_factura) && is_null($request->periodo)) {
-            $data = $repo->findTopByFechaRecepcionBetweenAndEstadoAndNumFacturaLike($params['desde'], $params['hasta'], $params['estado'], $request->num_factura, $params['limit']);
-        } elseif (is_null($request->cuit_prestador) && is_null($request->num_factura) && !is_null($request->periodo)) {
-            $data = $repo->findTopByFechaRecepcionBetweenAndPeriodo($params['desde'], $params['hasta'], $params['estado'], $request->periodo, $params['limit']);
-        } elseif (is_null($request->num_factura) && is_null($request->cuit_prestador) && is_null($request->periodo) && !is_null($request->cod_usuario)) {
-            $data = $repo->findTopByFechaRecepcionBetweenAndUsuarioLike($params['desde'], $params['hasta'], $params['estado'], $request->cod_usuario, $params['limit']);
-        } elseif(is_null($request->cuit_prestador) && is_null($request->num_factura) && is_null($request->periodo) && !is_null($request->id_locatario)){
-            $data = $repo->findTopByFechaRecepcionBetweenAndLocatario($params['desde'], $params['hasta'], $params['estado'], $params['limit'],$request->id_locatario);
-        } else {
-            $data = $repo->findTopByFechaRecepcionBetweenAndEstado($params['desde'], $params['hasta'], $params['estado'], $params['limit']);
-        }
-
-        return response()->json($data);
+        return $repo->findTopByFechaRecepcionBetweenAndEstadoAndNumFacturaLike($request);
     }
 
 

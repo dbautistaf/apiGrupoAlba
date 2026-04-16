@@ -14,34 +14,49 @@ class ComprobantesAfipCompraImport implements ToCollection, WithStartRow
     public function collection(Collection $rows)
     {
         $user = auth()->user();
+        $fechaActual = Carbon::now('America/Argentina/Buenos_Aires');
+        $rows = $rows->slice(2)->values();
+        $data = [];
         foreach ($rows as $row) {
-            ComprobantesAfipCompraEntity::create([
-                'fecha_emision' => $this->transformDate($row[0]),
+            $data[] = [
+                'fecha' => $this->transformDate($row[0]),
                 'tipo_comprobante' => $row[1],
                 'punto_venta' => $row[2],
-                'numero_comprobante' => $row[3],
-                'tipo_doc_vendedor' => $row[4],
-                'nro_doc_vendedor' => $row[5],
-                'denominacion_vendedor' => $row[6],
-                'importe_total_original' => str_replace(',', '.', $row[7] ?? 0),
-                'moneda_original' => $row[8],
-                'tipo_cambio' => $row[9],
-                'importe_no_gravado' => str_replace(',', '.', $row[10] ?? 0),
-                'importe_externo' => str_replace(',', '.', $row[11] ?? 0),
-                'credito_fiscal_computable' => $row[12] ?? 0,
-                'neto_gravado_iva_5' => str_replace(',', '.', $row[22] ?? 0),
-                'importe_iva_5' => str_replace(',', '.', $row[23] ?? 0),
-                'neto_gravado_iva_10_5' => str_replace(',', '.', $row[24] ?? 0),
-                'importe_iva_10_5' => str_replace(',', '.', $row[25] ?? 0),
-                'neto_gravado_iva_21' => str_replace(',', '.', $row[26] ?? 0),
-                'importe_iva_21' => str_replace(',', '.', $row[27] ?? 0),
-                'neto_gravado_iva_27' => str_replace(',', '.', $row[28] ?? 0),
-                'importe_iva_27' => str_replace(',', '.', $row[29] ?? 0),
-                'total_neto_gravado' => str_replace(',', '.', $row[30] ?? 0),
-                'total_iva' => str_replace(',', '.', $row[31] ?? 0),
+                'numero_desde' => $row[3],
+                'numero_hasta' => $row[4],
+                'cod_autorizacion' => $row[5],
+                'tipo_doc_emisor' => $row[6],
+                'nro_doc_emisor' => $row[7],
+                'denominacion_emisor' => $row[8],
+                'tipo_doc_receptor' => $row[9],
+                'nro_doc_receptor' => $row[10],
+                'tipo_cambio' => $row[11],
+                'moneda' => $row[12],
+
+                'neto_gravado_iva_0' => $this->toDecimal($row[13] ?? 0),
+                'iva_25' => $this->toDecimal($row[14] ?? 0),
+                'neto_gravado_iva_25' => $this->toDecimal($row[15] ?? 0),
+                'iva_5' => $this->toDecimal($row[16] ?? 0),
+                'neto_gravado_iva_5' => $this->toDecimal($row[17] ?? 0),
+                'iva_105' => $this->toDecimal($row[18] ?? 0),
+                'neto_gravado_iva_105' => $this->toDecimal($row[19] ?? 0),
+                'iva_21' => $this->toDecimal($row[20] ?? 0),
+                'neto_gravado_iva_21' => $this->toDecimal($row[21] ?? 0),
+                'iva_27' => $this->toDecimal($row[22] ?? 0),
+                'neto_gravado_iva_27' => $this->toDecimal($row[23] ?? 0),
+                'imp_neto_gravado' => $this->toDecimal($row[24] ?? 0),
+                'imp_neto_no_gravado' => $this->toDecimal($row[25] ?? 0),
+                'imp_op_exentas' => $this->toDecimal($row[26] ?? 0),
+                'otros_tributos' => $this->toDecimal($row[27] ?? 0),
+                'iva' => $this->toDecimal($row[28] ?? 0),
+                'imp_total' => $this->toDecimal($row[29] ?? 0),
+
+                'fecha_importacion' => $fechaActual,
                 'cod_usuario' => $user->cod_usuario,
-                'id_locatario' => 1
-            ]);
+            ];
+        }
+        foreach (array_chunk($data, 2000) as $chunk) {
+            ComprobantesAfipCompraEntity::insert($chunk);
         }
     }
     public function startRow(): int
@@ -69,4 +84,13 @@ class ComprobantesAfipCompraImport implements ToCollection, WithStartRow
             return null;
         }
     }
+
+    //  FORMATEAR DECIMALES
+    private function toDecimal($value)
+    {
+        if (!$value) return 0;
+
+        return (float) str_replace(',', '.', $value);
+    }
+
 }
