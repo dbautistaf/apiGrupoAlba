@@ -381,4 +381,87 @@ class TestOrdenPagoRepository
             return $newOpa;
         }
     }
+
+    public function findAddFacturaMultiple($request)
+    {
+        $detalleOpa = TesOrdenPagoDetalleEntity::where('id_factura', $request->idFactura)->first();
+
+        if (!$detalleOpa) {
+            return [
+                'success' => false,
+                'message' => 'No se encontró la factura'
+            ];
+        }
+
+        if ($detalleOpa->factura_unida == 1) {
+            return [
+                'success' => false,
+                'message' => 'No puede agrupar esta factura porque ya está agrupada'
+            ];
+        }
+
+        $opa = TesOrdenPagoEntity::where('id_orden_pago', $detalleOpa->id_orden_pago)->first();
+        $getOpa = TesOrdenPagoEntity::where('id_orden_pago', $request->idOrdenPago)->first();
+
+        if (!$opa || !$getOpa) {
+            return [
+                'success' => false,
+                'message' => 'No se encontró la OPA'
+            ];
+        }
+
+        // mejor usar increment
+        $getOpa->increment('monto_orden_pago', $opa->monto_orden_pago ?? 0);
+
+        $newOpa = TesOrdenPagoDetalleEntity::create([
+            'id_orden_pago' => $getOpa->id_orden_pago,
+            'id_factura' => $detalleOpa->id_factura,
+            'monto_factura' => $detalleOpa->monto_factura,
+            'tipo_factura' => $detalleOpa->tipo_factura,
+            'factura_unida' => 1
+        ]);
+
+        TesOrdenPagoDetalleEntity::where('id_orden_pago', $opa->id_orden_pago)->delete();
+        TesOrdenPagoEntity::where('id_orden_pago', $opa->id_orden_pago)->delete();
+
+        return [
+            'success' => true,
+            'message' => 'Se agregó una factura a la OPA',
+            'data' => $newOpa
+        ];
+    }
+
+    public function findRemoveFacturaMultiple($request)
+    {
+        $detalleOpa = TesOrdenPagoDetalleEntity::where('id_factura', $request->idFactura)->first();
+        $opa = TesOrdenPagoEntity::where('id_orden_pago', $detalleOpa->id_orden_pago)->first();
+
+        $newopa = TesOrdenPagoEntity::create([
+            'id_proveedor' => $opa->id_proveedor,
+            'id_prestador' => $opa->id_prestador,
+            'monto_orden_pago' => $detalleOpa->monto_factura,
+            'id_moneda' => $opa->id_moneda,
+            'fecha_emision' => $opa->fecha_emision,
+            'fecha_vencimiento' => $opa->fecha_vencimiento,
+            'fecha_probable_pago' => $opa->fecha_probable_pago,
+            'id_estado_orden_pago' => $opa->id_estado_orden_pago,
+            'monto_anticipado' => $opa->monto_anticipado,
+            'observaciones' => $opa->observaciones,
+            'cod_usuario' => $this->user->cod_usuario,
+            'fecha_genera' => $this->fechaActual,
+            'id_factura' => $opa->id_factura,
+            'tipo_factura' => $opa->tipo_factura
+        ]);
+
+        TesOrdenPagoDetalleEntity::create([
+            'id_orden_pago' => $newopa->id_orden_pago,
+            'id_factura' => $detalleOpa->id_factura,
+            'monto_factura' => $newopa->monto_orden_pago,
+            'tipo_factura' => $newopa->tipo_factura,
+            'factura_unida' => 0
+        ]);
+
+        TesOrdenPagoDetalleEntity::where('id_factura', $request->idFactura)->where('id_orden_pago', $detalleOpa->id_orden_pago)->delete();
+        return $newopa;
+    }
 }

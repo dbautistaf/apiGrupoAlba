@@ -845,6 +845,8 @@ Route::group([
     Route::get('comprobante_relacionado', [App\Http\Controllers\facturacion\FacturacionProcesosController::class, 'selectComprobanteRelacionado']);
 
     Route::post('generar-multiple_fc', [App\Http\Controllers\facturacion\FacturasPrestadoresController::class, 'getGenerarMultipleOpa']);
+    Route::post('agregar-multiple_fc', [App\Http\Controllers\facturacion\FacturasPrestadoresController::class, 'findAddFacturaMultiple']);
+    Route::post('remove-multiple_fc', [App\Http\Controllers\facturacion\FacturasPrestadoresController::class, 'getRemoveMultipleOpa']);
 });
 
 Route::group([
