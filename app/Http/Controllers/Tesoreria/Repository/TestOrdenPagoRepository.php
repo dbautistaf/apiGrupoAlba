@@ -136,6 +136,17 @@ class TestOrdenPagoRepository
             'opadetalle.detallefc',
         ]);
 
+        $query = TesOrdenPagoEntity::with([
+            'estado',
+            'opadetalle.detallefc.razonSocial',
+            'opadetalle.detallefc.comprobantes',
+            'proveedor',
+            'prestador',
+            'pagoFecha.fechaprobablepagos',
+            'opadetalle',
+            'opadetalle.detallefc',
+        ]);
+
         if (!is_null($params->tipo)) {
             $query->where(function ($q) use ($params) {
                 $q->whereHas('opadetalle.detallefc', function ($subQuery) use ($params) {
@@ -421,8 +432,8 @@ class TestOrdenPagoRepository
             'factura_unida' => 1
         ]);
 
-        TesOrdenPagoDetalleEntity::where('id_orden_pago', $opa->id_orden_pago)->delete();
-        TesOrdenPagoEntity::where('id_orden_pago', $opa->id_orden_pago)->delete();
+        TesOrdenPagoDetalleEntity::where('id_orden_pago', $detalleOpa->id_orden_pago)->delete();
+        TesOrdenPagoEntity::where('id_orden_pago', $detalleOpa->id_orden_pago)->delete();
 
         return [
             'success' => true,
@@ -430,7 +441,7 @@ class TestOrdenPagoRepository
             'data' => $newOpa
         ];
     }
-
+    
     public function findRemoveFacturaMultiple($request)
     {
         $detalleOpa = TesOrdenPagoDetalleEntity::where('id_factura', $request->idFactura)->first();
@@ -444,7 +455,7 @@ class TestOrdenPagoRepository
             'fecha_emision' => $opa->fecha_emision,
             'fecha_vencimiento' => $opa->fecha_vencimiento,
             'fecha_probable_pago' => $opa->fecha_probable_pago,
-            'id_estado_orden_pago' => $opa->id_estado_orden_pago,
+            'id_estado_orden_pago' => 1,
             'monto_anticipado' => $opa->monto_anticipado,
             'observaciones' => $opa->observaciones,
             'cod_usuario' => $this->user->cod_usuario,
@@ -462,6 +473,7 @@ class TestOrdenPagoRepository
         ]);
 
         TesOrdenPagoDetalleEntity::where('id_factura', $request->idFactura)->where('id_orden_pago', $detalleOpa->id_orden_pago)->delete();
+        TesOrdenPagoEntity::where('id_factura', $request->idFactura)->where('id_orden_pago', $detalleOpa->id_orden_pago)->delete();
         return $newopa;
     }
 }
