@@ -244,7 +244,7 @@
                         <thead>
                             <tr>
                                 <th width="50%">Detalle</th>
-                                <th width="20%">Cuota</th>
+                                <th width="20%">Facturas</th>
                                 <th width="30%">Importe</th>
                             </tr>
                         </thead>
@@ -257,6 +257,11 @@
                                 <td style="font-size: 9px;">
                                     <strong class="text-dark">FAC{{ $item?->detallefc?->tipo_letra }} {{ $item?->detallefc?->sucursal }}-{{ str_pad($item?->detallefc?->numero, 8, '0', STR_PAD_LEFT) }}</strong><br>
                                     <span style="color: #64748b;">(LIQ Nº {{ $item?->detallefc?->num_liquidacion }})</span>
+                                    @if(($item?->detallefc?->total_debitado_liquidacion ?? 0) > 0)
+                                        <div style="color: #dc2626; font-size: 8.5px; margin-top: 2px;">
+                                            <span class="font-bold">Débito:</span> ${{ number_format($item->detallefc->total_debitado_liquidacion, 2, ',', '.') }}
+                                        </div>
+                                    @endif
                                 </td>
                                 <td class="text-center font-bold">{{ $loop->iteration }}</td>
                                 <td class="text-right font-bold text-dark">${{ number_format($item?->detallefc?->total_neto ?? 0, 2, ',', '.') }}</td>
@@ -270,11 +275,11 @@
                             @endwhile
 
                             <tr class="total-row">
-                                <td colspan="2" class="text-right text-red">SUB-TOTAL DÉBITO</td>
+                                <td colspan="2" class="text-right text-red">Débito:</td>
                                 <td class="text-right text-red">${{ number_format($debito ?? 0, 2, ',', '.') }}</td>
                             </tr>
                             <tr class="total-final-row">
-                                <td colspan="2" class="text-right">A PAGAR</td>
+                                <td colspan="2" class="text-right">Total a Pagar:</td>
                                 <td class="text-right">${{ number_format(($total ?? 0) - ($debito ?? 0), 2, ',', '.') }}</td>
                             </tr>
                         </tbody>
@@ -307,7 +312,11 @@
                                 <tr>
                                     <td class="font-bold text-dark" style="font-size: 9px;">
                                         {{ $pagosP?->formaPago?->tipo_pago }}<br>
-                                        <span style="font-weight: normal; font-size: 8px; color: #64748b;">{{ $item->cuenta?->nombre_cuenta }}</span>
+                                        <span style="font-weight: normal; font-size: 8px; color: #64748b;">{{ $item->cuenta?->nombre_cuenta }}</span><br>
+                                        <div style="margin-top: 3px;">
+                                            <span class="font-bold" style="font-size: 8px;">Fecha de Pago:</span> 
+                                            <span class="text-blue" style="font-size: 8px;">{{ $pagosP?->fecha_confirma_pago }}</span>
+                                        </div>
                                     </td>
                                     <td class="text-center font-bold">{{ $loop->iteration }}</td>
                                     <td class="text-right font-bold text-dark">${{ number_format($pagosP?->monto_pago ?? 0, 2, ',', '.') }}</td>
@@ -315,14 +324,6 @@
                                 @php $totalFilas2++; @endphp
                                 @endforeach
 
-                                @foreach ($item->pagosParciales as $pagosP)
-                                <tr>
-                                    <td colspan="3" style="font-size: 9px;">
-                                        <span class="font-bold">Fecha de Pago:</span> <span class="text-blue">{{ $pagosP?->fecha_confirma_pago }}</span>
-                                    </td>
-                                </tr>
-                                @php $totalFilas2++; @endphp
-                                @endforeach
 
                                 @if ($item?->id_forma_pago == 1)
                                 <tr>
@@ -349,11 +350,11 @@
                             @endwhile
 
                             <tr class="total-row">
-                                <td colspan="2"lass="text-right text-red">SUB-TOTAL DÉBITO</td>
+                                <td colspan="2" class="text-right text-red">Débito:</td>
                                 <td class="text-right text-red">${{ number_format($debito ?? 0, 2, ',', '.') }}</td>
                             </tr>
                             <tr class="total-final-row" style="background-color: #065933;">
-                                <td colspan="2" class="text-right" style="background-color: #065933;">TOTAL VALORES</td>
+                                <td colspan="2" class="text-right" style="background-color: #065933;">Total:</td>
                                 <td class="text-right" style="background-color: #065933;">${{ number_format(($total ?? 0) - ($debito ?? 0), 2, ',', '.') }}</td>
                             </tr>
                         </tbody>
@@ -363,38 +364,40 @@
         </tr>
     </table>
 
-    <!-- Footer: Detalle de Débitos -->
-    @if(($debito ?? 0) > 0)
-    <div class="card" style="border-left: 3px solid #dc2626;">
-        <div class="card-header" style="background-color: #fef2f2; color: #dc2626; border-bottom: 1px solid #fecaca; font-size: 9px;">
-            Detalle Analítico de Débitos Aplicados
-        </div>
-        <div class="card-body" style="padding: 0;">
-            <table class="data-table" style="width: 100%; border-collapse: collapse;">
-                <tbody>
-                    @foreach ($facturas as $item)
-                        @php 
-                            $debitoFac = $item?->detallefc?->total_debitado_liquidacion ?? 0; 
-                        @endphp
-                        @if($debitoFac > 0)
-                            <tr>
-                                <td style="padding: 5px 10px; border-bottom: 1px solid #f8fafc;">
-                                    <span class="font-bold text-dark">Comprobante:</span>
-                                    FAC{{ $item?->detallefc?->tipo_letra }} {{ $item?->detallefc?->sucursal }}-{{ str_pad($item?->detallefc?->numero, 8, '0', STR_PAD_LEFT) }}
-                                    <span style="color: #64748b; margin-left: 10px;">(LIQ Nº {{ $item?->detallefc?->num_liquidacion }})</span>
-                                </td>
-                                <td style="padding: 5px 10px; text-align: right; width: 30%; border-bottom: 1px solid #f8fafc;">
-                                    <span class="font-bold text-dark">Monto Detraído:</span> &nbsp;
-                                    <span class="debit-amount">${{ number_format($debitoFac, 2, ',', '.') }}</span>
-                                </td>
-                            </tr>
-                        @endif
-                    @endforeach
-                </tbody>
-            </table>
+    <!-- Footer: Observaciones y Detalle de Débitos -->
+    <div class="card" style="border-left: 3px solid #388E3C;">
+        <div class="card-body" style="padding: 10px;">
+            <div class="font-bold text-dark" style="font-size: 11px; margin-bottom: 5px; text-transform: uppercase;">Observaciones:</div>
+            <div style="font-size: 10px; color: #334155; margin-bottom: 10px; min-height: 20px;">
+                {{ $observaciones ?? 'Sin observaciones adicionales.' }}
+            </div>
+
+            <!-- @if(($debito ?? 0) > 0)
+                <div style="border-top: 1px dashed #cbd5e1; padding-top: 8px;">
+                    <div class="font-bold" style="color: #dc2626; font-size: 9px; margin-bottom: 5px;">DETALLE DE DÉBITOS APLICADOS:</div>
+                    <table style="width: 100%;">
+                        @foreach ($facturas as $item)
+                            @php 
+                                $debitoFac = $item?->detallefc?->total_debitado_liquidacion ?? 0; 
+                            @endphp
+                            @if($debitoFac > 0)
+                                <tr>
+                                    <td style="padding: 2px 0;">
+                                        <span class="font-bold text-dark">Comprobante:</span>
+                                        FAC{{ $item?->detallefc?->tipo_letra }} {{ $item?->detallefc?->sucursal }}-{{ str_pad($item?->detallefc?->numero, 8, '0', STR_PAD_LEFT) }}
+                                        <span style="color: #64748b; margin-left: 10px;">(LIQ Nº {{ $item?->detallefc?->num_liquidacion }})</span>
+                                    </td>
+                                    <td style="text-align: right; width: 30%;">
+                                        <span class="debit-amount">${{ number_format($debitoFac, 2, ',', '.') }}</span>
+                                    </td>
+                                </tr>
+                            @endif
+                        @endforeach
+                    </table>
+                </div>
+            @endif -->
         </div>
     </div>
-    @endif
 
 </body>
 </html>
