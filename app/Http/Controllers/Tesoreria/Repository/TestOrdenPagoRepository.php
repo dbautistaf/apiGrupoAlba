@@ -206,9 +206,9 @@ class TestOrdenPagoRepository
         }
 
         return $query
-            ->leftJoin('tb_prestador as p', 'p.cod_prestador', '=', 'tb_tes_orden_pago.id_prestador')
-            ->leftJoin('tb_proveedor as prov', 'prov.cod_proveedor', '=', 'tb_tes_orden_pago.id_proveedor')
-            ->orderByRaw('COALESCE(p.razon_social, prov.razon_social)')
+            //->leftJoin('tb_prestador as p', 'p.cod_prestador', '=', 'tb_tes_orden_pago.id_prestador')
+            //->leftJoin('tb_proveedor as prov', 'prov.cod_proveedor', '=', 'tb_tes_orden_pago.id_proveedor')
+            //->orderByRaw('COALESCE(p.razon_social, prov.razon_social)')
             ->orderBy('monto_orden_pago')
             ->get();
     }

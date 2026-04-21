@@ -161,7 +161,7 @@ class FacturasPrestadoresController extends Controller
             DB::beginTransaction();
             $opa->findByIdFacturaMultiple($request->facturas);
             DB::commit();
-            return response()->json(["message" => "Se genero múltiples facturas para un solo orden de pago"]);
+            return response()->json(["message" => "Se genero una orden de pago con múltiples facturas"]);
         } catch (\Throwable $th) {
             //throw $th;
             DB::rollBack();

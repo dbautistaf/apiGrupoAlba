@@ -311,7 +311,7 @@
                                 @foreach ($item->pagosParciales as $pagosP)
                                 <tr>
                                     <td class="font-bold text-dark" style="font-size: 9px;">
-                                        {{ $pagosP?->formaPago?->tipo_pago }}<br>
+                                       {{ $pagosP?->formaPago?->tipo_pago }}{{ $pagosP?->num_cheque ? ': '.$pagosP->num_cheque : '' }}<br>
                                         <span style="font-weight: normal; font-size: 8px; color: #64748b;">{{ $item->cuenta?->nombre_cuenta }}</span><br>
                                         <div style="margin-top: 3px;">
                                             <span class="font-bold" style="font-size: 8px;">Fecha de Pago:</span> 
