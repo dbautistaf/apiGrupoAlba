@@ -106,7 +106,7 @@
                     <!-- <p class="plan">TIPO PLAN:<b> {{ $padron->detalleplan[0]->addplan->tipo ?? $tipoPrincipal }} </b>  -->
                     <p class="cuil">DNI:<b> {{ $padron->dni }} </b></p>
                     <p class="plan">TIPO PLAN:<b> PLAN ÚNICO </b>
-                    <p class="plan">OBRA SOCIAL:<b> {{ $padron->origen->detalle_comercial_origen ?? '' }} </b>
+                    <p class="plan">OBRA SOCIAL:<b> {{ $padron->origen->detalle_comercial_origen ?? 'DESCONOCIDO' }} </b>
                     </p>
 
                     <div class="fecha">

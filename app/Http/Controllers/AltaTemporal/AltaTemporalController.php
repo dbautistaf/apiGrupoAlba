@@ -4,6 +4,7 @@ namespace App\Http\Controllers\AltaTemporal;
 
 use App\Http\Controllers\Controller;
 use App\Models\afiliado\AltaTemporalEntity;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller as RoutingController;
@@ -17,12 +18,12 @@ class AltaTemporalController extends RoutingController
     {
         $now = Carbon::now('America/Argentina/Buenos_Aires');
         $user = Auth::user();
-        if ($request->id != '') {
+        if ($request->id_temporal != '') {
             try {
 
                 DB::beginTransaction();
 
-                $query = AltaTemporalEntity::where('id', $request->id)->first();
+                $query = AltaTemporalEntity::where('id_temporal', $request->id_temporal)->first();
 
                 $query->cuil_tit = $request->cuil_tit;
                 $query->cuil_benef = $request->cuil_benef;
@@ -31,11 +32,9 @@ class AltaTemporalController extends RoutingController
                 $query->nombre = $request->nombre;
                 $query->apellidos = $request->apellidos;
                 $query->id_sexo = $request->id_sexo;
-                $query->id_estado_civil = $request->id_estado_civil;
                 $query->fe_nac = $request->fe_nac;
                 $query->fe_alta = $request->fe_alta;
                 $query->id_usuario = $request->id_usuario;
-                $query->fecha_carga = $request->fecha_carga;
                 $query->id_tipo_beneficiario = $request->id_tipo_beneficiario;
                 $query->id_parentesco = $request->id_parentesco;
                 $query->fe_baja = $request->fe_baja;
@@ -65,15 +64,15 @@ class AltaTemporalController extends RoutingController
                         'nombre' => $request->nombre,
                         'apellidos' => $request->apellidos,
                         'id_sexo' => $request->id_sexo,
-                        'id_estado_civil' => $request->id_estado_civil,
                         'fe_nac' => $request->fe_nac,
-                        'fe_alta' => $request->fe_alta,
+                        'fe_alta' =>$now->format('Y-m-d'),
                         'id_usuario' => $user->cod_usuario,
                         'id_parentesco' => $request->id_parentesco,
                         'fe_baja' => $request->fe_baja,
                         'activo' => $request->activo,
                         'observaciones' => $request->observaciones,
                         'id_locatario' => $request->id_locatario,
+                        'id_tipo_beneficiario' => $request->id_tipo_beneficiario,
                     ]);
 
                     $msg = 'Datos registrados correctamente';
@@ -91,7 +90,6 @@ class AltaTemporalController extends RoutingController
 
     public function getLikePadron(Request $request)
     {
-        $user = Auth::user();
         $query = AltaTemporalEntity::with([
             'tipoParentesco',
             'sexo' ,
@@ -108,13 +106,62 @@ class AltaTemporalController extends RoutingController
         }
 
         if (!empty($request->desde) && !empty($request->hasta)) {
-            $query->whereBetween('fecha_carga', [$request->desde, $request->hasta]);
+            $query->whereBetween('fe_alta', [$request->desde, $request->hasta]);
         }
 
         $files = $query
+            ->OrderBy('fe_alta')
             ->limit(50)
             ->get();
 
         return response()->json($files, 200);
+    }
+
+    public function printCarnetPersonal(Request $request)
+    {
+
+        $now = new \DateTime('now', new \DateTimeZone('America/Argentina/Buenos_Aires'));
+        $fecha_inicio = $now->format('Y-m-d');
+        $fecha_final = $now->modify('+2 days')->format('Y-m-d');
+        $datos = AltaTemporalEntity::with('tipoParentesco')->where('dni', $request->dni)->where('activo', '1')->get();
+        if ($datos[0]->activo != 0) {
+            $now = new \DateTime('now', new \DateTimeZone('America/Argentina/Buenos_Aires'));
+            $datos = AltaTemporalEntity::with( 'tipoParentesco')->where('dni', $request->dni)->get();
+            $grupal = AltaTemporalEntity::with( 'tipoParentesco')->where('cuil_tit', $datos[0]->cuil_tit)
+                ->OrderBy('id_parentesco', 'asc')->get();
+
+            $correlativo = null;
+            foreach ($grupal as $index => $item) {
+                if ($item->dni == $request->dni) {
+                    $correlativo = $index;
+                    break;
+                }
+            }
+            $datos = $datos->map(function ($afiliado) use ($correlativo) {
+                $afiliado->correlativo = $correlativo;
+                return $afiliado;
+            });
+
+            if ($datos) {
+                foreach ($datos as $afiliado) {
+                    $afiliado["cuil_benef"] = $afiliado->dni;
+                }
+                $pdf = Pdf::loadView('carnet_afiliado', ["data" => $datos, "f_inicio" => $fecha_inicio, "f_fin" => $fecha_final, "plan" => $grupal]);
+                $pdf->setPaper('A5', 'landscape');
+                return $pdf->download('carnet.pdf');
+            }
+        } else {
+            return response()->json(['error' => 'El usuario esta inactivo. Muchas gracias.'], 404);
+        }
+    }
+
+    public function getDniPadron(Request $request)
+    {
+        $query = AltaTemporalEntity::where('dni', $request->dni)->first();
+        if ($query) {
+            return response()->json($query, 200);
+        } else {
+            return response()->json(['message' => 'No se encontró el registro con el numero DNI ingresado'], 500);
+        }
     }
 }

@@ -1450,3 +1450,13 @@ Route::group([
 ], function () {
     Route::get('/', [App\Http\Controllers\Dashboard\DashboardController::class, 'getDashboard']);
 });
+
+Route::group([
+    'middleware' => ['jwt.verify'],
+    'prefix' => '/v1/alta-temporal'
+], function () {
+    Route::Post('save', [App\Http\Controllers\AltaTemporal\AltaTemporalController::class, 'postSavePadron']);
+    Route::get('listar', [App\Http\Controllers\AltaTemporal\AltaTemporalController::class, 'getLikePadron']);
+    Route::get('obtenerDni', [App\Http\Controllers\AltaTemporal\AltaTemporalController::class, 'getDniPadron']);
+    Route::post('getPrintCarnetTemporal', [App\Http\Controllers\AltaTemporal\AltaTemporalController::class, 'printCarnetPersonal']);
+});

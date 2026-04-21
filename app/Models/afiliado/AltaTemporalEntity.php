@@ -11,8 +11,8 @@ use Illuminate\Database\Eloquent\Model;
 class AltaTemporalEntity extends Model
 {
     use HasFactory;
-    protected $table = 'tb_tipo_plan';
-    protected $primaryKey = 'id_tipo_plan';
+    protected $table = 'tb_alta_temporal';
+    protected $primaryKey = 'id_temporal';
     public $timestamps = false;
 
     protected $fillable = [
