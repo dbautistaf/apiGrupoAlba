@@ -3,12 +3,20 @@
 namespace App\Http\Controllers\Tesoreria\Repository;
 
 use App\Models\Tesoreria\TesFechaProbablePagoEntity;
+use App\Models\Tesoreria\TestChequesEntity;
 use App\Models\Tesoreria\TesPagoEntity;
 use App\Models\Tesoreria\TesPagosParciales;
 use App\Models\Tesoreria\TestDetalleComprobantesPagoEntity;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Models\Tesoreria\TesPagoDetalleEntity;
+use App\Models\Tesoreria\TesOrdenPagoEntity;
+use App\Models\Tesoreria\TesEstadoOrdenPagoEntity;
+use App\Models\Tesoreria\TesEstadoPagoEntity;
+use App\Models\Tesoreria\TesFacturasOpaEntity;
+use App\Http\Controllers\Tesoreria\Repository\FacturasOpaRepository;
+use App\Models\Tesoreria\PagoRetencionesEntity;
 
 class TesPagosRepository
 {
@@ -280,4 +288,230 @@ class TesPagosRepository
         }
         return false;
     }
+
+    public function findByCrearCheque($cheque)
+    {
+        return TestChequesEntity::create([
+            'id_cuenta_bancaria' => $cheque->id_cuenta_bancaria,
+            'tipo_cheque' => 'TERCERO',
+            'numero_cheque' => $cheque->num_cheque,
+            'monto' => $cheque->monto_pago,
+            'fecha_emision' => $cheque->fecha_confirma_pago,
+            'fecha_vencimiento' => $cheque->fecha_confirma_pago,
+            'tipo' => 'EMISION',
+            'estado' => 'ACTIVO',
+            'descripcion' => null,
+            'archivo_adjunto' => null,
+            'cod_usuario_registra' => $this->user->cod_usuario,
+            'fecha_registra' => $this->fechaActual,
+            'beneficiario' => $cheque->beneficiario,
+            'numero_cheque_anterior' => null,
+            'is_echeck' => 0,
+            'id_chequera' => $cheque->id_chequera
+        ]);
+    }
+
+    public function findByListTipoEstado()
+    {
+        return TesEstadoPagoEntity::get();
+    }
+
+    /**
+     * Determina si es el primer pago del mes para un prestador específico
+     * 
+     * @param int $idPrestador ID del prestador
+     * @param string $fecha Fecha del pago a verificar (Y-m-d o Carbon)
+     * @return bool true si es el primer pago del mes, false si no
+     */
+    public function esPrimerPagoDelMes($idPrestador, $fecha)
+    {
+        try {
+            $fechaPago = $fecha instanceof Carbon ? $fecha : Carbon::parse($fecha);
+
+            $primerDiaMes = $fechaPago->copy()->startOfMonth()->toDateString();
+            $ultimoDiaMes = $fechaPago->copy()->endOfMonth()->toDateString();
+
+            // Obtener IDs de pagos del prestador en ese mes que tengan detalles confirmados
+            $pagosDelPrestador = TesPagoEntity::whereHas('opa.prestador', function ($q) use ($idPrestador) {
+                $q->where('cod_prestador', $idPrestador);
+            })
+                ->where('tipo_factura', 'PRESTADOR')
+                ->pluck('id_pago');
+
+            // Verificar si alguno de esos pagos ya tiene detalles con fecha_acreditacion en el mes
+            $detallesEnElMes = TesPagoDetalleEntity::whereIn('id_pago', $pagosDelPrestador)
+                ->whereBetween(DB::raw('DATE(fecha_acreditacion)'), [$primerDiaMes, $ultimoDiaMes])
+                ->exists();
+
+            return !$detallesEnElMes;
+
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Determina si es el primer pago del mes basado en el ID del pago
+     * 
+     * @param int $idPago ID del pago a verificar
+     * @return bool true si es el primer pago del mes, false si no
+     */
+    public function esPrimerPagoDelMesPorIdPago($idPago)
+    {
+        try {
+            $pago = TesPagoEntity::with('opa.prestador')->find($idPago);
+
+            if (!$pago || !$pago->opa || !$pago->opa->prestador) {
+                return false;
+            }
+
+            return $this->esPrimerPagoDelMes($pago->opa->prestador->cod_prestador, Carbon::now());
+
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+        /**
+     * Recalcula y actualiza el monto total pagado para un pago (sum de sus detalles)
+     */
+    public function recalcPagoTotal($idPago)
+    {
+        $total = (float) TesPagoDetalleEntity::where('id_pago', $idPago)
+            ->selectRaw('SUM(monto) as total')
+            ->value('total');
+
+        $totalRetenido = (float) PagoRetencionesEntity::where('id_pago', $idPago)
+            ->sum('monto');
+
+        $pago = TesPagoEntity::find($idPago);
+        if ($pago) {
+            $pago->monto_total_pagado = round($total, 2);
+            $pago->monto_total_retenido = round($totalRetenido, 2);
+            $pago->update();
+        }
+        return $total;
+    }
+
+    /**
+     * Recalcula el estado del pago a partir de sus detalles (monto pagado)
+     * - Si suma == 0 => GENERADO (1)
+     * - Si 0 < suma < monto_opa => EN PROCESO (2)
+     * - Si suma >= monto_opa => CONFIRMADO (3)
+     * Actualiza `monto_total_pagado` y `id_estado_pago`, y recalcula el estado de la OPA.
+     */
+    public function recalcPagoEstadoFromDetalles($idPago)
+    {
+        try {
+            $sumDetalles = (float) TesPagoDetalleEntity::where('id_pago', $idPago)->sum('monto');
+            $sumRetenciones = (float) PagoRetencionesEntity::where('id_pago', $idPago)->sum('monto');
+            $pago = TesPagoEntity::find($idPago);
+            if (!$pago) {
+                return null;
+            }
+
+            $montoOpa = (float) ($pago->monto_opa ?? 0);
+
+            $generadoId = $this->getPagoEstadoIdByName('GENERADO') ?? 1;
+            $enProcesoId = $this->getPagoEstadoIdByName('EN PROCESO') ?? 2;
+            $confirmadoId = $this->getPagoEstadoIdByName('CONFIRMADO') ?? 3;
+
+            if (abs($sumDetalles) < 0.0001) {
+                $nuevoEstado = $generadoId;
+            } elseif ($sumDetalles + $sumRetenciones + 0.0001 >= $montoOpa) {
+                $nuevoEstado = $confirmadoId;
+            } else {
+                $nuevoEstado = $enProcesoId;
+            }
+
+            $pago->monto_total_pagado = round($sumDetalles, 2);
+            $pago->monto_total_retenido = round($sumRetenciones, 2);
+            $pago->id_estado_pago = $nuevoEstado;
+            $pago->update();
+
+            // Recalcular estado de la OPA asociado al pago
+            if (isset($pago->id_orden_pago)) {
+                $this->recalcOpaTotalsAndState($pago->id_orden_pago);
+            }
+
+            return $pago;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Recalcula el total pagado de la OPA (sum de monto_total_pagado en tb_tes_pago)
+     * y actualiza el estado de la OPA según la regla proporcionada.
+     */
+    public function recalcOpaTotalsAndState($idOpa)
+    {
+        // Nuevo comportamiento:
+        // - total_pagado_confirmado = SUM(monto_total_pagado) WHERE id_estado_pago = CONFIRMADO
+        // - si existen pagos EN PROCESO -> OPA = EN PROCESO
+        // - si total = 0 -> PENDIENTE
+        // - si 0 < total < monto_orden -> PARCIALMENTE PAGADA
+        // - si total >= monto_orden -> PAGADA
+
+        $opa = TesOrdenPagoEntity::find($idOpa);
+        if (!$opa)
+            return null;
+
+        $montoOrden = (float) ($opa->monto_orden_pago ?? 0);
+
+        $confirmadoId = $this->getPagoEstadoIdByName('CONFIRMADO') ?? 3;
+        $enProcesoPagoId = $this->getPagoEstadoIdByName('EN PROCESO') ?? 2;
+
+        $totalConfirmado = (float) TesPagoEntity::where('id_orden_pago', $idOpa)
+            ->where('id_estado_pago', $confirmadoId)
+            ->sum(DB::raw('monto_total_pagado + monto_total_retenido'));
+
+        $existenEnProceso = TesPagoEntity::where('id_orden_pago', $idOpa)
+            ->where('id_estado_pago', $enProcesoPagoId)
+            ->exists();
+
+        $pendienteId = $this->getEstadoIdByName('Pendiente') ?? 1;
+        $enProcesoOpaId = $this->getEstadoIdByName('En Proceso') ?? 2;
+        $parcialmentePagadaId = $this->getEstadoIdByName('Parcialmente Pagada') ?? $this->getEstadoIdByName('Parcial') ?? 3;
+        $pagadaId = $this->getEstadoIdByName('Pagada') ?? 4;
+
+        if ($existenEnProceso) {
+            $nuevoEstado = $enProcesoOpaId;
+        } elseif (abs($totalConfirmado) < 0.0001) {
+            $nuevoEstado = $pendienteId;
+        } elseif ($totalConfirmado > 0 && $totalConfirmado < $montoOrden) {
+            $nuevoEstado = $parcialmentePagadaId;
+        } else {
+            $nuevoEstado = $pagadaId;
+        }
+
+        if (!is_null($nuevoEstado)) {
+            $opa->id_estado_orden_pago = $nuevoEstado;
+            $opa->update();
+        }
+
+        return [
+            'total_pagado_confirmado' => $totalConfirmado,
+            'monto_orden' => $montoOrden,
+            'estado' => $nuevoEstado,
+            'existen_pagos_en_proceso' => $existenEnProceso
+        ];
+    }
+
+    private function getPagoEstadoIdByName($name)
+    {
+        if (empty($name))
+            return null;
+        $estado = TesEstadoPagoEntity::whereRaw('LOWER(descripcion_estado) = ?', [strtolower($name)])->first();
+        return $estado ? $estado->id_estado_pago : null;
+    }
+
+    private function getEstadoIdByName($name)
+    {
+        if (empty($name))
+            return null;
+        $estado = TesEstadoOrdenPagoEntity::whereRaw('LOWER(descripcion_estado) = ?', [strtolower($name)])->first();
+        return $estado ? $estado->id_estado_orden_pago : null;
+    }
+
 }
