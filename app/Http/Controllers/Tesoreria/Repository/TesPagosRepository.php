@@ -73,42 +73,35 @@ class TesPagosRepository
     public function findByListPagosFiltroPrincipal($params)
     {
         $jquery = "";
-        if ($params->tipo === 'PROVEEDOR') {
-            $jquery = TesPagoEntity::with([
-                'estado',
-                'cuenta',
-                'formaPago',
-                'opa.proveedor',
-                'opa.proveedor.datosBancarios',
-                'opa.factura.razonSocial',
-                'opa.opadetalle.detallefc',
-                'comprobantes',
-                'pagosParciales',
-                'pagosParciales.formaPago',
-                'fechaprobablepagos',
-                'detalleopa.detallefc',
-                'detalleopa.detallefc.razonSocial'
-            ]);
-            $jquery->where('tipo_factura', 'PROVEEDOR');
-        } else {
-            $jquery = TesPagoEntity::with([
-                'estado',
-                'cuenta',
-                'formaPago',
-                'opa.prestador',
-                'opa.prestador.datosBancarios',
-                'opa.factura.razonSocial',
-                'opa.opadetalle.detallefc',
-                'comprobantes',
-                'pagosParciales',
-                'pagosParciales.formaPago',
-                'fechaprobablepagos',
-                'detalleopa.detallefc',
-                'detalleopa.detallefc.razonSocial'
-            ]);
-            $jquery->where('tipo_factura', 'PRESTADOR');
-        }
+        $tipoRelacion = $params->tipo === 'PROVEEDOR' ? 'proveedor' : 'prestador';
+        $tipoFactura = $params->tipo === 'PROVEEDOR' ? 'PROVEEDOR' : 'PRESTADOR';
 
+        $jquery = TesPagoEntity::with([
+            'estado',
+            'cuenta',
+            'formaPago',
+            "opa.$tipoRelacion",
+            "opa.$tipoRelacion.datosBancarios",
+            'opa.factura.razonSocial',
+            'opa.opadetalle.detallefc',
+            'comprobantes',
+            'pagosParciales',
+            'pagosParciales.formaPago',
+            'fechaprobablepagos',
+            'detalleopa.detallefc',
+            'detalleopa.detallefc.razonSocial'
+        ]);
+
+        $jquery->where('tipo_factura', $tipoFactura);
+
+        if (!is_null($params->beneficiario)) {
+            $jquery->whereHas("opa.$tipoRelacion", function ($query) use ($params) {
+                $query->where(function ($q) use ($params) {
+                    $q->where('razon_social', 'like', '%' . $params->beneficiario . '%')
+                        ->orWhere('nombre_fantasia', 'like', '%' . $params->beneficiario . '%');
+                });
+            });
+        }
 
         if (!is_null($params->desde) && !is_null($params->hasta)) {
             $jquery->whereHas('fechaprobablepagos', function ($query) use ($params) {
