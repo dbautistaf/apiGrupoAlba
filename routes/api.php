@@ -1202,6 +1202,40 @@ Route::group(
         Route::get('exportarOrdenesPago', [App\Http\Controllers\Tesoreria\Services\TesOrdenPagoController::class, 'exportOrdenesPago']);
 
         Route::post('enviar-email-reporte-pago-opa/{id}', [App\Http\Controllers\Tesoreria\Services\TesOrdenPagoController::class, 'printOrderPay']);
+
+        //Rutas de Cash
+
+        Route::post('postCrear', [App\Http\Controllers\Tesoreria\Services\TesCashEgresosController::class, 'postCrear']); // Crear nuevo egreso
+        Route::get('cash-egresos', [App\Http\Controllers\Tesoreria\Services\TesCashEgresosController::class, 'getListEgresos']); // Listado general entre fechas
+        Route::get('getImputacionesByPrestador/{id}', [App\Http\Controllers\Tesoreria\Services\TesCashEgresosController::class, 'getImputacionesByPrestador']);
+        Route::get('cash-egresos/{id}', [App\Http\Controllers\Tesoreria\Services\TesCashEgresosController::class, 'getEgresoById']); // Obtener un egreso por ID
+        Route::delete('eliminarEgreso/{id}', [App\Http\Controllers\Tesoreria\Services\TesCashEgresosController::class, 'eliminarEgreso']); // Obtener un egreso por ID
+        // Route::put('cash-egresos/{id}', [CashEgresosController::class, 'update']); // Actualizar egreso
+        Route::delete('anular-cheque', [App\Http\Controllers\Tesoreria\Services\TesChequesController::class, 'anularCheque']);
+
+        //Endpoints de opa facturacion
+        Route::get('getFacturasOpaId/{id}', [App\Http\Controllers\Tesoreria\Services\FacturasOpaController::class, 'getFacturasOpa']); // Obtener un egreso por ID
+
+        //Endpoint de detalle de pagos
+        // Endpoints para TesPagoDetalleController
+        Route::post('postCrearPagoDetalle', [App\Http\Controllers\Tesoreria\Services\TesPagoDetalleController::class, 'store']); // Crear nuevo detalle de pago
+        Route::put('updatePagoDetalle/{id}', [App\Http\Controllers\Tesoreria\Services\TesPagoDetalleController::class, 'update']); // Actualizar detalle de pago por ID
+        Route::delete('eliminarPagoDetalle/{id}', [App\Http\Controllers\Tesoreria\Services\TesPagoDetalleController::class, 'destroy']); // Eliminar detalle de pago por ID
+        Route::get('getPdfPagoDetalle', [App\Http\Controllers\Tesoreria\Services\TesPagoDetalleController::class, 'generarPdfPagoDetalle']); // Obtener detalle de pago por ID
+        Route::get('pagos-excel', [App\Http\Controllers\Tesoreria\Services\TesPagosController::class, 'exportarExcelPagos']); // Exportar pagos a Excel
+
+        //Endpoints de retenciones en pagos
+        Route::get('retenciones/listar', [App\Http\Controllers\Tesoreria\Services\PagoRetencionesController::class, 'getListarRetenciones']); // Listar retenciones con filtros
+        Route::get('pago-retenciones/{idPago}', [App\Http\Controllers\Tesoreria\Services\PagoRetencionesController::class, 'listar']); // Listar retenciones de un pago
+        Route::get('pago-retencion-regla-vigente', [App\Http\Controllers\Tesoreria\Services\PagoRetencionesController::class, 'getReglaVigente']); // Obtener regla vigente de una retención
+        Route::post('pago-retencion', [App\Http\Controllers\Tesoreria\Services\PagoRetencionesController::class, 'store']); // Crear nueva retención
+        Route::put('pago-retencion/{id}', [App\Http\Controllers\Tesoreria\Services\PagoRetencionesController::class, 'update']); // Actualizar retención
+        Route::delete('pago-retencion/{id}', [App\Http\Controllers\Tesoreria\Services\PagoRetencionesController::class, 'destroy']); // Eliminar retención
+
+        //Endpoints de saldos - deudas pendientes
+        Route::get('saldos-proveedores-prestadores', [App\Http\Controllers\Tesoreria\Services\SaldosController::class, 'getListarProveedoresPrestadoresConDeudas']); // Lista proveedores/prestadores con deudas
+        Route::get('detalle-facturas-pendientes', [App\Http\Controllers\Tesoreria\Services\SaldosController::class, 'getDetalleFacturasPendientes']); // Detalle de facturas pendientes específicas
+        Route::get('resumen-deudas', [App\Http\Controllers\Tesoreria\Services\SaldosController::class, 'getResumenDeudas']); // Resumen general de deudas
     }
 );
 
@@ -1459,4 +1493,16 @@ Route::group([
     Route::get('listar', [App\Http\Controllers\AltaTemporal\AltaTemporalController::class, 'getLikePadron']);
     Route::get('obtenerDni', [App\Http\Controllers\AltaTemporal\AltaTemporalController::class, 'getDniPadron']);
     Route::post('getPrintCarnetTemporal', [App\Http\Controllers\AltaTemporal\AltaTemporalController::class, 'printCarnetPersonal']);
+});
+
+Route::group([
+    'middleware' => ['jwt.verify'],
+    'prefix' => '/v1/chequeras'
+], function () {
+    Route::get('tipos', [App\Http\Controllers\Tesoreria\Services\ChequerasBancariasController::class, 'tipoChequera']);
+    Route::get('historial', [App\Http\Controllers\Tesoreria\Services\ChequerasBancariasController::class, 'historialChequera']);
+    Route::get('consultar', [App\Http\Controllers\Tesoreria\Services\ChequerasBancariasController::class, 'listar']);
+    Route::post('procesar', [App\Http\Controllers\Tesoreria\Services\ChequerasBancariasController::class, 'proceso']);
+    Route::put('estado', [App\Http\Controllers\Tesoreria\Services\ChequerasBancariasController::class, 'estado']);
+    Route::delete('eliminar', [App\Http\Controllers\Tesoreria\Services\ChequerasBancariasController::class, 'eliminar']);
 });
