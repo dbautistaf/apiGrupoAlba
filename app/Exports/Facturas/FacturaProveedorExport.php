@@ -27,13 +27,16 @@ class FacturaProveedorExport implements FromCollection, WithHeadings, ShouldAuto
     {
         //
         $sql = "SELECT vwm.cuit, vwm.razon_social, vwm.comprobante, vwm.delegacion, vwm.periodo, 
-               ma.articulo, tfd.cantidad, tfd.precio_neto, vwm.subtotal, vwm.total_iva, vwm.total_neto,
+               ma.articulo, tfd.cantidad, tfd.precio_neto, vwm.subtotal, vwm.total_iva,
+               COALESCE(tfdi.total_impuestos, 0) AS total_impuestos, vwm.total_neto,
                vwm.fecha_comprobante, vwm.fecha_vencimiento, vwm.total_aprobado, vwm.total_facturado,
                vwm.total_debitado_liquidacion, vwm.r_social, vwm.tipo_comprobante,
                vwm.observaciones
         FROM vw_matriz_facturas_proveedor AS vwm 
         LEFT JOIN tb_facturacion_detalle tfd ON tfd.id_factura = vwm.id_factura
-        LEFT JOIN tb_facturacion_detalle_impuesto tfdi ON tfdi.id_factura = vwm.id_factura
+        LEFT JOIN (
+            SELECT id_factura, SUM(importe) AS total_impuestos FROM tb_facturacion_detalle_impuesto GROUP BY id_factura
+        ) tfdi ON tfdi.id_factura = vwm.id_factura
         LEFT JOIN tb_facturacion_detalle_descuento tfdd ON tfdd.id_factura = vwm.id_factura
         LEFT JOIN vw_matriz_articulos ma ON ma.id_articulo = tfd.id_articulo";
 
@@ -86,6 +89,7 @@ class FacturaProveedorExport implements FromCollection, WithHeadings, ShouldAuto
             'PRECIO NETO',
             'SUBTOTAL',
             'TOTAL IVA',
+            'TOTAL IMPUESTO',
             'TOTAL NETO',
             'FECHA COMPROBANTE',
             'FECHA VENCIMIENTO',

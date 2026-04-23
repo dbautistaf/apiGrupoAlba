@@ -25,16 +25,17 @@ class FacturaPrestadorExport implements FromCollection, WithHeadings, ShouldAuto
     public function collection()
     {
         //
-        $sql = "SELECT vwm.cuit, vwm.razon_social, vwm.comprobante, vwm.refacturacion, vwm.delegacion, vwm.periodo, 
-               ma.articulo, 
-               tfd.cantidad, tfd.precio_neto, 
-               tfd.subtotal, tfd.monto_iva, tfd.total_importe,
-               vwm.fecha_comprobante,  vwm.fecha_registra, vwm.total_aprobado, vwm.total_facturado,
-               vwm.total_debitado, vwm.r_social, vwm.tipo_comprobante,
-               vwm.observaciones
+        $sql = "SELECT vwm.cuit, vwm.razon_social, vwm.comprobante, vwm.refacturacion, 
+                vwm.delegacion, vwm.periodo, ma.articulo, 
+                tfd.cantidad, tfd.precio_neto, tfd.subtotal, tfd.monto_iva,                
+                COALESCE(tfdi.total_impuestos, 0) AS total_impuestos, tfd.total_importe,
+                vwm.fecha_comprobante, vwm.fecha_registra, vwm.total_aprobado, vwm.total_facturado,
+                vwm.total_debitado, vwm.r_social, vwm.tipo_comprobante, vwm.observaciones
         FROM vw_matriz_facturas_prestador AS vwm 
         LEFT JOIN tb_facturacion_detalle tfd ON tfd.id_factura = vwm.id_factura
-        LEFT JOIN tb_facturacion_detalle_impuesto tfdi ON tfdi.id_factura = vwm.id_factura
+        LEFT JOIN (
+            SELECT id_factura, SUM(importe) AS total_impuestos FROM tb_facturacion_detalle_impuesto GROUP BY id_factura
+        ) tfdi ON tfdi.id_factura = vwm.id_factura
         LEFT JOIN tb_facturacion_detalle_descuento tfdd ON tfdd.id_factura = vwm.id_factura
         LEFT JOIN vw_matriz_articulos ma ON ma.id_articulo = tfd.id_articulo";
 
@@ -81,6 +82,7 @@ class FacturaPrestadorExport implements FromCollection, WithHeadings, ShouldAuto
             'PRECIO NETO',
             'SUBTOTAL',
             'TOTAL IVA',
+            'TOTAL IMPUESTO',
             'TOTAL NETO',
             'FECHA COMPROBANTE',
             'FECHA REGISTRA',
