@@ -55,9 +55,9 @@ class LiquidacionesFacturaRepository
 
         // orden + límite
         $data = $query
+            ->orderByDesc('fecha_registra_factura')
             ->orderBy('prestador_fantasia')
             ->orderByDesc('total_neto')
-            ->limit(100)
             ->get();
 
         return $this->collectAlls($data);

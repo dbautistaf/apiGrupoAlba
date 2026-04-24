@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Tesoreria\Repository;
 
 use App\Models\Tesoreria\TesEstadoOrdenPagoEntity;
+use App\Models\Tesoreria\TesFechaProbablePagoEntity;
 use App\Models\Tesoreria\TesOrdenPagoDetalleEntity;
 use App\Models\Tesoreria\TesOrdenPagoEntity;
 use Carbon\Carbon;
@@ -264,19 +265,40 @@ class TestOrdenPagoRepository
     public function findByUpdate($param)
     {
         $tes = TesOrdenPagoEntity::find($param->id_orden_pago);
-        // $tes->id_proveedor = $param->id_proveedor;
-        // $tes->id_prestador = $param->id_prestador;
-        // $tes->monto_orden_pago = $param->monto_orden_pago;
         $tes->id_moneda = $param->id_moneda;
-        //$tes->fecha_emision = $param->fecha_emision;
+        $tes->fecha_emision = $param->fecha_emision;
         $tes->fecha_vencimiento = $param->fecha_vencimiento;
         $tes->fecha_probable_pago = $param->fecha_probable_pago;
-        // $tes->id_estado_orden_pago = $param->id_estado_orden_pago;
-        // $tes->monto_anticipado = $param->monto_anticipado;
         $tes->observaciones = $param->observaciones;
-        // $tes->id_factura = $param->id_factura;
         $tes->pago_emergencia = $param->pago_emergencia;
         $tes->update();
+
+        //$idsFinales[]=[];
+        $id_pago = $param->fechaprobablepagos[0]['id_pago'];
+        foreach ($param->fechaprobablepagos as $index => $item) {
+            $orden = $index + 1;
+            if (!empty($item['id_fecha_probable'])) {
+                $detalle = TesFechaProbablePagoEntity::find($item['id_fecha_probable']);
+                if ($detalle) {
+                    $detalle->fecha_probable_pago = $item['fecha_probable_pago'];
+                    $detalle->orden_cuotas = $item['orden_cuotas'];
+                    $detalle->update();
+                }
+                $idsFinales[] = $detalle->id_fecha_probable;
+            } else {
+                $nuevo = TesFechaProbablePagoEntity::create([
+                    'fecha_registra' => $item['fecha_registra'],
+                    'fecha_probable_pago' => $item['fecha_probable_pago'],
+                    'orden_cuotas' => $orden,
+                    'id_pago' => $id_pago,
+                ]);
+                $idsFinales[] = $nuevo->id_fecha_probable;
+            }
+        }
+
+        TesFechaProbablePagoEntity::where('id_pago', $id_pago)
+            ->whereNotIn('id_fecha_probable', $idsFinales)
+            ->delete();
         return $tes;
     }
 
@@ -441,7 +463,7 @@ class TestOrdenPagoRepository
             'data' => $newOpa
         ];
     }
-    
+
     public function findRemoveFacturaMultiple($request)
     {
         $detalleOpa = TesOrdenPagoDetalleEntity::where('id_factura', $request->idFactura)->first();
