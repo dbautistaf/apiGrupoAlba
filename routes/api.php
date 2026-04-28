@@ -407,6 +407,7 @@ Route::group([
     Route::post('postsaveComercialCaja', [App\Http\Controllers\configuracion\ComercialCajaController::class, 'saveComercialCaja']);
     Route::get('getIdComercialCaja/{id}', [App\Http\Controllers\configuracion\ComercialCajaController::class, 'getIdComercilaCaja']);
     Route::get('filterComercialcaja', [App\Http\Controllers\configuracion\ComercialCajaController::class, 'getListaComercialCaja']);
+    Route::post('deleteComercialCaja', [App\Http\Controllers\configuracion\ComercialCajaController::class, 'deleteComercialCaja']);
 
     Route::post('saveComercialOrigen', [App\Http\Controllers\configuracion\ComercialOrigenController::class, 'saveComercialOrigen']);
     Route::post('updateEstadoComercialOrigen', [App\Http\Controllers\configuracion\ComercialOrigenController::class, 'updateEstado']);

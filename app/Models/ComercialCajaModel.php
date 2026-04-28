@@ -6,11 +6,14 @@ use App\Models\configuracion\Gerenciadora;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+use Illuminate\Database\Eloquent\SoftDeletes;
+
 class ComercialCajaModel extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
     protected $table = 'tb_comercial_caja';
     protected $primaryKey = 'id_comercial_caja';
+    const DELETED_AT = 'eliminado_el';
     public $timestamps = false;
 
     protected $fillable = [
@@ -18,7 +21,8 @@ class ComercialCajaModel extends Model
         'detalle_comercial_caja',
         'id_locatario',
         'id_gerenciadora',
-        'activo'
+        'activo',
+        'cod_usuario_elimina'
     ];
 
     public function locatario(){
