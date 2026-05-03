@@ -108,7 +108,7 @@ class TesOrdenPagoController extends Controller
                 ? number_format((float) $query?->monto_orden_pago, 2, '.', '')
                 : '0.00',
             "razon_social" => "PRUEBA",
-            "observaciones" => $query?->pagos?->observaciones,
+            "observaciones" => $query?->observaciones?? null,
             "pagosParciales" => $query?->pagos?->pluck('pagosParciales')?->flatten() ?? collect()
         ];
 

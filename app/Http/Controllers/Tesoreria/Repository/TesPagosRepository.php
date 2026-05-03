@@ -90,7 +90,7 @@ class TesPagosRepository
             'formaPago',
             "opa.$tipoRelacion",
             "opa.$tipoRelacion.datosBancarios",
-            'opa.factura.razonSocial',
+            //'opa.factura.razonSocial',
             'opa.opadetalle.detallefc',
             'comprobantes',
             'pagosParciales',
@@ -197,7 +197,7 @@ class TesPagosRepository
         $pago->fecha_confirma_pago = $this->fechaActual;
         $pago->id_forma_pago = 0;
         $pago->monto_pago = $params->anticipo == '1' ? $params->monto_anticipado : $params->monto_pago;
-        $pago->id_estado_orden_pago = $estado;
+        $pago->id_estado_orden_pago = 5;
         $pago->anticipo = $params->anticipo;
         $pago->monto_anticipado = $params->monto_anticipado;
         $pago->num_cheque = $params->num_cheque;
