@@ -30,7 +30,7 @@ class TestOrdenPagoRepository
 
     public function findListAlls($desde, $hasta)
     {
-        return TesOrdenPagoEntity::with(['estado', 'proveedor', 'factura', 'prestador'])
+        return TesOrdenPagoEntity::with(['estado', 'proveedor','prestador'])
             ->whereBetween(DB::raw('DATE(fecha_genera)'), [$desde, $hasta])
             ->orderByDesc('id_orden_pago')
             ->get();
@@ -38,7 +38,7 @@ class TestOrdenPagoRepository
 
     public function findListBetweenAnEstado($estado, $desde, $hasta)
     {
-        return TesOrdenPagoEntity::with(['estado', 'proveedor', 'factura', 'prestador'])
+        return TesOrdenPagoEntity::with(['estado', 'proveedor', 'prestador'])
             ->where('id_estado_orden_pago', $estado)
             ->whereBetween(DB::raw('DATE(fecha_genera)'), [$desde, $hasta])
             ->orderByDesc('id_orden_pago')
@@ -47,7 +47,7 @@ class TestOrdenPagoRepository
 
     public function findListBetweenAnTipo($tipo, $desde, $hasta)
     {
-        return TesOrdenPagoEntity::with(['estado', 'proveedor', 'factura', 'prestador'])
+        return TesOrdenPagoEntity::with(['estado', 'proveedor',  'prestador'])
             ->where('tipo_factura', $tipo)
             ->whereBetween(DB::raw('DATE(fecha_genera)'), [$desde, $hasta])
             ->orderByDesc('id_orden_pago')
@@ -56,7 +56,7 @@ class TestOrdenPagoRepository
 
     public function findListBetweenAnTipoAndEstado($tipo, $estado, $desde, $hasta)
     {
-        return TesOrdenPagoEntity::with(['estado', 'proveedor', 'factura', 'prestador'])
+        return TesOrdenPagoEntity::with(['estado', 'proveedor', 'prestador'])
             ->where('tipo_factura', $tipo)
             ->where('id_estado_orden_pago', $estado)
             ->whereBetween(DB::raw('DATE(fecha_genera)'), [$desde, $hasta])
@@ -66,7 +66,7 @@ class TestOrdenPagoRepository
 
     public function findListBetweenAnTipoAndEstadoAndMontos($tipo, $estado, $desde, $hasta, $montDesde, $montHasta)
     {
-        return TesOrdenPagoEntity::with(['estado', 'proveedor', 'factura', 'prestador'])
+        return TesOrdenPagoEntity::with(['estado', 'proveedor',  'prestador'])
             ->where('tipo_factura', $tipo)
             ->where('id_estado_orden_pago', $estado)
             ->whereBetween('monto_orden_pago', [$montDesde, $montHasta])
@@ -77,7 +77,7 @@ class TestOrdenPagoRepository
 
     public function findListBetweenAnTipoAndEstadoAndMontosAndBeneficiario($tipo, $estado, $desde, $hasta, $montDesde, $montHasta, $beneficiario)
     {
-        return TesOrdenPagoEntity::with(['estado', 'proveedor', 'factura', 'prestador'])
+        return TesOrdenPagoEntity::with(['estado', 'proveedor',  'prestador'])
             ->where('tipo_factura', $tipo)
             ->where('id_estado_orden_pago', $estado)
             ->whereBetween('monto_orden_pago', [$montDesde, $montHasta])
@@ -95,7 +95,7 @@ class TestOrdenPagoRepository
 
     public function findListBetweenAnEstadoAndBeneficiario($estado, $desde, $hasta, $beneficiario)
     {
-        return TesOrdenPagoEntity::with(['estado', 'proveedor', 'factura', 'prestador'])
+        return TesOrdenPagoEntity::with(['estado', 'proveedor', 'prestador'])
             ->where('id_estado_orden_pago', $estado)
             ->whereBetween(DB::raw('DATE(fecha_genera)'), [$desde, $hasta])
             ->where(function ($query) use ($beneficiario) {
@@ -111,7 +111,7 @@ class TestOrdenPagoRepository
 
     public function findListBetweenAndBeneficiario($desde, $hasta, $beneficiario)
     {
-        return TesOrdenPagoEntity::with(['estado', 'proveedor', 'factura', 'prestador'])
+        return TesOrdenPagoEntity::with(['estado', 'proveedor', 'prestador'])
             ->whereBetween(DB::raw('DATE(fecha_genera)'), [$desde, $hasta])
             ->where(function ($query) use ($beneficiario) {
                 $query->whereHas('proveedor', function ($q) use ($beneficiario) {
@@ -320,7 +320,7 @@ class TestOrdenPagoRepository
         $tes->id_estado_orden_pago = $estado;
         $tes->fecha_confirma_pago = $fechaPago;
         $tes->update();
-        return $tes->load(['proveedor', 'factura', 'factura.tipoComprobante']);
+        return $tes->load(['proveedor']);
     }
 
     public function findByConfirmarFechaProbablePago($id_opa, $fechaProbablePago, $cuotas)
@@ -329,7 +329,7 @@ class TestOrdenPagoRepository
         $tes->fecha_probable_pago = $fechaProbablePago;
         $tes->cuotas = $cuotas;
         $tes->update();
-        return $tes->load(['proveedor', 'factura', 'factura.tipoComprobante']);
+        return $tes->load(['proveedor']);
     }
 
     public function findByConfirmarPagoEmergencia($id_opa, $emergencia)
@@ -337,7 +337,7 @@ class TestOrdenPagoRepository
         $tes = TesOrdenPagoEntity::find($id_opa);
         $tes->pago_emergencia = $emergencia;
         $tes->update();
-        return $tes->load(['proveedor', 'factura', 'factura.tipoComprobante']);
+        return $tes->load(['proveedor']);
     }
 
     public function findByAnticipoPago($id_opa, $montoAnticipo)
@@ -345,7 +345,7 @@ class TestOrdenPagoRepository
         $tes = TesOrdenPagoEntity::find($id_opa);
         $tes->monto_anticipado = $montoAnticipo;
         $tes->update();
-        return $tes->load(['proveedor', 'factura', 'factura.tipoComprobante']);
+        return $tes->load(['proveedor']);
     }
 
     public function findByExistsOpaEstado($id, $estado)

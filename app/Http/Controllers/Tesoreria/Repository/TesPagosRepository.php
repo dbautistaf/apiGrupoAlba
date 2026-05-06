@@ -185,6 +185,18 @@ class TesPagosRepository
                     'id_pago' => $pago->id_pago,
                     'monto_restante' => $pagos->monto_restante,
                 ]);
+            }else{
+                $query=TesPagosParciales::find($pagos->id_pago_parcial);
+                $query->fecha_registra=$this->fechaActual;
+                $query->fecha_confirma_pago=$pagos->fecha_confirma_pago;
+                $query->id_forma_pago=$pagos->id_forma_pago;
+                $query->monto_pago=$pagos->monto_pago;
+                $query->monto_opa=$pagos->monto_opa;
+                $query->num_cheque=$pagos->num_cheque;
+                $query->id_usuario=$this->user->cod_usuario;
+                $query->id_pago=$pagos->id_pago;
+                $query->monto_restante=$pagos->monto_restante;
+                $query->update();
             }
         }
         if ($pagosparciales < $pago->monto_opa) {
