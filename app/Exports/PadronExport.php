@@ -21,7 +21,7 @@ class PadronExport implements FromCollection, WithHeadings, ShouldAutoSize, With
     {
         if ($tipo == 3) {
             $this->tipo = [1, 0];
-        }else{
+        } else {
             $this->tipo = [$tipo];
         }
     }
@@ -51,7 +51,7 @@ class PadronExport implements FromCollection, WithHeadings, ShouldAutoSize, With
                 'tb_padron.dni',
                 DB::raw('CONCAT(tb_padron.apellidos, " ", tb_padron.nombre) as nombre_padron'),
                 'tb_padron.id_sexo',
-                'orden_grupo',
+                DB::raw("LPAD(ROW_NUMBER() OVER (PARTITION BY tb_padron.cuil_tit ORDER BY tb_padron.id_parentesco ASC ) - 1,2,'0') AS orden_grupo"),
                 'tb_estado_civil.estado',
                 DB::raw("CONCAT(SUBSTR(tb_padron.fe_nac, 9, 2), '/', SUBSTR(tb_padron.fe_nac, 6, 2), '/', SUBSTR(tb_padron.fe_nac, 1, 4)) AS fecnac"),
                 'tb_nacionalidad.Nombre',
