@@ -91,15 +91,33 @@ class InternacionFiltrosRepository
             ->get();
     }
 
-    public function findByListNombresLike($search)
+    public function findByListNombresLike($request)
     {
-        return InternacionesEntity::with($this->relaciones)
-            ->whereHas('afiliado', function ($query) use ($search) {
-                $query->where('nombre', 'like',  $search . '%');
-                $query->orWhere('apellidos', 'like',  $search . '%');
+        $query = InternacionesEntity::with($this->relaciones)
+            ->when(!empty($request->dni), function ($q) use ($request) {
+                $q->whereHas('afiliado', function ($query) use ($request) {
+                    $query->where('nombre', 'like', '%' . $request->search . '%')
+                        ->orWhere('apellidos', 'like', '%' . $request->search . '%')
+                        ->orWhere('dni', 'like', $request->search . '%');
+                });
+            })
+            ->when(!empty($request->estado), function ($q) use ($request) {
+                $q->where('cod_tipo_estado', $request->estado);
+            })
+            ->when(!empty($request->persona), function ($q) use ($request) {
+                $q->where('cod_usuario_registra', $request->persona);
+            })
+            ->when(!empty($request->desde) && !empty($request->hasta), function ($q) use ($request) {
+                $q->whereBetween('fecha_ingresa', [
+                    $request->desde,
+                    $request->hasta
+                ]);
             })
             ->orderBy('fecha_internacion', 'desc')
+            ->limit('200')
             ->get();
+
+        return $query;
     }
 
     public function findByListEstado($estado)
@@ -133,7 +151,7 @@ class InternacionFiltrosRepository
             ->get();
     }
 
-   
+
     public function findById($id)
     {
         return InternacionesEntity::with($this->relaciones)

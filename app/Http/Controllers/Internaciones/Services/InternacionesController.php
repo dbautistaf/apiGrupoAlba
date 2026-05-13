@@ -29,22 +29,7 @@ class InternacionesController  extends Controller
     {
         $data = [];
 
-        if (!empty($request->search)) {
-            if (is_numeric($request->search)) {
-                $data = $repoInternacionFiltro->findByListDniLike($request->search);
-            } else {
-                $data = $repoInternacionFiltro->findByListNombresLike($request->search);
-            }
-        } elseif (!empty($request->estado)) {
-            $data = $repoInternacionFiltro->findByListEstado($request->estado);
-        } elseif (!empty($request->interestado)) {
-            $data = $repoInternacionFiltro->findByListNewEstado($request->interestado);
-        } elseif (!empty($request->persona)) {
-            $data = $repoInternacionFiltro->findByListUsuario($request->persona);
-        } else {
-            $data = $repoInternacionFiltro->findByList();
-        }
-
+        $data = $repoInternacionFiltro->findByListNombresLike($request);
         foreach ($data as $key) {
             $detalle = $repoInternacionFiltro->finByListaDetallePrestaciones($key->cod_internacion);
             $key->setAttribute('show', false);
@@ -143,7 +128,7 @@ class InternacionesController  extends Controller
 
     // ESTA ES LA API DE EXPORTAR (CORREGIDA)
     public function getExportInternacion(InternacionFiltrosRepository $repoInternacionFiltro, Request $request)
-    {        
+    {
         try {
 
             $data = [];
@@ -165,7 +150,6 @@ class InternacionesController  extends Controller
 
             // Pasa los datos YA FILTRADOS y los filtros al Excel
             return Excel::download(new InternacionExport($data, $request), 'Internacion.xlsx');
-
         } catch (\Exception $e) {
 
             return response()->json([
