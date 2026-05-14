@@ -101,8 +101,8 @@ class InternacionFiltrosRepository
                         ->orWhere('dni', 'like', $request->search . '%');
                 });
             })
-            ->when(!empty($request->estado), function ($q) use ($request) {
-                $q->where('cod_tipo_estado', $request->estado);
+            ->when(!empty($request->interestado), function ($q) use ($request) {
+                $q->where('estado', $request->interestado);
             })
             ->when(!empty($request->persona), function ($q) use ($request) {
                 $q->where('cod_usuario_registra', $request->persona);
