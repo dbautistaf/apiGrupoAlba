@@ -1205,7 +1205,7 @@ Route::group(
         Route::post('enviar-email-reporte-pago-opa/{id}', [App\Http\Controllers\Tesoreria\Services\TesOrdenPagoController::class, 'printOrderPay']);
 
         //Rutas de Cash
-
+    
         Route::post('postCrear', [App\Http\Controllers\Tesoreria\Services\TesCashEgresosController::class, 'postCrear']); // Crear nuevo egreso
         Route::get('cash-egresos', [App\Http\Controllers\Tesoreria\Services\TesCashEgresosController::class, 'getListEgresos']); // Listado general entre fechas
         Route::get('getImputacionesByPrestador/{id}', [App\Http\Controllers\Tesoreria\Services\TesCashEgresosController::class, 'getImputacionesByPrestador']);
@@ -1216,7 +1216,7 @@ Route::group(
 
         //Endpoints de opa facturacion
         Route::get('getFacturasOpaId/{id}', [App\Http\Controllers\Tesoreria\Services\FacturasOpaController::class, 'getFacturasOpa']); // Obtener un egreso por ID
-
+    
         //Endpoint de detalle de pagos
         // Endpoints para TesPagoDetalleController
         Route::post('postCrearPagoDetalle', [App\Http\Controllers\Tesoreria\Services\TesPagoDetalleController::class, 'store']); // Crear nuevo detalle de pago
@@ -1224,7 +1224,7 @@ Route::group(
         Route::delete('eliminarPagoDetalle/{id}', [App\Http\Controllers\Tesoreria\Services\TesPagoDetalleController::class, 'destroy']); // Eliminar detalle de pago por ID
         Route::get('getPdfPagoDetalle', [App\Http\Controllers\Tesoreria\Services\TesPagoDetalleController::class, 'generarPdfPagoDetalle']); // Obtener detalle de pago por ID
         Route::get('pagos-excel', [App\Http\Controllers\Tesoreria\Services\TesPagosController::class, 'exportarExcelPagos']); // Exportar pagos a Excel
-
+    
         //Endpoints de retenciones en pagos
         Route::get('retenciones/listar', [App\Http\Controllers\Tesoreria\Services\PagoRetencionesController::class, 'getListarRetenciones']); // Listar retenciones con filtros
         Route::get('pago-retenciones/{idPago}', [App\Http\Controllers\Tesoreria\Services\PagoRetencionesController::class, 'listar']); // Listar retenciones de un pago
@@ -1232,7 +1232,7 @@ Route::group(
         Route::post('pago-retencion', [App\Http\Controllers\Tesoreria\Services\PagoRetencionesController::class, 'store']); // Crear nueva retención
         Route::put('pago-retencion/{id}', [App\Http\Controllers\Tesoreria\Services\PagoRetencionesController::class, 'update']); // Actualizar retención
         Route::delete('pago-retencion/{id}', [App\Http\Controllers\Tesoreria\Services\PagoRetencionesController::class, 'destroy']); // Eliminar retención
-
+    
         //Endpoints de saldos - deudas pendientes
         Route::get('saldos-proveedores-prestadores', [App\Http\Controllers\Tesoreria\Services\SaldosController::class, 'getListarProveedoresPrestadoresConDeudas']); // Lista proveedores/prestadores con deudas
         Route::get('detalle-facturas-pendientes', [App\Http\Controllers\Tesoreria\Services\SaldosController::class, 'getDetalleFacturasPendientes']); // Detalle de facturas pendientes específicas
@@ -1361,7 +1361,7 @@ Route::group(
         Route::get('getListAcuerdosPago', [App\Http\Controllers\Fiscalizacion\AcuerdoPagoController::class, 'getListAcuerdosPago']);
         Route::delete('eliminarAcuerdo/{id}', [App\Http\Controllers\Fiscalizacion\AcuerdoPagoController::class, 'eliminarAcuerdo']);
         // Route::get('acuerdo-pago/{id}', [App\Http\Controllers\Fiscalizacion\AcuerdoPagoController::class, 'getAcuerdoPagoById']);
-
+    
         // Rutas para tb_fisca_cobranza_periodo
         Route::get('cobranzas-periodo', [App\Http\Controllers\Fiscalizacion\CobranzaPeriodoController::class, 'getListCobranzasPeriodo']);
         Route::get('cobranza-periodo/{id}', [App\Http\Controllers\Fiscalizacion\CobranzaPeriodoController::class, 'getCobranzaPeriodoById']);
