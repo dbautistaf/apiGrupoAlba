@@ -1437,6 +1437,7 @@ Route::group([
     Route::get('cs-tipo-impuesto', [App\Http\Controllers\Contabilidad\Services\CatalogoController::class, 'getTipoImpuesto']);
     Route::get('cs-retencion-cuenta-contable', [App\Http\Controllers\Contabilidad\Services\RetencionCuentaContableController::class, 'getListar']);
     Route::get('cs-plan-cuenta-completo', [App\Http\Controllers\Contabilidad\Services\PlanesCuentasController::class, 'getListarCuentasCompleto']);
+    Route::get('get-export-plan-cuentas', [App\Http\Controllers\Contabilidad\Services\PlanesCuentasController::class, 'getExportPlanCuentas']);
     Route::get('get-imputaciones-contables', [App\Http\Controllers\Contabilidad\Services\ImputacionCuentaContableController::class, 'getListarTipoImputacionContable']);
 
     Route::post('psr-periodo-contable', [App\Http\Controllers\Contabilidad\Services\PeriodosContablesService::class, 'getProcesar']);
