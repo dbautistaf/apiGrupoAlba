@@ -2,6 +2,7 @@
 
 namespace App\Models\Internaciones;
 
+use App\Models\DetallePrestacionesPracticaLaboratorioEntity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -17,4 +18,9 @@ class InternacionAutorizacionEntity extends Model
         'fecha_registra',
         'cod_usuario'
     ];
+
+    public function detalle_prestacion()
+    {
+        return $this->hasMany(DetallePrestacionesPracticaLaboratorioEntity::class, 'cod_prestacion', 'cod_prestacion');
+    }
 }

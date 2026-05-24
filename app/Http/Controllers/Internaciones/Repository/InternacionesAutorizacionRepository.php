@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Internaciones\Repository;
 
 use App\Models\Internaciones\InternacionAutorizacionEntity;
+use App\Models\Internaciones\RecienNacidoEntity;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 
@@ -48,6 +49,58 @@ class InternacionesAutorizacionRepository
                     'cod_usuario' => $this->user->cod_usuario,
                 ]);
             }
+        }
+    }
+
+    public function findBySavePrestacionVinculada($request)
+    {
+        InternacionAutorizacionEntity::create([
+            'cod_internacion' => $request->cod_internacion,
+            'cod_prestacion' => $request->id_internacion_autorizacion,
+            'fecha_registra' => $this->fechaActual,
+            'cod_usuario' => $this->user->cod_usuario,
+        ]);
+    }
+
+    public function findByDeletePrestacionVinculada($cod_prestacion)
+    {
+        $internacion = InternacionAutorizacionEntity::where('cod_prestacion', $cod_prestacion)->first();
+        if ($internacion != null) {
+            $internacion->delete();
+        }
+    }
+
+    public function findBySaveRN($request)
+    {
+        if (!empty($request->cod_recien_nacido)) {
+            $query = RecienNacidoEntity::find($request->cod_recien_nacido);
+            $query->dni_rn = $request->dni_rn;
+            $query->nombre_rn = $request->nombre_rn;
+            $query->apellidos_rn = $request->apellidos_rn;
+            $query->fecha_nacimiento = $request->fecha_nacimiento;
+            $query->diagnostico = $request->diagnostico;
+            $query->observaciones = $request->observaciones;
+            $query->save();
+        } else {
+            RecienNacidoEntity::create([
+                'dni_rn' => $request->dni_rn,
+                'nombre_rn' => $request->nombre_rn,
+                'apellidos_rn' => $request->apellidos_rn,
+                'fecha_nacimiento' => $request->fecha_nacimiento,
+                'diagnostico' => $request->diagnostico,
+                'observaciones' => $request->observaciones,
+                'cod_internacion' => $request->cod_internacion,
+                'fecha_registra' => $this->fechaActual,
+                'cod_usuario' => $this->user->cod_usuario,
+            ]);
+        }
+    }
+
+    public function findByDeleteRN($request)
+    {
+        $internacion = RecienNacidoEntity::find($request->cod_recien_nacido);
+        if ($internacion != null) {
+            $internacion->delete();
         }
     }
 }
