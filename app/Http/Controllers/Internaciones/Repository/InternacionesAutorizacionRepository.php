@@ -36,10 +36,7 @@ class InternacionesAutorizacionRepository
     public function findByUpdate($detalle, $cod_internacion)
     {
         if (!empty($detalle) && !empty($cod_internacion)) {
-            $internacion = InternacionAutorizacionEntity::find($cod_internacion);
-            if ($internacion != null) {
-                $internacion->delete();
-            }
+            InternacionAutorizacionEntity::where('cod_internacion', $cod_internacion)->delete();
 
             foreach ($detalle as $key) {
                 InternacionAutorizacionEntity::create([
