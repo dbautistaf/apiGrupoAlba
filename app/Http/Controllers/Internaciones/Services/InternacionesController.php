@@ -205,7 +205,7 @@ class InternacionesController  extends Controller
         InternacionFiltrosRepository $repoInterAut,
         Request $request
     ) {
-        $data = $repoInterAut->findById($request);
+        $data = $repoInterAut->findById($request->cod_internacion);
         return response()->json($data, 200);
     }
 
