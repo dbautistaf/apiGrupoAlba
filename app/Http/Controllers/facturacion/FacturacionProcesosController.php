@@ -105,7 +105,7 @@ class FacturacionProcesosController extends Controller
                 // CREAR ASIENTO CONTABLE AUTOMÁTICO
                 // ============================================================
                 // @CREAR ASIENTO CONTABLE AUTOMÁTICO PARA FACTURAS DE PROVEEDOR
-                if ($cabecera->idImputacionHaber) {
+                if ($cabecera->idImputacionDebe) {
                     //Período contable activo
                     try {
                         $formatoCorto = substr($cabecera->periodo, 2, 2) . substr($cabecera->periodo, 5, 2);
@@ -124,23 +124,15 @@ class FacturacionProcesosController extends Controller
                     $facturaConProveedor = $repo->findById($facturacion->id_factura);
 
                     $datosFactura = [
-                        // 'id_proveedor' => $facturacion->id_proveedor,
+                        'id_proveedor' => $facturacion->id_proveedor,
+                        'id_prestador' => $facturacion->id_prestador,
                         'cuit' => $facturaConProveedor->proveedor->cuit ?? $facturaConProveedor->prestador->cuit,
                         'nombre' => $facturaConProveedor->proveedor->razon_social ?? $facturaConProveedor->prestador->razon_social,
                         'numero_factura' => $cabecera->tipo_letra . ' ' . $cabecera->sucursal . '-' . $cabecera->numero,
                         'fecha_registra' => $facturacion->fecha_registra,
                         'total_factura' => $facturacion->total_neto,
-                        'id_cuenta_gasto' => $cabecera->id_tipo_imputacion_sintetizada,
                         'id_tipo_factura' => $facturacion->id_tipo_factura,
-                        'idImputacionHaber' => $cabecera->idImputacionHaber,
-                        'ImputacionDebe' => array_map(function ($item) {
-                            return [
-                                'idImputacionDebe' => $item->idImputacionDebe ?? null,
-                                'nombreDebe' => $item->nombreDebe ?? null,
-                                'codigoDebe' => $item->codigoDebe ?? null,
-                                'totalImporteDebe' => $item->total_importe ?? null,
-                            ];
-                        }, $detalle),
+                        'idImputacionDebe' => $cabecera->idImputacionDebe,
                     ];
                     // Crear asiento contable (las validaciones ya se hicieron arriba)
                     try {
@@ -254,7 +246,7 @@ class FacturacionProcesosController extends Controller
                 }
 
                 // Procesar modificación contable si tiene asientos y datos contables
-                if ($tieneAsientos && $cabecera->idImputacionHaber) {
+                if ($tieneAsientos && $cabecera->idImputacionDebe) {
                     try {
                         $formatoCorto = substr($cabecera->periodo, 2, 2) . substr($cabecera->periodo, 5, 2);
                         $periodoContableActivo = $periodoContableRepositorio->findByExistsPeriodoActivo($formatoCorto);
@@ -268,22 +260,14 @@ class FacturacionProcesosController extends Controller
 
                         $nuevosDatosFactura = [
                             'id_proveedor' => $facturacion->id_proveedor,
+                            'id_prestador' => $facturacion->id_prestador,
                             'cuit' => $facturaConProveedor->proveedor->cuit ?? $facturaConProveedor->prestador->cuit,
                             'nombre' => $facturaConProveedor->proveedor->razon_social ?? $facturaConProveedor->prestador->razon_social,
                             'numero_factura' => $cabecera->tipo_letra . ' ' . $cabecera->sucursal . '-' . $cabecera->numero,
                             'fecha_registra' => $facturacion->fecha_registra,
                             'total_factura' => $facturacion->total_neto,
-                            'id_cuenta_gasto' => $cabecera->id_tipo_imputacion_sintetizada,
                             'id_tipo_factura' => $facturacion->id_tipo_factura,
-                            'idImputacionHaber' => $cabecera->idImputacionHaber,
-                            'ImputacionDebe' => array_map(function ($item) {
-                                return [
-                                    'idImputacionDebe' => $item->idImputacionDebe ?? null,
-                                    'nombreDebe' => $item->nombreDebe ?? null,
-                                    'codigoDebe' => $item->codigoDebe ?? null,
-                                    'totalImporteDebe' => $item->total_importe ?? null,
-                                ];
-                            }, $detalle),
+                            'idImputacionDebe' => $cabecera->idImputacionDebe,
                         ];
 
                         // Procesar modificación contable

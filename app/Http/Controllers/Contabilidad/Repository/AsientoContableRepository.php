@@ -348,111 +348,79 @@ class AsientoContableRepository
 
     public function crearAsientoFactura($datosFactura, $idPeriodoContable)
     {
-        // \Log::info('Datos recibidos:', ['datos' => $datosFactura]);
-
-        $cuentaProveedor = null;
-        $cuentaPrestador = null;
-
-        // Lógica separada para proveedor vs prestador
-        if (!empty($datosFactura['id_proveedor'])) {
-            // Manejo para proveedores
-            // $codProveedorReal = $this->obtenerCodProveedorReal($datosFactura);
-            // $proveedorTieneCuenta = $codProveedorReal ? $this->verificarProveedorTieneCuentaContable($codProveedorReal) : false;
-
-            // if (!$proveedorTieneCuenta) {
-            //     throw new Exception("El proveedor '{$datosFactura['nombre']}' no tiene una cuenta contable asignada. Configure la relación proveedor-cuenta contable antes de continuar.");
-            // }
-
-            // $cuentaProveedor = $this->obtenerCuentaContableProveedor($codProveedorReal);
-            // \Log::info('Cuenta proveedor obtenida:', ['cuenta' => $cuentaProveedor]);
-
-        } elseif (!empty($datosFactura['id_prestador'])) {
-            // Manejo para prestadores
-            $prestadorRepo = new PrestadorRepository();
-            // \Log::info('Buscando prestador con ID:', ['id_prestador' => $datosFactura['id_prestador']]);
-            $prestador = $prestadorRepo->findByExistCodPrestador($datosFactura['id_prestador']);
-
-            if (!$prestador) {
-                throw new Exception("No se encontró el prestador con ID: '{$datosFactura['id_prestador']}'.");
-            }
-
-            $prestadorTieneCuenta = $this->verificarTipoPrestadorTieneCuentaContable($prestador->cod_tipo_prestador);
-
-            if (!$prestadorTieneCuenta) {
-                throw new Exception("El prestador '{$datosFactura['nombre']}' no tiene una cuenta contable asignada. Configure la relación prestador-cuenta contable antes de continuar.");
-            }
-
-            $cuentaPrestador = $this->obtenerCuentaContableTipoPrestador($prestador->cod_tipo_prestador);
-            // \Log::info('Cuenta prestador obtenida:', ['cuenta' => $cuentaPrestador]);
-
-        } else {
-            throw new Exception("No existe una cuenta contable asignada para el proveedor o prestador.");
+        // Validar imputación DEBE
+        $idImputacionDebe = $datosFactura['idImputacionDebe'] ?? null;
+        if (!$idImputacionDebe) {
+            throw new Exception("Falta la imputación contable (DEBE) para registrar el asiento. Por favor contacte con Contabilidad.");
         }
 
-        $detalleImputaciones = $datosFactura['ImputacionDebe']; // Ensure 'ImputacionDebe' exists, default to an empty array
-        // $ImputacionDebe = $this->obtenerCuentaContableImputacion($detalleImputaciones['idImputacionDebe']);
-        $ImputacionHaber = $this->obtenerCuentaContableImputacion($datosFactura['idImputacionHaber']);
-
-        //Verificar que todas las imputaciones tengan cuenta contable asignada
-        foreach ($detalleImputaciones as $imputacion) {
-            if (!$this->verificarFamiliaTieneCuentaContable($imputacion['idImputacionDebe'])) {
-                throw new Exception("La imputacion '{$imputacion['nombreDebe']}' no tiene una cuenta contable asignada. Configure la relación imputación-cuenta contable antes de continuar.");
-                // return;
-            }
+        $imputacionDebe = $this->obtenerCuentaContableImputacion($idImputacionDebe);
+        if (!$imputacionDebe) {
+            throw new Exception("La imputación contable seleccionada no tiene una cuenta contable asignada. Por favor contacte con Contabilidad.");
         }
 
-        // \Log::info('Imputaciones de debe verificadas con cuenta contable asignada:');
-        // Crear leyenda: CUIT - NOMBRE - NUMERO_FACTURA
-        $leyenda = ' FACTURA- ' . $datosFactura['cuit'] . ' - ' .
-            $datosFactura['nombre'] . ' - ' .
+        // Determinar id_detalle_plan del HABER: prestador = 35, proveedor = 36
+        $esPrestador = !empty($datosFactura['id_prestador']);
+        $esProveedor = !empty($datosFactura['id_proveedor']);
+
+        if (!$esPrestador && !$esProveedor) {
+            throw new Exception("No se pudo determinar si la factura es de prestador o proveedor para registrar el asiento. Por favor contacte con Contabilidad.");
+        }
+
+        $idDetallePlanHaber = $esPrestador ? 35 : 36;
+
+        // Leyenda: FACTURA - CUIT - NOMBRE - NUMERO - FECHA
+        $leyenda = 'FACTURA - ' . ($datosFactura['cuit'] ?? '') . ' - ' .
+            ($datosFactura['nombre'] ?? '') . ' - ' .
             $datosFactura['numero_factura'] . ' - ' .
             'FECHA: ' . $datosFactura['fecha_registra'];
 
-        // Obtener siguiente número correlativo
         $numeroCorrelativo = $this->obtenerSiguienteNumeroAsiento();
-        // \Log::info('Comenzando creación de asiento contable para factura con número correlativo');
 
-        // Crear asiento (sin numero_referencia para facturas normales)
         $asiento = $this->findByCrearAsiento(
-            1, // ID tipo asiento para facturas (ajustar según tu configuración)
+            1,
             'FACTURA',
             $leyenda,
             $numeroCorrelativo,
             $idPeriodoContable,
-            null, // numero_referencia como null para facturas normales
+            $datosFactura['numero_factura'],
             'ACTIVO'
         );
 
-        // Iterar sobre las imputaciones para llenar el debe
-        foreach ($detalleImputaciones as $imputacion) {
-            $ImputacionDebe = $this->obtenerCuentaContableFamilia($imputacion['idImputacionDebe']);
-            $this->findByCrearDetalleAsiento([
-                'id_asiento_contable' => $asiento->id_asiento_contable,
-                'id_proveedor_cuenta_contable' => null,
-                'id_forma_pago_cuenta_contable' => null,
-                'id_familia_cuenta_contable' => null,
-                'monto_debe' => $imputacion['totalImporteDebe'], // Use array syntax
-                'monto_haber' => 0,
-                'observaciones' => 'Registro de factura',
-                'id_detalle_plan' => $ImputacionDebe['id_detalle_plan'] // Use array syntax
-            ]);
-        }
-
-        // Crear el haber
+        // DEBE — imputación dinámica desde tb_cont_imputacion_cuenta_contable
         $this->findByCrearDetalleAsiento([
-            'id_asiento_contable' => $asiento->id_asiento_contable,
-            'cod_proveedor' => $datosFactura['id_proveedor'] ?? null,
-            'cod_prestador' => $datosFactura['id_prestador'] ?? null,
-            'id_proveedor_cuenta_contable' => null,
-            'id_tipo_prestador_cuenta_contable' => $cuentaPrestador ? $cuentaPrestador->id_tipo_prestador_cuenta_contable : null,
-            'id_forma_pago_cuenta_contable' => null,
-            'id_familia_cuenta_contable' => null,
-            'monto_debe' => 0,
-            'monto_haber' => $datosFactura['total_factura'],
-            'observaciones' => 'Cuenta por pagar proveedor',
-            'id_detalle_plan' => $cuentaPrestador ? $cuentaPrestador['id_detalle_plan'] : 134 //2.1.11.10.03	ACREEDORES VARIOS/GASTOS
+            'id_asiento_contable'              => $asiento->id_asiento_contable,
+            'cod_proveedor'                    => null,
+            'cod_prestador'                    => null,
+            'id_proveedor_cuenta_contable'     => null,
+            'id_tipo_prestador_cuenta_contable'=> null,
+            'id_forma_pago_cuenta_contable'    => null,
+            'id_familia_cuenta_contable'       => null,
+            'id_cuenta_bancaria_cuenta_contable' => null,
+            'id_retencion_cuenta_contable'     => null,
+            'monto_debe'                       => $datosFactura['total_factura'],
+            'monto_haber'                      => 0,
+            'observaciones'                    => 'Gasto - ' . ($imputacionDebe->imputacion ?? ''),
+            'id_detalle_plan'                  => $imputacionDebe->id_detalle_plan,
         ]);
-        // \Log::info('Asiento contable creado exitosamente para factura con ID: ' . $asiento->id_asiento_contable);
+
+        // HABER — hardcodeado: prestador = 35 (DEUDAS PRESTACIONALES), proveedor = 36 (PROVEEDORES)
+        $this->findByCrearDetalleAsiento([
+            'id_asiento_contable'              => $asiento->id_asiento_contable,
+            'cod_proveedor'                    => $datosFactura['id_proveedor'] ?? null,
+            'cod_prestador'                    => $datosFactura['id_prestador'] ?? null,
+            'id_proveedor_cuenta_contable'     => null,
+            'id_tipo_prestador_cuenta_contable'=> null,
+            'id_forma_pago_cuenta_contable'    => null,
+            'id_familia_cuenta_contable'       => null,
+            'id_cuenta_bancaria_cuenta_contable' => null,
+            'id_retencion_cuenta_contable'     => null,
+            'monto_debe'                       => 0,
+            'monto_haber'                      => $datosFactura['total_factura'],
+            'observaciones'                    => $esPrestador ? 'Deudas prestacionales' : 'Proveedores a pagar',
+            'id_detalle_plan'                  => $idDetallePlanHaber,
+        ]);
+
         return $asiento;
     }
 
