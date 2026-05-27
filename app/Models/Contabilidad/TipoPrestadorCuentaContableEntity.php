@@ -2,19 +2,20 @@
 
 namespace App\Models\Contabilidad;
 
+use App\Models\Prestadores\TipoPrestadorEntity;
 use App\Models\proveedor\MatrizProveedoresEntity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class ProveedorCuentaContableEntity extends Model
+class TipoPrestadorCuentaContableEntity extends Model
 {
     use HasFactory;
-    protected $table = 'tb_cont_proveedor_cuenta_contable';
-    protected $primaryKey = 'id_proveedor_cuenta_contable';
+    protected $table = 'tb_cont_tipo_prestador_cuenta_contable';
+    protected $primaryKey = 'id_tipo_prestador_cuenta_contable';
     public $timestamps = false;
 
     protected $fillable = [
-        'id_proveedor',
+        'cod_tipo_prestador',
         'id_detalle_plan',
         'cod_usuario_crea',
         'fecha_registra',
@@ -23,9 +24,9 @@ class ProveedorCuentaContableEntity extends Model
         'vigente'
     ];
 
-    public function proveedor()
+    public function tipoPrestador()
     {
-        return $this->belongsTo(MatrizProveedoresEntity::class, 'id_proveedor', 'cod_proveedor');
+        return $this->belongsTo(TipoPrestadorEntity::class, 'cod_tipo_prestador', 'cod_tipo_prestador');
     }
 
     public function detallePlan()

@@ -67,6 +67,11 @@ class ImputacionCuentaContableRepository
     {
         $query = ImputacionesCuentaContableEntity::with(['detallePlan']);
 
+        // aplicar por defecto vigente = 1 si no se envía el filtro
+        if (!isset($filtros['vigente'])) {
+            $query->where('vigente', 1);
+        }
+
         if (isset($filtros['vigente'])) {
             $query->where('vigente', $filtros['vigente']);
         }
@@ -84,5 +89,47 @@ class ImputacionCuentaContableRepository
         }
 
         return $query->get();
+    }
+
+    // Nuevo: obtener por id (para editar)
+    public function findById($id)
+    {
+        return ImputacionesCuentaContableEntity::with(['detallePlan'])
+            ->where('id_imputacion_cuenta_contable', $id)
+            ->first();
+    }
+
+    // Nuevo: wrapper para 'editar' con mapeo de campos esperado por la UI
+    public function findByEditar($id)
+    {
+        $registro = $this->findById($id);
+        if (!$registro) {
+            return null;
+        }
+
+        return (object) [
+            'id_imputacion_cuenta_contable' => $registro->id_imputacion_cuenta_contable,
+            'id_detalle_plan' => $registro->id_detalle_plan,
+            'descripcion' => $registro->imputacion,    // coincide con create que usaba 'descripcion'
+            'codigo_cuenta' => $registro->codigo,      // coincide con create que usaba 'codigo_cuenta'
+            'codigo' => $registro->codigo,             // para compatibilidad con update que usa 'codigo'
+            'vigente' => $registro->vigente,
+            'detallePlan' => $registro->detallePlan ?? null
+        ];
+    }
+
+    // Nuevo: "eliminar" marcando como no vigente y registrando usuario/fecha
+    public function findByEliminar($id)
+    {
+        $imputacion = ImputacionesCuentaContableEntity::find($id);
+        if (!$imputacion) {
+            return false;
+        }
+
+        $imputacion->vigente = false;
+        $imputacion->cod_usuario_modifica = $this->user->cod_usuario;
+        $imputacion->fecha_modifica = $this->fechaActual;
+
+        return $imputacion->update();
     }
 }

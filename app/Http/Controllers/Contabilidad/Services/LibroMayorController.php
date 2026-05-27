@@ -106,6 +106,7 @@ class LibroMayorController extends Controller
                 }
             }
 
+
             // Generar reporte (puedes pasar info de empresa si la tienes)
             $reporte = $this->libroMayorRepository->findByReporteLibroMayor($request);
 

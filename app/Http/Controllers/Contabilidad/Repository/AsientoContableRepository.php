@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Contabilidad\Repository;
 
+use App\Http\Controllers\Prestadores\repository\PrestadorRepository;
 use App\Models\Contabilidad\AsientosContablesEntity;
 use App\Models\Contabilidad\BancoCuentasContableEntity;
 use App\Models\Contabilidad\DetalleAsientosContablesEntity;
@@ -9,10 +10,14 @@ use App\Models\Contabilidad\FamiliaCuentaContableEntity;
 use App\Models\Contabilidad\ImputacionesCuentaContableEntity;
 use App\Models\Contabilidad\ProveedorCuentaContableEntity;
 use App\Models\Contabilidad\FormasPagoCuentasContableEntity;
+use App\Models\Contabilidad\RetencionCuentasContablesEntity;
+use App\Models\Contabilidad\TipoPrestadorCuentaContableEntity;
 use App\Models\Tesoreria\TesCuentasBancariasEntity;
+use App\Http\Controllers\proveedor\Repository\ProveedorRepository;
 use Exception;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Log;
 
 class AsientoContableRepository
 {
@@ -45,10 +50,14 @@ class AsientoContableRepository
     {
         return DetalleAsientosContablesEntity::create([
             'id_asiento_contable' => $params['id_asiento_contable'],
+            'cod_proveedor' => $params['cod_proveedor'] ?? null,
+            'cod_prestador' => $params['cod_prestador'] ?? null,
             'id_proveedor_cuenta_contable' => $params['id_proveedor_cuenta_contable'] ?? null,
+            'id_tipo_prestador_cuenta_contable' => $params['id_tipo_prestador_cuenta_contable'] ?? null,
             'id_forma_pago_cuenta_contable' => $params['id_forma_pago_cuenta_contable'] ?? null,
             'id_familia_cuenta_contable' => $params['id_familia_cuenta_contable'] ?? null,
             'id_cuenta_bancaria_cuenta_contable' => $params['id_cuenta_bancaria_cuenta_contable'] ?? null,
+            'id_retencion_cuenta_contable' => $params['id_retencion_cuenta_contable'] ?? null,
             'monto_debe' => $params['monto_debe'],
             'monto_haber' => $params['monto_haber'],
             'observaciones' => $params['observaciones'],
@@ -87,6 +96,7 @@ class AsientoContableRepository
         $item = DetalleAsientosContablesEntity::find($id);
         $item->id_asiento_contable = $params['id_asiento_contable'];
         $item->id_proveedor_cuenta_contable = $params['id_proveedor_cuenta_contable'] ?? null;
+        $item->id_tipo_prestador_cuenta_contable = $params['id_tipo_prestador_cuenta_contable'] ?? null;
         $item->id_forma_pago_cuenta_contable = $params['id_forma_pago_cuenta_contable'];
         $item->id_familia_cuenta_contable = $params['id_familia_cuenta_contable'] ?? null;
         $item->id_cuenta_bancaria_cuenta_contable = $params['id_cuenta_bancaria_cuenta_contable'] ?? null;
@@ -102,7 +112,7 @@ class AsientoContableRepository
         $query = AsientosContablesEntity::with(['tipo']);
 
         if (!is_null($params->id_periodo_contable)) {
-            $query->where('id_periodo_contable', [$params->id_periodo_contable]);
+            $query->where('id_periodo_contable', $params->id_periodo_contable);
         }
 
         if (!is_null($params->numero)) {
@@ -128,6 +138,12 @@ class AsientoContableRepository
             ->find($id);
     }
 
+    // Obtener detalle de asiento por id (necesario para validar periodo antes de borrar)
+    public function findDetalleById($id)
+    {
+        return DetalleAsientosContablesEntity::find($id);
+    }
+
     public function findByDeleteDetalleId($id)
     {
         return DetalleAsientosContablesEntity::find($id)->delete();
@@ -142,7 +158,12 @@ class AsientoContableRepository
 
     public function findByContraAsientoContableId($numero, $numero_referencia, $vigente)
     {
-        $asiento = AsientosContablesEntity::where('numero', [$numero])->first();
+        $asiento = AsientosContablesEntity::where('numero', $numero)->first();
+
+        if (!$asiento) {
+            throw new \Exception("No se encontró el asiento contable con número: {$numero}");
+        }
+
         $asiento->numero_referencia = $numero_referencia;
         $asiento->vigente = $vigente;
         return $asiento->update();
@@ -150,25 +171,52 @@ class AsientoContableRepository
 
     //Metodos Franco
 
+    //======================================
+
+
+    //Proveedor
+
     public function verificarProveedorTieneCuentaContable($idProveedor)
     {
         return ProveedorCuentaContableEntity::where('id_proveedor', $idProveedor)
-            ->where('vigente', 1)
+            // ->where('vigente', 1)
             ->exists();
     }
 
+    public function obtenerCuentaContableProveedor($idProveedor)
+    {
+        return ProveedorCuentaContableEntity::where('id_proveedor', $idProveedor)
+            // ->where('vigente', 1)
+            ->first();
+    }
+    //Tipos de prestadores
+
+    public function verificarTipoPrestadorTieneCuentaContable($cod_tipo_prestador)
+    {
+        return TipoPrestadorCuentaContableEntity::where('cod_tipo_prestador', $cod_tipo_prestador)
+            // ->where('vigente', 1)
+            ->exists();
+    }
+
+    public function obtenerCuentaContableTipoPrestador($cod_tipo_prestador)
+    {
+        return TipoPrestadorCuentaContableEntity::where('cod_tipo_prestador', $cod_tipo_prestador)
+            // ->where('vigente', 1)
+            ->first();
+    }
+
+    //Metodos de pago
     public function verificarMetodoPagoTieneCuentaContable($idMetodoPago)
     {
         return FormasPagoCuentasContableEntity::where('id_forma_pago', $idMetodoPago)
-            ->where('vigente', 1)
             ->exists();
     }
-    public function verificarFamiliaTieneCuentaContable($idFamilia)
+    public function obtenerCuentaContableMetodoPago($idMetodoPago)
     {
-        return FamiliaCuentaContableEntity::where('id_tipo_familia', $idFamilia)
-            ->where('vigente', 1)
-            ->exists();
+        return FormasPagoCuentasContableEntity::where('id_forma_pago', $idMetodoPago)
+            ->first();
     }
+    //Cuentas bancarias
     public function verificarCuentaBancariaTieneCuentaContable($idCuentaBancaria)
     {
         // Verificar si existe una relación en la tabla de banco-cuentas contables
@@ -176,36 +224,27 @@ class AsientoContableRepository
             ->where('vigente', '1')
             ->exists();
     }
-
-    public function obtenerCuentaContableProveedor($idProveedor)
-    {
-        return ProveedorCuentaContableEntity::where('id_proveedor', $idProveedor)
-            ->where('vigente', 1)
-            ->first();
-    }
-
-    public function obtenerCuentaContableMetodoPago($idMetodoPago)
-    {
-        return FormasPagoCuentasContableEntity::where('id_forma_pago', $idMetodoPago)
-            ->where('vigente', 1)
-            ->first();
-    }
-    public function obtenerCuentaContableFamilia($idFamilia)
-    {
-        return FamiliaCuentaContableEntity::where('id_tipo_familia', $idFamilia)
-            ->where('vigente', 1)
-            ->first();
-    }
     public function obtenerCuentaContableByCuentaBancaria($idCuentaBancaria)
     {
         return BancoCuentasContableEntity::where('id_cuenta_bancaria', $idCuentaBancaria)
             ->where('vigente', '1')
             ->first();
     }
+    //Familia de articulos
+    public function verificarFamiliaTieneCuentaContable($idFamilia)
+    {
+        return FamiliaCuentaContableEntity::where('id_tipo_familia', $idFamilia)
+            ->where('vigente', 1)
+            ->exists();
+    }
 
-    /**
-     * Obtener cuenta bancaria asociada a una cuenta contable
-     */
+    public function obtenerCuentaContableFamilia($idFamilia)
+    {
+        return FamiliaCuentaContableEntity::where('id_tipo_familia', $idFamilia)
+            ->where('vigente', 1)
+            ->first();
+    }
+
     public function obtenerCuentaBancariaPorPlanContable($idDetallePlan)
     {
         return BancoCuentasContableEntity::where('id_detalle_plan', $idDetallePlan)
@@ -213,9 +252,7 @@ class AsientoContableRepository
             ->first();
     }
 
-    /**
-     * Obtener cuenta bancaria asociada a una cuenta contable
-     */
+    //Imputaciones genericas
     public function obtenerImputacionPorPlanContable($idDetallePlan)
     {
         return ImputacionesCuentaContableEntity::where('id_detalle_plan', $idDetallePlan)
@@ -231,6 +268,25 @@ class AsientoContableRepository
             ->first();
     }
 
+    //Retenciones
+
+    public function verificarRetencionTieneCuentaContable($idRetencion)
+    {
+        return RetencionCuentasContablesEntity::where('id_retencion', $idRetencion)
+            ->where('vigente', 1)
+            ->exists();
+    }
+
+    public function obtenerCuentaContableRetencion($idRetencion)
+    {
+        return RetencionCuentasContablesEntity::where('id_retencion', $idRetencion)
+            ->first();
+    }
+
+
+
+    //======================================
+
     public function obtenerSiguienteNumeroAsiento()
     {
         $ultimoAsiento = AsientosContablesEntity::orderBy('numero', 'desc')->first();
@@ -243,12 +299,96 @@ class AsientoContableRepository
      * Etapa 2: Crear el asiento contable con los detalles correspondientes (Verificar Debe id_detalle_plan)
      * Asiento creado para proveedores ok
      */
+    private function obtenerCodProveedorReal($datosFactura)
+    {
+        // Si viene directamente como proveedor, usar ese ID
+        if (!empty($datosFactura['id_proveedor']) && empty($datosFactura['id_prestador'])) {
+            return $datosFactura['id_proveedor'];
+        }
+
+        // Si es prestador, buscar en proveedores por CUIT -- suspendemos este por ahora
+        // Prestadores lo vamos a guardar por tipo de prestador
+        if (!empty($datosFactura['id_prestador']) && !empty($datosFactura['cuit'])) {
+            $proveedorRepo = new ProveedorRepository();
+            $proveedor = $proveedorRepo->findByCuit($datosFactura['cuit']);
+
+            if ($proveedor) {
+                \Log::info('Prestador encontrado como proveedor por CUIT:', [
+                    'cuit' => $datosFactura['cuit'],
+                    'cod_proveedor' => $proveedor->cod_proveedor
+                ]);
+                return $proveedor->cod_proveedor;
+            }
+        }
+
+        return null;
+    }
+
+    private function validarPeriodoContable($idPeriodoContable, $contexto)
+    {
+        if (is_null($idPeriodoContable) || !is_numeric($idPeriodoContable) || (int) $idPeriodoContable <= 0) {
+            throw new Exception("No se recibió un período contable válido para {$contexto}.");
+        }
+    }
+
+    private function validarCamposRequeridos(array $datos, array $camposRequeridos, $contexto)
+    {
+        $faltantes = [];
+
+        foreach ($camposRequeridos as $campo) {
+            if (!array_key_exists($campo, $datos) || is_null($datos[$campo]) || $datos[$campo] === '') {
+                $faltantes[] = $campo;
+            }
+        }
+
+        if (!empty($faltantes)) {
+            throw new Exception("Faltan campos obligatorios para {$contexto}: " . implode(', ', $faltantes));
+        }
+    }
+
     public function crearAsientoFactura($datosFactura, $idPeriodoContable)
     {
-        // Las validaciones ya se realizaron en el controlador de facturación
-        // Solo obtenemos la cuenta del proveedor
-        // $cuentaProveedor = $this->obtenerCuentaContableProveedor($datosFactura['id_proveedor']);
-        // $cuentaFamilia = $this->obtenerCuentaContableFamilia($datosFactura['id_tipo_factura']);
+        // \Log::info('Datos recibidos:', ['datos' => $datosFactura]);
+
+        $cuentaProveedor = null;
+        $cuentaPrestador = null;
+
+        // Lógica separada para proveedor vs prestador
+        if (!empty($datosFactura['id_proveedor'])) {
+            // Manejo para proveedores
+            // $codProveedorReal = $this->obtenerCodProveedorReal($datosFactura);
+            // $proveedorTieneCuenta = $codProveedorReal ? $this->verificarProveedorTieneCuentaContable($codProveedorReal) : false;
+
+            // if (!$proveedorTieneCuenta) {
+            //     throw new Exception("El proveedor '{$datosFactura['nombre']}' no tiene una cuenta contable asignada. Configure la relación proveedor-cuenta contable antes de continuar.");
+            // }
+
+            // $cuentaProveedor = $this->obtenerCuentaContableProveedor($codProveedorReal);
+            // \Log::info('Cuenta proveedor obtenida:', ['cuenta' => $cuentaProveedor]);
+
+        } elseif (!empty($datosFactura['id_prestador'])) {
+            // Manejo para prestadores
+            $prestadorRepo = new PrestadorRepository();
+            // \Log::info('Buscando prestador con ID:', ['id_prestador' => $datosFactura['id_prestador']]);
+            $prestador = $prestadorRepo->findByExistCodPrestador($datosFactura['id_prestador']);
+
+            if (!$prestador) {
+                throw new Exception("No se encontró el prestador con ID: '{$datosFactura['id_prestador']}'.");
+            }
+
+            $prestadorTieneCuenta = $this->verificarTipoPrestadorTieneCuentaContable($prestador->cod_tipo_prestador);
+
+            if (!$prestadorTieneCuenta) {
+                throw new Exception("El prestador '{$datosFactura['nombre']}' no tiene una cuenta contable asignada. Configure la relación prestador-cuenta contable antes de continuar.");
+            }
+
+            $cuentaPrestador = $this->obtenerCuentaContableTipoPrestador($prestador->cod_tipo_prestador);
+            // \Log::info('Cuenta prestador obtenida:', ['cuenta' => $cuentaPrestador]);
+
+        } else {
+            throw new Exception("No existe una cuenta contable asignada para el proveedor o prestador.");
+        }
+
         $detalleImputaciones = $datosFactura['ImputacionDebe']; // Ensure 'ImputacionDebe' exists, default to an empty array
         // $ImputacionDebe = $this->obtenerCuentaContableImputacion($detalleImputaciones['idImputacionDebe']);
         $ImputacionHaber = $this->obtenerCuentaContableImputacion($datosFactura['idImputacionHaber']);
@@ -261,7 +401,7 @@ class AsientoContableRepository
             }
         }
 
-
+        // \Log::info('Imputaciones de debe verificadas con cuenta contable asignada:');
         // Crear leyenda: CUIT - NOMBRE - NUMERO_FACTURA
         $leyenda = ' FACTURA- ' . $datosFactura['cuit'] . ' - ' .
             $datosFactura['nombre'] . ' - ' .
@@ -270,6 +410,7 @@ class AsientoContableRepository
 
         // Obtener siguiente número correlativo
         $numeroCorrelativo = $this->obtenerSiguienteNumeroAsiento();
+        // \Log::info('Comenzando creación de asiento contable para factura con número correlativo');
 
         // Crear asiento (sin numero_referencia para facturas normales)
         $asiento = $this->findByCrearAsiento(
@@ -287,6 +428,7 @@ class AsientoContableRepository
             $ImputacionDebe = $this->obtenerCuentaContableFamilia($imputacion['idImputacionDebe']);
             $this->findByCrearDetalleAsiento([
                 'id_asiento_contable' => $asiento->id_asiento_contable,
+                'id_proveedor_cuenta_contable' => null,
                 'id_forma_pago_cuenta_contable' => null,
                 'id_familia_cuenta_contable' => null,
                 'monto_debe' => $imputacion['totalImporteDebe'], // Use array syntax
@@ -299,30 +441,92 @@ class AsientoContableRepository
         // Crear el haber
         $this->findByCrearDetalleAsiento([
             'id_asiento_contable' => $asiento->id_asiento_contable,
+            'cod_proveedor' => $datosFactura['id_proveedor'] ?? null,
+            'cod_prestador' => $datosFactura['id_prestador'] ?? null,
             'id_proveedor_cuenta_contable' => null,
+            'id_tipo_prestador_cuenta_contable' => $cuentaPrestador ? $cuentaPrestador->id_tipo_prestador_cuenta_contable : null,
             'id_forma_pago_cuenta_contable' => null,
             'id_familia_cuenta_contable' => null,
             'monto_debe' => 0,
             'monto_haber' => $datosFactura['total_factura'],
             'observaciones' => 'Cuenta por pagar proveedor',
-            'id_detalle_plan' => $ImputacionHaber['id_detalle_plan']
+            'id_detalle_plan' => $cuentaPrestador ? $cuentaPrestador['id_detalle_plan'] : 134 //2.1.11.10.03	ACREEDORES VARIOS/GASTOS
         ]);
-
+        // \Log::info('Asiento contable creado exitosamente para factura con ID: ' . $asiento->id_asiento_contable);
         return $asiento;
     }
 
     public function crearAsientoPago($datosPago, $idPeriodoContable)
     {
-        // Las validaciones ya se realizaron en el controlador de pagos
-        // Solo obtenemos las cuentas necesarias
-        // $cuentaProveedor = $this->obtenerCuentaContableProveedor($datosPago['id']);
-        // $cuentaMetodoPago = $this->obtenerCuentaContableMetodoPago($datosPago['id_metodo_pago']);
+        //log de info que entra
+        \Log::info('Creando asiento para pago con datos:', ['datos_pago' => $datosPago]);
 
-        $ImputacionDebe = $this->obtenerCuentaContableImputacion($datosPago['idImputacionDebe']);
-        $ImputacionHaber = $datosPago['ImputacionHaber']; // objeto 
-        // Obtener cuentas contables
-        $cuentaOrigen = $this->obtenerCuentaContableByCuentaBancaria($datosPago['id_cuenta_bancaria']);
 
+        $cuentaProveedor = null;
+        $cuentaPrestador = null;
+
+        // Lógica separada para proveedor vs prestador
+        if (!empty($datosPago['id_proveedor'])) {
+            // Manejo para proveedores
+            // $codProveedorReal = $this->obtenerCodProveedorReal($datosPago); //obtengo id
+            // Log::info('Código de proveedor real obtenido:', ['cod_proveedor_real' => $codProveedorReal]);
+            // $proveedorTieneCuenta = $codProveedorReal ? $this->verificarProveedorTieneCuentaContable($codProveedorReal) : false;
+
+            // if (!$proveedorTieneCuenta) {
+            //     throw new Exception("El proveedor '{$datosPago['nombre']}' no tiene una cuenta contable asignada. Configure la relación proveedor-cuenta contable antes de continuar.");
+            // }
+
+
+            // $cuentaProveedor = $this->obtenerCuentaContableProveedor($codProveedorReal);
+            // \Log::info('Cuenta proveedor obtenida:', ['cuenta' => $cuentaProveedor]);
+
+        } elseif (!empty($datosPago['id_prestador'])) {
+            // Manejo para prestadores
+            $prestadorRepo = new PrestadorRepository();
+            \Log::info('Buscando prestador con ID:', ['id_prestador' => $datosPago['id_prestador']]);
+            $prestador = $prestadorRepo->findByExistCodPrestador($datosPago['id_prestador']);
+
+            if (!$prestador) {
+                throw new Exception("No se encontró el prestador con ID: '{$datosPago['id_prestador']}'.");
+            }
+
+            $prestadorTieneCuenta = $this->verificarTipoPrestadorTieneCuentaContable($prestador->cod_tipo_prestador);
+
+            if (!$prestadorTieneCuenta) {
+                throw new Exception("El prestador '{$datosPago['nombre']}' no tiene una cuenta contable asignada. Configure la relación prestador-cuenta contable antes de continuar.");
+            }
+
+            $cuentaPrestador = $this->obtenerCuentaContableTipoPrestador($prestador->cod_tipo_prestador);
+            \Log::info('Cuenta prestador obtenida:', ['cuenta' => $cuentaPrestador]);
+
+        } else {
+            throw new Exception("No existe una cuenta contable asignada para el proveedor o prestador.");
+        }
+
+        $ImputacionHaber = $datosPago['ImputacionHaber'] ?? [];
+        // Obtener cuentas contables de cada detalle de pago
+        $detallesPago = $datosPago['detalles_pago'] ?? [];
+        if (empty($detallesPago)) {
+            // Fallback: usar id_cuenta_bancaria global si no vienen detalles
+            $cuentaOrigen = $this->obtenerCuentaContableByCuentaBancaria($datosPago['id_cuenta_bancaria']);
+            if (!$cuentaOrigen) {
+                throw new Exception("La cuenta bancaria '{$datosPago['id_cuenta_bancaria']}' no tiene una cuenta contable asignada. Configure la relación cuenta bancaria-cuenta contable antes de continuar.");
+            }
+            $detallesPago = [
+                [
+                    'id_cuenta_bancaria' => $datosPago['id_cuenta_bancaria'],
+                    'monto' => $ImputacionHaber['totalImporteHaber'] ?? 0,
+                ]
+            ];
+        }
+
+        // Verificar que todas las cuentas bancarias de los detalles tengan cuenta contable
+        foreach ($detallesPago as $detalle) {
+            $cuentaOrigen = $this->obtenerCuentaContableByCuentaBancaria($detalle['id_cuenta_bancaria']);
+            if (!$cuentaOrigen) {
+                throw new Exception("La cuenta bancaria '{$detalle['id_cuenta_bancaria']}' no tiene una cuenta contable asignada. Configure la relación cuenta bancaria-cuenta contable antes de continuar.");
+            }
+        }
 
         // Crear leyenda: CUIT - NOMBRE - NUMERO_PAGO
         $leyenda = $datosPago['cuit'] . ' - ' .
@@ -333,44 +537,62 @@ class AsientoContableRepository
         // Obtener siguiente número correlativo
         $numeroCorrelativo = $this->obtenerSiguienteNumeroAsiento();
 
-        // Crear asiento (sin numero_referencia para pagos normales)
+        // Crear asiento — numero_referencia = id_pago para que agregarDetalleRetencionAlAsientoPago lo pueda localizar
         $asiento = $this->findByCrearAsiento(
             1, // ID tipo asiento para pagos (ajustar según tu configuración)
             'PAGO',
             $leyenda,
             $numeroCorrelativo,
             $idPeriodoContable,
-            null, // numero_referencia como null para pagos normales
+            $datosPago['numero_referencia'] ?? null,
             'ACTIVO'
         );
 
-        // Crear detalle del asiento
-        // DEBE: Cuenta del proveedor (disminuye el pasivo)
+
+        // Calcular monto total: pagos + retenciones
+        $montoTotalPagos = array_sum(array_column($detallesPago, 'monto'));
+        $montoTotalRetenciones = (float) ($datosPago['monto_retenciones'] ?? 0);
+        $montoTotal = $montoTotalPagos + $montoTotalRetenciones;
+        if ($montoTotal <= 0) {
+            \Log::warning('Detalles de pago sin monto válido al crear asiento de pago', ['detalles_pago' => $detallesPago]);
+            throw new Exception("La imputación de haber debe tener un monto mayor a cero para crear el asiento contable de pago.");
+        }
+
+        // Crear detalle: DEBE (disminuye pasivo) — pagos + retenciones
         $this->findByCrearDetalleAsiento([
             'id_asiento_contable' => $asiento->id_asiento_contable,
+            'cod_proveedor' => $datosPago['id_proveedor'] ?? null,
+            'cod_prestador' => $datosPago['id_prestador'] ?? null,
             'id_proveedor_cuenta_contable' => null,
+            'id_tipo_prestador_cuenta_contable' => $cuentaPrestador ? $cuentaPrestador->id_tipo_prestador_cuenta_contable : null,
             'id_forma_pago_cuenta_contable' => null,
             'id_familia_cuenta_contable' => null,
-            'monto_debe' => $ImputacionHaber['totalImporteHaber'],
+            'monto_debe' => $montoTotal,
             'monto_haber' => 0,
-            'observaciones' => 'Pago a proveedor/prestador',
-            'id_detalle_plan' => $ImputacionDebe['id_detalle_plan']
+            'observaciones' => 'Pago a proveedor/prestador (pagos: ' . $montoTotalPagos . ' + retenciones: ' . $montoTotalRetenciones . ')',
+            'id_detalle_plan' => $cuentaPrestador ? $cuentaPrestador['id_detalle_plan'] : 134
         ]);
 
-        // HABER: Cuenta del método de pago (caja, banco, etc.)
-        // $consultaCuentaHaber = $this->obtenerCuentaContableImputacion($ImputacionHaber['idImputacionHaber']);
-        $this->findByCrearDetalleAsiento([
-            'id_asiento_contable' => $asiento->id_asiento_contable,
-            'id_proveedor_cuenta_contable' => null,
-            'id_forma_pago_cuenta_contable' => null,
-            'id_familia_cuenta_contable' => null,
-            'monto_debe' => 0,
-            'monto_haber' => $ImputacionHaber['totalImporteHaber'],
-            'observaciones' => 'Salida de fondos',
-            // 'id_detalle_plan' => $consultaCuentaHaber['id_detalle_plan']
-            'id_detalle_plan' => $cuentaOrigen['id_detalle_plan']
-        ]);
+        // Crear detalle: HABER individual por cada detalle de pago (una línea por cuenta bancaria/forma de pago)
+        foreach ($detallesPago as $detallePago) {
+            $cuentaOrigen = $this->obtenerCuentaContableByCuentaBancaria($detallePago['id_cuenta_bancaria']);
+            $idDetallePlanCuentaOrigen = $cuentaOrigen->id_detalle_plan ?? ($cuentaOrigen['id_detalle_plan'] ?? null);
 
+            if (is_null($idDetallePlanCuentaOrigen)) {
+                throw new Exception('Falta configuración de plan contable para la cuenta bancaria de origen.');
+            }
+
+            $this->findByCrearDetalleAsiento([
+                'id_asiento_contable' => $asiento->id_asiento_contable,
+                'id_cuenta_bancaria_cuenta_contable' => $cuentaOrigen->id_cuenta_bancaria_cuenta_contable ?? null,
+                'id_forma_pago_cuenta_contable' => null,
+                'id_familia_cuenta_contable' => null,
+                'monto_debe' => 0,
+                'monto_haber' => (float) $detallePago['monto'],
+                'observaciones' => 'Salida de fondos - Cuenta: ' . $detallePago['id_cuenta_bancaria'],
+                'id_detalle_plan' => $idDetallePlanCuentaOrigen
+            ]);
+        }
 
         return $asiento;
     }
@@ -378,6 +600,7 @@ class AsientoContableRepository
 
     public function crearAsientoTransaccion($datosTransaccion, $idPeriodoContable)
     {
+
         // Mapeo de tipo de transacción
         // (Podés ajustar los IDs según tu configuración real)
         $tipos = [
@@ -387,6 +610,7 @@ class AsientoContableRepository
         ];
 
         $tipoId = $datosTransaccion['id_tipo_transaccion'];
+
         $tipo = isset($tipos[$tipoId]) ? $tipos[$tipoId] : 'DESCONOCIDO';
 
         // Obtener cuentas contables
@@ -400,6 +624,7 @@ class AsientoContableRepository
         $montoOperacion = (float) $datosTransaccion['monto_operacion'];
         $montoRetencion = (float) $datosTransaccion['monto_retencion'];
         $montoTotal = $montoOperacion - $montoRetencion;
+
 
         // Leyenda descriptiva
         $leyenda = strtoupper($tipo) . ' - ' .
@@ -494,9 +719,457 @@ class AsientoContableRepository
                 ]);
                 break;
         }
+    }
+
+    public function crearAsientoReintegro($datosReintegro, $idPeriodoContable)
+    {
+        \Log::info('Creando asiento para reintegro con datos:', ['datos_reintegro' => $datosReintegro]);
+
+
+        // Crear leyenda: ID_AFILIADO - NOMBRE_AFILIADO - MOTIVO - FECHA
+        $leyenda = 'REINTEGRO - ' .
+            'ID: ' . $datosReintegro['id_afiliados'] . ' - ' .
+            ($datosReintegro['nombre_afiliado'] ?? 'SIN NOMBRE') . ' - ' .
+            $datosReintegro['motivo'] . ' - ' .
+            'FECHA: ' . $datosReintegro['fecha_solicitud'];
+
+        // Obtener siguiente número correlativo
+        $numeroCorrelativo = $this->obtenerSiguienteNumeroAsiento();
+
+        // Crear asiento
+        $asiento = $this->findByCrearAsiento(
+            1, // ID tipo asiento para reintegros (ajustar según configuración)
+            'REINTEGRO',
+            $leyenda,
+            $numeroCorrelativo,
+            $idPeriodoContable,
+            null, // numero_referencia como null para reintegros normales
+            'ACTIVO'
+        );
+
+        $montoReintegro = (float) $datosReintegro['importe_reconocido_total'];
+
+        // Crear detalle: DEBE - Cuenta 341 (REINTEGROS)
+        $this->findByCrearDetalleAsiento([
+            'id_asiento_contable' => $asiento->id_asiento_contable,
+            'id_proveedor_cuenta_contable' => null,
+            'id_tipo_prestador_cuenta_contable' => null,
+            'id_forma_pago_cuenta_contable' => null,
+            'id_familia_cuenta_contable' => null,
+            'id_cuenta_bancaria_cuenta_contable' => null,
+            'monto_debe' => $montoReintegro,
+            'monto_haber' => 0,
+            'observaciones' => 'Reintegro a afiliado - Gasto',
+            'id_detalle_plan' => 341 // Cuenta 341 - REINTEGROS (hardcodeado)
+        ]);
+
+        // Crear detalle: HABER - Cuenta 171 (REINTEGRO A PAGAR)
+        $this->findByCrearDetalleAsiento([
+            'id_asiento_contable' => $asiento->id_asiento_contable,
+            'id_proveedor_cuenta_contable' => null,
+            'id_tipo_prestador_cuenta_contable' => null,
+            'id_forma_pago_cuenta_contable' => null,
+            'id_familia_cuenta_contable' => null,
+            'id_cuenta_bancaria_cuenta_contable' => null,
+            'monto_debe' => 0,
+            'monto_haber' => $montoReintegro,
+            'observaciones' => 'Reintegro pendiente de pago',
+            'id_detalle_plan' => 171 // Cuenta 171 - REINTEGRO A PAGAR (hardcodeado)
+        ]);
+
+        \Log::info('Asiento contable creado exitosamente para reintegro con ID: ' . $asiento->id_asiento_contable);
+        return $asiento;
+    }
+
+    /**
+     * Crear asiento contable para pago de reintegros
+     * DEBE: 171 - REINTEGRO A PAGAR (reduce el pasivo)
+     * HABER: Cuenta bancaria (reduce el activo)
+     */
+    public function crearAsientoPagoReintegro($datosReintegrosPago, $idPeriodoContable)
+    {
+        \Log::info('Iniciando creación de asiento contable para pago de reintegros', $datosReintegrosPago);
+
+        try {
+
+            // Obtener las cuentas contables
+            $cuentaBancariaContable = $this->obtenerCuentaContableByCuentaBancaria($datosReintegrosPago['id_cuenta_bancaria']);
+            if (!$cuentaBancariaContable) {
+                throw new \Exception("No se encontró la configuración contable para la cuenta bancaria seleccionada.");
+            }
+
+
+            // Obtener siguiente número correlativo
+            $numeroCorrelativo = $this->obtenerSiguienteNumeroAsiento();
+
+            // Crear descripción del asiento
+            $reintegrosIds = collect($datosReintegrosPago['reintegros'])->pluck('id_reintegro')->implode(', ');
+            $afiliados = collect($datosReintegrosPago['reintegros'])->pluck('reintegro.afiliado')->filter()->unique()->implode(', ');
+            $leyenda = "PAGO REINTEGROS - IDs: {$reintegrosIds} - Afiliados: {$afiliados} - {$datosReintegrosPago['numero_pago']}";
+
+            // Crear asiento principal
+            $asiento = $this->findByCrearAsiento(
+                1, // Tipo asiento para pagos (ajustar según tu catálogo)
+                'PAGO REINTEGROS',
+                $leyenda,
+                $numeroCorrelativo,
+                $idPeriodoContable,
+                null,
+                'ACTIVO'
+            );
+
+            // DEBE: 171 - REINTEGRO A PAGAR (reduce el pasivo - se está pagando la deuda)
+            $this->findByCrearDetalleAsiento([
+                'id_asiento_contable' => $asiento->id_asiento_contable,
+                'id_proveedor_cuenta_contable' => null,
+                'id_tipo_prestador_cuenta_contable' => null,
+                'id_forma_pago_cuenta_contable' => null,
+                'id_familia_cuenta_contable' => null,
+                'id_cuenta_bancaria_cuenta_contable' => null,
+                'monto_debe' => $datosReintegrosPago['monto_total_pago'],
+                'monto_haber' => 0,
+                'observaciones' => 'DEBE - Pago de reintegros - Reducción de pasivo',
+                'id_detalle_plan' => 171 // REINTEGRO A PAGAR (hardcodeado como solicitado)
+            ]);
+
+            // HABER: Cuenta bancaria (reduce el activo - sale dinero del banco)
+            $this->findByCrearDetalleAsiento([
+                'id_asiento_contable' => $asiento->id_asiento_contable,
+                'id_proveedor_cuenta_contable' => null,
+                'id_tipo_prestador_cuenta_contable' => null,
+                'id_forma_pago_cuenta_contable' => null,
+                'id_familia_cuenta_contable' => null,
+                'id_cuenta_bancaria_cuenta_contable' => $cuentaBancariaContable->id_banco_cuenta_contable,
+                'monto_debe' => 0,
+                'monto_haber' => $datosReintegrosPago['monto_total_pago'],
+                'observaciones' => 'HABER - Pago de reintegros - Salida de dinero de cuenta bancaria',
+                'id_detalle_plan' => $cuentaBancariaContable->id_detalle_plan
+            ]);
+
+            \Log::info('Asiento contable de pago de reintegros creado exitosamente', [
+                'id_asiento' => $asiento->id_asiento_contable,
+                'numero_correlativo' => $numeroCorrelativo,
+                'monto_total' => $datosReintegrosPago['monto_total_pago'],
+                'reintegros_Count' => count($datosReintegrosPago['reintegros'])
+            ]);
+
+
+            return $asiento;
+
+        } catch (\Exception $e) {
+            \Log::error('Error al crear asiento contable para pago de reintegros', [
+                'error' => $e->getMessage(),
+                'datos' => $datosReintegrosPago
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Agrega un detalle de retención al asiento de pago existente
+     * Busca el asiento de pago por id_pago (número_referencia) y agrega un detalle con la retención
+     */
+    public function agregarDetalleRetencionAlAsientoPago($retencion, $pago, $regla)
+    {
+        try {
+            \Log::info('Agregando detalle de retención al asiento de pago', ['id_pago' => $pago->id_pago, 'id_pago_retencion' => $retencion->id_pago_retencion]);
+
+            // Buscar el asiento de pago existente usando id_pago como numero_referencia
+            $asientoPago = AsientosContablesEntity::where('numero_referencia', $pago->id_pago)
+                ->where('asiento_modelo', 'PAGO')
+                ->latest('id_asiento_contable')
+                ->first();
+
+            // Si no existe el asiento de pago, crearlo
+            if (!$asientoPago) {
+                \Log::info('No se encontró asiento de pago, intentando crear nuevo asiento', ['id_pago' => $pago->id_pago]);
+
+                try {
+                    // Obtener período contable activo
+                    $periodosRepo = new PeriodosContablesRepository();
+                    $periodoActivo = $periodosRepo->findByPeriodoContableActivoNow();
+
+                    if (!$periodoActivo) {
+                        throw new Exception('No hay período contable activo para crear el asiento de pago');
+                    }
+
+                    \Log::info('Preparando datos para crear asiento de pago', [
+                        'id_pago' => $pago->id_pago,
+                        'id_cuenta_bancaria' => $pago->id_cuenta_bancaria,
+                        'id_proveedor' => $pago->opa->id_proveedor ?? null,
+                        'id_prestador' => $pago->opa->id_prestador ?? null,
+                        'monto_pago' => $pago->monto_pago
+                    ]);
+
+                    // Preparar datos para crear asiento de pago
+                    $datosPago = [
+                        'id_proveedor' => $pago->opa->id_proveedor ?? null,
+                        'id_prestador' => $pago->opa->id_prestador ?? null,
+                        'id_cuenta_bancaria' => $pago->id_cuenta_bancaria,
+                        'cuit' => $pago->opa->proveedor->cuit ?? $pago->opa->prestador->cod_prestador ?? 'N/A',
+                        'nombre' => $pago->opa->proveedor->razon_social ?? $pago->opa->prestador->nombre_prestador ?? 'Desconocido',
+                        'numero_pago' => $pago->id_pago,
+                        'fecha_registra' => $pago->fecha_registra ?? now()->toDateString(),
+                        'ImputacionHaber' => [
+                            'totalImporteHaber' => $pago->monto_pago ?? 0
+                        ]
+                    ];
+
+                    $asientoPago = $this->crearAsientoPago($datosPago, $periodoActivo->id_periodo_contable);
+                    \Log::info('✓ Asiento de pago creado exitosamente', [
+                        'id_asiento' => $asientoPago->id_asiento_contable,
+                        'id_pago' => $pago->id_pago
+                    ]);
+                } catch (\Exception $e) {
+                    \Log::error('✗ Error al crear asiento de pago', [
+                        'error' => $e->getMessage(),
+                        'id_pago' => $pago->id_pago,
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine()
+                    ]);
+                    // Re-lanzar la excepción para que se propague al try-catch superior
+                    throw $e;
+                }
+            }
+
+            $opa = $pago->opa;
+            if (!$opa) {
+                throw new Exception("No se encontró información de la OPA para el pago");
+            }
+
+            // Obtener cuentas contables según tipo de beneficiario
+            $cuentaBeneficiario = null;
+            $codProveedor = null;
+            $codPrestador = null;
+
+            if (!empty($opa->id_proveedor)) {
+                $codProveedor = $opa->id_proveedor;
+            } elseif (!empty($opa->id_prestador)) {
+                $codPrestador = $opa->id_prestador;
+                $prestadorRepo = new PrestadorRepository();
+                $prestador = $prestadorRepo->findByExistCodPrestador($codPrestador);
+
+                if ($prestador) {
+                    $cuentaBeneficiario = $this->obtenerCuentaContableTipoPrestador($prestador->cod_tipo_prestador);
+                }
+            }
+
+            // Obtener cuenta de retenciones
+            $cuentaRetencion = $this->obtenerCuentaContableRetencion($retencion->id_retencion);
+
+            // Crear observación con detalles de la retención
+            $observacionRetencion = 'Retención - ' . ($retencion->tipoRetencion->descripcion ?? '') .
+                ' | Base: ' . number_format($retencion->base_imponible, 2) .
+                ' | Porcentaje: ' . $retencion->porcentaje . '%' .
+                (isset($retencion->observaciones) && $retencion->observaciones ? ' | Obs: ' . $retencion->observaciones : '');
+
+            // Solo lleva Haber
+            // Agregar detalle: HABER al beneficiario (ajuste por retención)
+            $this->findByCrearDetalleAsiento([
+                'id_asiento_contable' => $asientoPago->id_asiento_contable,
+                'cod_proveedor' => $codProveedor,
+                'cod_prestador' => $codPrestador,
+                'id_proveedor_cuenta_contable' => null,
+                'id_tipo_prestador_cuenta_contable' => null,
+                'id_forma_pago_cuenta_contable' => null,
+                'id_familia_cuenta_contable' => null,
+                'id_retencion_cuenta_contable' => $cuentaRetencion->id_retencion_cuenta_contable,
+                'id_pago_retencion' => $retencion->id_pago_retencion,
+                'monto_debe' => 0,
+                'monto_haber' => $retencion->monto,
+                'observaciones' => $observacionRetencion,
+                'id_detalle_plan' => $cuentaRetencion->id_detalle_plan,
+            ]);
+
+            \Log::info('Detalle de retención agregado al asiento de pago exitosamente', [
+                'id_asiento' => $asientoPago->id_asiento_contable,
+                'id_pago_retencion' => $retencion->id_pago_retencion
+            ]);
+
+            return $asientoPago;
+        } catch (\Exception $e) {
+            \Log::error('Error al agregar detalle de retención al asiento de pago', [
+                'error' => $e->getMessage(),
+                'id_pago' => $pago->id_pago ?? 'N/A',
+                'id_pago_retencion' => $retencion->id_pago_retencion ?? 'N/A'
+            ]);
+            throw $e;
+        }
+    }
+
+    //======================================
+    // MÉTODOS PARA DISCAPACIDAD
+    //======================================
+
+    /**
+     * Crear asiento contable automático para prestaciones de discapacidad
+     */
+    public function crearAsientoDiscapacidad($datosDiscapacidad, $idPeriodoContable)
+    {
+        $this->validarPeriodoContable($idPeriodoContable, 'asiento de discapacidad');
+        $this->validarCamposRequeridos($datosDiscapacidad, [
+            'id_discapacidad',
+            'cuil_beneficiario',
+            'periodo_prestacion',
+            'fecha_registra',
+            'monto_solicitado'
+        ], 'asiento de discapacidad');
+
+        // Crear leyenda descriptiva
+        $leyenda = 'PRESTACIÓN DISCAPACIDAD - ' .
+            'CUIL: ' . $datosDiscapacidad['cuil_beneficiario'] . ' - ' .
+            'PRESTADOR: ' . ($datosDiscapacidad['razon_social_prestador'] ?? 'SIN NOMBRE') . ' - ' .
+            'PERÍODO: ' . $datosDiscapacidad['periodo_prestacion'] . ' - ' .
+            'FECHA: ' . $datosDiscapacidad['fecha_registra'];
+
+        // Obtener siguiente número correlativo
+        $numeroCorrelativo = $this->obtenerSiguienteNumeroAsiento();
+
+        // Crear asiento principal
+        $asiento = $this->findByCrearAsiento(
+            1, // Tipo asiento automático
+            'DISCAPACIDAD',
+            $leyenda,
+            $numeroCorrelativo,
+            $idPeriodoContable,
+            $datosDiscapacidad['id_discapacidad'], // referencia
+            'ACTIVO'
+        );
+
+        $montoTotal = (float) $datosDiscapacidad['monto_solicitado'];
+
+        // DEBE - Cuenta de gastos prestaciones discapacidad
+        $this->findByCrearDetalleAsiento([
+            'id_asiento_contable' => $asiento->id_asiento_contable,
+            'cod_prestador' => $datosDiscapacidad['cod_prestador'] ?? null,
+            'monto_debe' => $montoTotal,
+            'monto_haber' => 0,
+            'observaciones' => 'Gasto prestación discapacidad',
+            'id_detalle_plan' => 260, // SANATORIALES
+        ]);
+
+        // HABER - Cuenta a pagar prestadores discapacidad
+        $this->findByCrearDetalleAsiento([
+            'id_asiento_contable' => $asiento->id_asiento_contable,
+            'cod_prestador' => $datosDiscapacidad['cod_prestador'] ?? null,
+            'monto_debe' => 0,
+            'monto_haber' => $montoTotal,
+            'observaciones' => 'A pagar prestador discapacidad',
+            'id_detalle_plan' => 131,  // ACREED. POR PRESTACIONES ASISTENCIALES
+        ]);
+
+        \Log::info('Asiento contable creado para discapacidad', [
+            'id_discapacidad' => $datosDiscapacidad['id_discapacidad'],
+            'id_asiento_contable' => $asiento->id_asiento_contable,
+            'monto' => $montoTotal
+        ]);
 
         return $asiento;
     }
 
+    /**
+     * Verificar si una prestación de discapacidad tiene asientos contables
+     * (Deprecated: usar AsientosDiscapacidadHistorialRepository->discapacidadTieneAsientos)
+     */
+    public function discapacidadTieneAsientos($idDiscapacidad)
+    {
+        // Este método se mantiene por compatibilidad pero se recomienda usar el historial
+        return AsientosContablesEntity::where('numero_referencia', $idDiscapacidad)
+            ->where('asiento_modelo', 'DISCAPACIDAD')
+            ->whereIn('vigente', ['ACTIVO', 'S', '1'])
+            ->exists();
+    }
+
+    /**
+     * Obtener el último asiento de una prestación de discapacidad
+     * (Deprecated: usar AsientosDiscapacidadHistorialRepository->obtenerAsientoVigenteDiscapacidad)
+     */
+    public function obtenerUltimoAsientoDiscapacidad($idDiscapacidad)
+    {
+        // Este método se mantiene por compatibilidad pero se recomienda usar el historial
+        return AsientosContablesEntity::where('numero_referencia', $idDiscapacidad)
+            ->where('asiento_modelo', 'DISCAPACIDAD')
+            ->whereIn('vigente', ['ACTIVO', 'S', '1'])
+            ->orderByDesc('id_asiento_contable')
+            ->first();
+    }
+
+    /**
+     * Crear contraasiento para modificación de prestación de discapacidad
+     * (Deprecated: usar AsientosDiscapacidadHistorialRepository->procesarModificacionDiscapacidad)
+     */
+    public function crearContraAsientoDiscapacidad($idDiscapacidad, $datosDiscapacidad, $idPeriodoContable)
+    {
+        // Obtener asiento original
+        $asientoOriginal = $this->obtenerUltimoAsientoDiscapacidad($idDiscapacidad);
+
+        if (!$asientoOriginal) {
+            \Log::warning('No se encontró asiento original para crear contraasiento', [
+                'id_discapacidad' => $idDiscapacidad
+            ]);
+            return null;
+        }
+
+        // Crear contraasiento del asiento original
+        $this->findByContraAsientoContableId(
+            $asientoOriginal->numero,
+            $idDiscapacidad,
+            'CONTRAASIENTO'
+        );
+
+        // Crear nuevo asiento con datos actualizados
+        $nuevoAsiento = $this->crearAsientoDiscapacidad($datosDiscapacidad, $idPeriodoContable);
+
+        return $nuevoAsiento;
+    }
+
+    /**
+     * Anular asiento de prestación de discapacidad
+     * (Deprecated: usar AsientosDiscapacidadHistorialRepository->procesarAnulacionDiscapacidad)
+     */
+    public function anularAsientoDiscapacidad($idDiscapacidad)
+    {
+        $asientoOriginal = $this->obtenerUltimoAsientoDiscapacidad($idDiscapacidad);
+
+        if (!$asientoOriginal) {
+            \Log::warning('No se encontró asiento para anular', [
+                'id_discapacidad' => $idDiscapacidad
+            ]);
+            return false;
+        }
+
+        // Anular el asiento
+        $resultado = $this->findByAnularAsientoContableId(
+            $asientoOriginal->id_asiento_contable,
+            'ANULADO'
+        );
+
+        \Log::info('Asiento contable anulado para discapacidad', [
+            'id_discapacidad' => $idDiscapacidad,
+            'id_asiento_contable' => $asientoOriginal->id_asiento_contable
+        ]);
+
+        return $resultado;
+    }
+
+    /**
+     * Verificar si el prestador de discapacidad tiene cuenta contable asignada
+     */
+    public function verificarPrestadorDiscapacidadTieneCuentaContable($codPrestador)
+    {
+        if (!$codPrestador) {
+            return false;
+        }
+
+        // Buscar por tipo de prestador
+        $prestadorRepo = new \App\Http\Controllers\Prestadores\repository\PrestadorRepository();
+        $prestador = $prestadorRepo->findByExistCodPrestador($codPrestador);
+
+        if ($prestador) {
+            return $this->verificarTipoPrestadorTieneCuentaContable($prestador->cod_tipo_prestador);
+        }
+
+        return false;
+    }
 
 }

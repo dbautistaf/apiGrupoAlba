@@ -49,4 +49,37 @@ class ImputacionCuentaContableController extends Controller
             ], 500);
         }
     }
+
+    public function editar($id, ImputacionCuentaContableRepository $repo)
+    {
+        $registro = $repo->findById($id);
+        if (!$registro) {
+            return response()->json(['message' => 'Registro no encontrado.'], 404);
+        }
+        return response()->json($registro);
+    }
+
+    public function delete(Request $request, ImputacionCuentaContableRepository $repo)
+    {
+        $id = $request->id ?? null;
+        if (is_null($id)) {
+            return response()->json(['message' => 'ID no proporcionado.'], 400);
+        }
+
+        try {
+            DB::beginTransaction();
+            $deleted = $repo->findByEliminar($id);
+            DB::commit();
+            if ($deleted) {
+                return response()->json(['message' => 'Registro eliminado con éxito.'], 200);
+            }
+            return response()->json(['message' => 'Registro no encontrado o no eliminado.'], 404);
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return response()->json([
+                'code' => $th->getCode(),
+                'message' => $th->getMessage()
+            ], 500);
+        }
+    }
 }

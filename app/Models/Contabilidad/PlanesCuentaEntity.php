@@ -22,7 +22,6 @@ class PlanesCuentaEntity extends Model
         'activo'
     ];
 
-
     public function tipo()
     {
         return $this->hasOne(TipoPlanCuentaEntity::class, 'id_tipo_plan_cuenta', 'id_tipo_plan_cuenta');

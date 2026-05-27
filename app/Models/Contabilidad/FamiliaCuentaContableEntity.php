@@ -25,17 +25,13 @@ class FamiliaCuentaContableEntity extends Model
         'vigente'
     ];
 
-    public function tipoFactura()
+    public function tipoFamilia()
     {
-        return $this->hasOne(TipoFacturacionEntity::class, 'id_tipo_factura', 'id_tipo_factura');
+        return $this->hasOne(ArticuloFamiliaEntity::class, 'id_familia', 'id_tipo_familia');
     }
 
     public function detallePlan()
     {
         return $this->hasOne(DetallePlanCuentasEntity::class, 'id_detalle_plan', 'id_detalle_plan');
-    }
-    public function familia()
-    {
-        return $this->hasOne(ArticuloFamiliaEntity::class, 'id_familia', 'id_tipo_familia');
     }
 }
