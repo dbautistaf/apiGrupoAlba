@@ -557,7 +557,9 @@ class PadronComercialController extends Controller
                         'actualizo_datos' => 0
                     ]);
                     $afiliado = AfiliadoPadronEntity::with(['obrasocial', 'tipoParentesco', 'origen'])->where('dni', $request->dni)->first();
-                    Mail::to($afiliado->email)->send(new NotificarUsuario($afiliado));
+                    Mail::mailer('gmail_padron')
+                        ->to($afiliado->email)
+                        ->send(new NotificarUsuario($afiliado));
                 }
             }
         } else {
@@ -760,5 +762,5 @@ class PadronComercialController extends Controller
         } else {
             return response()->json(['message' => 'No tiene permisos para descargar'], 403);
         }
-    }   
+    }
 }

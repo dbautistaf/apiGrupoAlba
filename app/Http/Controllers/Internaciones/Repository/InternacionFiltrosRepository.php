@@ -26,7 +26,7 @@ class InternacionFiltrosRepository
             "internacion",
             "autorizacion.detalle_prestacion.practica",
             "autorizacion.internacion",
-            "recien_nacido"
+            "recien_nacido.recien_nacido"
         ];
     }
 

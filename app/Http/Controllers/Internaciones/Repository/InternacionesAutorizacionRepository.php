@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Internaciones\Repository;
 
+use App\Models\Internaciones\AutorizacionRecienNacidoEntity;
 use App\Models\Internaciones\InternacionAutorizacionEntity;
 use App\Models\Internaciones\RecienNacidoEntity;
 use Carbon\Carbon;
@@ -96,6 +97,34 @@ class InternacionesAutorizacionRepository
     public function findByDeleteRN($request)
     {
         $internacion = RecienNacidoEntity::find($request->cod_recien_nacido);
+        if ($internacion != null) {
+            $internacion->delete();
+        }
+    }
+
+    public function findBySavePrestacionVinculadaRN($request)
+    {
+        $internacion = AutorizacionRecienNacidoEntity::where('cod_prestacion', $request->cod_prestacion)
+            ->where('cod_recien_nacido', $request->cod_recien_nacido)->first();
+        if (!$internacion) {
+            AutorizacionRecienNacidoEntity::create([
+                'cod_recien_nacido' => $request->cod_recien_nacido,
+                'cod_prestacion' => $request->cod_prestacion,
+                'fecha_registra' => $this->fechaActual,
+                'cod_usuario' => $this->user->cod_usuario,
+            ]);
+        }
+    }
+
+    public function findByListAutorizacionRN($request)
+    {
+        return AutorizacionRecienNacidoEntity::with(['detalle_prestacion.practica', 'internacion'])
+            ->where('cod_recien_nacido', $request->cod_recien_nacido)->get();
+    }
+
+    public function findByDeletePrestacionVinculadaRN($cod_prestacion)
+    {
+        $internacion = AutorizacionRecienNacidoEntity::where('cod_prestacion', $cod_prestacion)->first();
         if ($internacion != null) {
             $internacion->delete();
         }

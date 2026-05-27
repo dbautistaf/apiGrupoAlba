@@ -192,4 +192,28 @@ class InternacionesController  extends Controller
         $repoInterAut->findByDeleteRN($request);
         return response()->json(['message' => 'Recien nacido eliminado Correctamente'], 200);
     }
+
+     public function postSavePrestacionesAutorizadasRN(
+        InternacionesAutorizacionRepository $repoInterAut,
+        Request $request
+    ) {
+        $repoInterAut->findBySavePrestacionVinculadaRN($request);
+        return response()->json(['message' => 'Autorizacion vinculado Correctamente'], 200);
+    }
+
+    public function getListAutorizadasRN(
+        InternacionFiltrosRepository $repoInterAut,
+        Request $request
+    ) {
+        $data = $repoInterAut->findById($request);
+        return response()->json($data, 200);
+    }
+
+    public function postDeletePrestacionesAutorizadasRN(
+        InternacionesAutorizacionRepository $repoInterAut,
+        Request $request
+    ) {
+        $repoInterAut->findByDeletePrestacionVinculadaRN($request->cod_prestacion);
+        return response()->json(['message' => 'Autorizacion desvinculado Correctamente'], 200);
+    }
 }

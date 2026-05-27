@@ -23,4 +23,9 @@ class RecienNacidoEntity extends Model
         'fecha_registra',
         'cod_usuario',
     ];
+
+    public function autorizacion()
+    {
+        return $this->hasMany(AutorizacionRecienNacidoEntity::class, 'cod_recien_nacido', 'cod_recien_nacido');
+    }
 }
