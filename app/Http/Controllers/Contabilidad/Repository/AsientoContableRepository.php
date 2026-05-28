@@ -383,7 +383,7 @@ class AsientoContableRepository
             $leyenda,
             $numeroCorrelativo,
             $idPeriodoContable,
-            $datosFactura['numero_factura'],
+            $datosFactura['id_factura'],
             'ACTIVO'
         );
 

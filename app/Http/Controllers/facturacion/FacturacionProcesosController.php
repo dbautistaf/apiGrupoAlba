@@ -124,12 +124,13 @@ class FacturacionProcesosController extends Controller
                     $facturaConProveedor = $repo->findById($facturacion->id_factura);
 
                     $datosFactura = [
-                        'id_proveedor' => $facturacion->id_proveedor,
-                        'id_prestador' => $facturacion->id_prestador,
-                        'cuit' => $facturaConProveedor->proveedor->cuit ?? $facturaConProveedor->prestador->cuit,
-                        'nombre' => $facturaConProveedor->proveedor->razon_social ?? $facturaConProveedor->prestador->razon_social,
-                        'numero_factura' => $cabecera->tipo_letra . ' ' . $cabecera->sucursal . '-' . $cabecera->numero,
-                        'fecha_registra' => $facturacion->fecha_registra,
+                        'id_factura'    => $facturacion->id_factura,
+                        'id_proveedor'  => $facturacion->id_proveedor,
+                        'id_prestador'  => $facturacion->id_prestador,
+                        'cuit'          => $facturaConProveedor->proveedor->cuit ?? $facturaConProveedor->prestador->cuit,
+                        'nombre'        => $facturaConProveedor->proveedor->razon_social ?? $facturaConProveedor->prestador->razon_social,
+                        'numero_factura'=> $cabecera->tipo_letra . ' ' . $cabecera->sucursal . '-' . $cabecera->numero,
+                        'fecha_registra'=> $facturacion->fecha_registra,
                         'total_factura' => $facturacion->total_neto,
                         'id_tipo_factura' => $facturacion->id_tipo_factura,
                         'idImputacionDebe' => $cabecera->idImputacionDebe,
@@ -259,12 +260,13 @@ class FacturacionProcesosController extends Controller
                         $facturaConProveedor = $repo->findById($facturacion->id_factura);
 
                         $nuevosDatosFactura = [
-                            'id_proveedor' => $facturacion->id_proveedor,
-                            'id_prestador' => $facturacion->id_prestador,
-                            'cuit' => $facturaConProveedor->proveedor->cuit ?? $facturaConProveedor->prestador->cuit,
-                            'nombre' => $facturaConProveedor->proveedor->razon_social ?? $facturaConProveedor->prestador->razon_social,
-                            'numero_factura' => $cabecera->tipo_letra . ' ' . $cabecera->sucursal . '-' . $cabecera->numero,
-                            'fecha_registra' => $facturacion->fecha_registra,
+                            'id_factura'    => $facturacion->id_factura,
+                            'id_proveedor'  => $facturacion->id_proveedor,
+                            'id_prestador'  => $facturacion->id_prestador,
+                            'cuit'          => $facturaConProveedor->proveedor->cuit ?? $facturaConProveedor->prestador->cuit,
+                            'nombre'        => $facturaConProveedor->proveedor->razon_social ?? $facturaConProveedor->prestador->razon_social,
+                            'numero_factura'=> $cabecera->tipo_letra . ' ' . $cabecera->sucursal . '-' . $cabecera->numero,
+                            'fecha_registra'=> $facturacion->fecha_registra,
                             'total_factura' => $facturacion->total_neto,
                             'id_tipo_factura' => $facturacion->id_tipo_factura,
                             'idImputacionDebe' => $cabecera->idImputacionDebe,
