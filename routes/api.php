@@ -591,6 +591,14 @@ Route::group([
     Route::post('save-notas-internacion', [App\Http\Controllers\Internaciones\Services\InternacionesController::class, 'postSaveNotasInternacion']);
 
     Route::get('export-internacion', [App\Http\Controllers\Internaciones\Services\InternacionesController::class, 'getExportInternacion']);
+    Route::post('save-prestaciones-autorizadas', [App\Http\Controllers\Internaciones\Services\InternacionesController::class, 'postSavePrestacionesAutorizadas']);
+    Route::post('delete-prestaciones-autorizadas', [App\Http\Controllers\Internaciones\Services\InternacionesController::class, 'postDeletePrestacionesAutorizadas']);
+    Route::post('save-recien-nacido', [App\Http\Controllers\Internaciones\Services\InternacionesController::class, 'postSaveRN']);
+    Route::post('delete-recien-nacido', [App\Http\Controllers\Internaciones\Services\InternacionesController::class, 'postDeleteRN']);
+    Route::post('save-prestaciones-autorizadas-rn', [App\Http\Controllers\Internaciones\Services\InternacionesController::class, 'postSavePrestacionesAutorizadasRN']);
+    Route::get('list-prestaciones-autorizadas-rn', [App\Http\Controllers\Internaciones\Services\InternacionesController::class, 'getListAutorizadasRN']);
+    Route::post('delete-prestaciones-autorizadas-rn', [App\Http\Controllers\Internaciones\Services\InternacionesController::class, 'postDeletePrestacionesAutorizadasRN']);
+    
 });
 
 Route::group([

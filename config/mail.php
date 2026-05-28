@@ -44,6 +44,16 @@ return [
             'timeout' => null,
         ],
 
+        'gmail_padron' => [
+            'transport' => 'smtp',
+            'host' => env('MAIL_GMAIL_HOST'),
+            'port' => env('MAIL_GMAIL_PORT'),
+            'encryption' => env('MAIL_GMAIL_ENCRYPTION'),
+            'username' => env('MAIL_GMAIL_USERNAME'),
+            'password' => env('MAIL_GMAIL_PASSWORD'),
+            'timeout' => null,
+        ],
+
         'ses' => [
             'transport' => 'ses',
         ],

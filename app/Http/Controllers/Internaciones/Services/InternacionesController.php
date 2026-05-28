@@ -160,4 +160,60 @@ class InternacionesController  extends Controller
             ], 500);
         }
     }
+
+    public function postSavePrestacionesAutorizadas(
+        InternacionesAutorizacionRepository $repoInterAut,
+        Request $request
+    ) {
+        $repoInterAut->findBySavePrestacionVinculada($request);
+        return response()->json(['message' => 'Autorizacion vinculado Correctamente'], 200);
+    }
+
+    public function postDeletePrestacionesAutorizadas(
+        InternacionesAutorizacionRepository $repoInterAut,
+        Request $request
+    ) {
+        $repoInterAut->findByDeletePrestacionVinculada($request->cod_prestacion);
+        return response()->json(['message' => 'Autorizacion desvinculado Correctamente'], 200);
+    }
+
+    public function postSaveRN(
+        InternacionesAutorizacionRepository $repoInterAut,
+        Request $request
+    ) {
+        $repoInterAut->findBySaveRN($request);
+        return response()->json(['message' => 'Recien nacido registrado Correctamente'], 200);
+    }
+
+    public function postDeleteRN(
+        InternacionesAutorizacionRepository $repoInterAut,
+        Request $request
+    ) {
+        $repoInterAut->findByDeleteRN($request);
+        return response()->json(['message' => 'Recien nacido eliminado Correctamente'], 200);
+    }
+
+     public function postSavePrestacionesAutorizadasRN(
+        InternacionesAutorizacionRepository $repoInterAut,
+        Request $request
+    ) {
+        $repoInterAut->findBySavePrestacionVinculadaRN($request);
+        return response()->json(['message' => 'Autorizacion vinculado Correctamente'], 200);
+    }
+
+    public function getListAutorizadasRN(
+        InternacionFiltrosRepository $repoInterAut,
+        Request $request
+    ) {
+        $data = $repoInterAut->findById($request->cod_internacion);
+        return response()->json($data, 200);
+    }
+
+    public function postDeletePrestacionesAutorizadasRN(
+        InternacionesAutorizacionRepository $repoInterAut,
+        Request $request
+    ) {
+        $repoInterAut->findByDeletePrestacionVinculadaRN($request->cod_prestacion);
+        return response()->json(['message' => 'Autorizacion desvinculado Correctamente'], 200);
+    }
 }

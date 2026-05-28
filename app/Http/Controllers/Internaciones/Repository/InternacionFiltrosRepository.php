@@ -24,7 +24,9 @@ class InternacionFiltrosRepository
             "usuario",
             "estadoPrestacion",
             "internacion",
-            "autorizacion"
+            "autorizacion.detalle_prestacion.practica",
+            "autorizacion.internacion",
+            "recien_nacido.autorizacion.detalle_prestacion.practica"
         ];
     }
 

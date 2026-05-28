@@ -156,6 +156,7 @@ class FacturaRepository
         $facturacion->id_locatorio = $params->id_locatorio;
         $facturacion->observaciones_resumen = $params->observaciones_resumen;
         $facturacion->comprobante_relacionado = $params->comprobante_relacionado;
+        $facturacion->fecha_registra = $params->fecha_registra;
 
         if (!is_null($nombre_archivo)) {
             $facturacion->archivo = $nombre_archivo;
