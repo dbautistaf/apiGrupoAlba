@@ -8,6 +8,7 @@ use App\Models\Contabilidad\BancoCuentasContableEntity;
 use App\Models\Contabilidad\DetalleAsientosContablesEntity;
 use App\Models\Contabilidad\FamiliaCuentaContableEntity;
 use App\Models\Contabilidad\ImputacionesCuentaContableEntity;
+use App\Models\Contabilidad\ImputacionesProveedoresCuentaContableEntity;
 use App\Models\Contabilidad\ProveedorCuentaContableEntity;
 use App\Models\Contabilidad\FormasPagoCuentasContableEntity;
 use App\Models\Contabilidad\RetencionCuentasContablesEntity;
@@ -260,10 +261,18 @@ class AsientoContableRepository
             ->first();
     }
 
-    //Obtener cuenta contable de imputacion con el id de imputacion
-    public function obtenerCuentaContableImputacion($idImputacionHaber)
+    //Obtener cuenta contable de imputacion prestador con el id de imputacion
+    public function obtenerCuentaContableImputacion($idImputacion)
     {
-        return ImputacionesCuentaContableEntity::where('id_imputacion_cuenta_contable', $idImputacionHaber)
+        return ImputacionesCuentaContableEntity::where('id_imputacion_cuenta_contable', $idImputacion)
+            ->where('vigente', '1')
+            ->first();
+    }
+
+    //Obtener cuenta contable de imputacion proveedor con el id de imputacion
+    public function obtenerCuentaContableImputacionProveedor($idImputacion)
+    {
+        return ImputacionesProveedoresCuentaContableEntity::where('id_imputacion_proveedor_cuenta_contable', $idImputacion)
             ->where('vigente', '1')
             ->first();
     }
@@ -348,23 +357,28 @@ class AsientoContableRepository
 
     public function crearAsientoFactura($datosFactura, $idPeriodoContable)
     {
+        // Determinar tipo: prestador o proveedor
+        $esPrestador = !empty($datosFactura['id_prestador']);
+        $esProveedor = !empty($datosFactura['id_proveedor']);
+
+        if (!$esPrestador && !$esProveedor) {
+            throw new Exception("No se pudo determinar si la factura es de prestador o proveedor para registrar el asiento. Por favor contacte con Contabilidad.");
+        }
+
         // Validar imputación DEBE
         $idImputacionDebe = $datosFactura['idImputacionDebe'] ?? null;
         if (!$idImputacionDebe) {
             throw new Exception("Falta la imputación contable (DEBE) para registrar el asiento. Por favor contacte con Contabilidad.");
         }
 
-        $imputacionDebe = $this->obtenerCuentaContableImputacion($idImputacionDebe);
+        // Prestador → tb_cont_imputacion_prestadores_cuenta_contable
+        // Proveedor → tb_cont_imputacion_proveedores_cuenta_contable
+        $imputacionDebe = $esPrestador
+            ? $this->obtenerCuentaContableImputacion($idImputacionDebe)
+            : $this->obtenerCuentaContableImputacionProveedor($idImputacionDebe);
+
         if (!$imputacionDebe) {
             throw new Exception("La imputación contable seleccionada no tiene una cuenta contable asignada. Por favor contacte con Contabilidad.");
-        }
-
-        // Determinar id_detalle_plan del HABER: prestador = 35, proveedor = 36
-        $esPrestador = !empty($datosFactura['id_prestador']);
-        $esProveedor = !empty($datosFactura['id_proveedor']);
-
-        if (!$esPrestador && !$esProveedor) {
-            throw new Exception("No se pudo determinar si la factura es de prestador o proveedor para registrar el asiento. Por favor contacte con Contabilidad.");
         }
 
         $idDetallePlanHaber = $esPrestador ? 35 : 36;

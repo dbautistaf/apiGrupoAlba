@@ -1439,12 +1439,17 @@ Route::group([
     Route::get('cs-plan-cuenta-completo', [App\Http\Controllers\Contabilidad\Services\PlanesCuentasController::class, 'getListarCuentasCompleto']);
     Route::get('get-export-plan-cuentas', [App\Http\Controllers\Contabilidad\Services\PlanesCuentasController::class, 'getExportPlanCuentas']);
     Route::get('get-imputaciones-contables', [App\Http\Controllers\Contabilidad\Services\ImputacionCuentaContableController::class, 'getListarTipoImputacionContable']);
+    Route::get('get-imputaciones-prestadores', [App\Http\Controllers\Contabilidad\Services\ImputacionCuentaContableController::class, 'getListarTipoImputacionContable']);
+    Route::get('get-imputaciones-proveedores', [App\Http\Controllers\Contabilidad\Services\ImputacionProveedoresCuentaContableController::class, 'getListarConFiltros']);
+    Route::get('editar-imputacion-proveedor/{id}', [App\Http\Controllers\Contabilidad\Services\ImputacionProveedoresCuentaContableController::class, 'getEditar']);
 
     Route::post('psr-periodo-contable', [App\Http\Controllers\Contabilidad\Services\PeriodosContablesService::class, 'getProcesar']);
     Route::post('toggle-activo/{id_periodo_contable}', [App\Http\Controllers\Contabilidad\Services\PeriodosContablesService::class, 'toggleActivo']);
     Route::post('toggle-vigente/{id_periodo_contable}', [App\Http\Controllers\Contabilidad\Services\PeriodosContablesService::class, 'toggleVigente']);
 
     Route::post('relacionar-imputacion-plan-cuenta', [App\Http\Controllers\Contabilidad\Services\ImputacionCuentaContableController::class, 'getProcesar']);
+    Route::post('relacionar-imputacion-proveedor-plan-cuenta', [App\Http\Controllers\Contabilidad\Services\ImputacionProveedoresCuentaContableController::class, 'getProcesar']);
+    Route::delete('eliminar-imputacion-proveedor', [App\Http\Controllers\Contabilidad\Services\ImputacionProveedoresCuentaContableController::class, 'delete']);
     Route::post('psr-plan-cuenta', [App\Http\Controllers\Contabilidad\Services\PlanesCuentasController::class, 'getProcesar']);
     Route::post('psr-nuevo-nivel', [App\Http\Controllers\Contabilidad\Services\PlanesCuentasController::class, 'getAgregarNivel']);
     Route::post('psr-estructura-plan-cuenta', [App\Http\Controllers\Contabilidad\Services\PlanesCuentasController::class, 'getAgregarItemEstructuraPlanCuenta']);

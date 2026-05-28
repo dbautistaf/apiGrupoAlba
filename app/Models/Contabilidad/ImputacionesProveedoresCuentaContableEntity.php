@@ -5,11 +5,11 @@ namespace App\Models\Contabilidad;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class ImputacionesCuentaContableEntity extends Model
+class ImputacionesProveedoresCuentaContableEntity extends Model
 {
     use HasFactory;
-    protected $table = 'tb_cont_imputacion_prestadores_cuenta_contable';
-    protected $primaryKey = 'id_imputacion_cuenta_contable';
+    protected $table = 'tb_cont_imputacion_proveedores_cuenta_contable';
+    protected $primaryKey = 'id_imputacion_proveedor_cuenta_contable';
     public $timestamps = false;
 
     protected $fillable = [
@@ -27,5 +27,4 @@ class ImputacionesCuentaContableEntity extends Model
     {
         return $this->hasOne(DetallePlanCuentasEntity::class, 'id_detalle_plan', 'id_detalle_plan');
     }
-
 }
