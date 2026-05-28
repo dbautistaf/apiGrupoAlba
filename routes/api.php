@@ -1515,3 +1515,10 @@ Route::group([
     Route::put('estado', [App\Http\Controllers\Tesoreria\Services\ChequerasBancariasController::class, 'estado']);
     Route::delete('eliminar', [App\Http\Controllers\Tesoreria\Services\ChequerasBancariasController::class, 'eliminar']);
 });
+
+Route::group([
+    'middleware' => ['jwt.verify'],
+    'prefix' => '/v1/portal-prestador'
+], function () {
+    Route::get('buscar-dashboard', [App\Http\Controllers\PortalPrestadores\dashboard::class, 'getDashboard']);
+});
