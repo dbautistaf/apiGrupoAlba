@@ -45,13 +45,13 @@ class FamiliaPlanesCuentaRepository
 
     public function findByListar()
     {
-        return FamiliaCuentaContableEntity::with(['familia', 'detallePlan'])
+        return FamiliaCuentaContableEntity::with(['tipoFamilia', 'detallePlan'])
             ->get();
     }
 
-    public function findByBuscarRelacionFamilia($idFamilia, $idPeriodo)
+    public function findByBuscarRelacionFamilia($idTipoFactura, $idPeriodo)
     {
-        return FamiliaCuentaContableEntity::where('id_tipo_familia', $idFamilia)
+        return FamiliaCuentaContableEntity::where('id_tipo_factura', $idTipoFactura)
             ->whereHas('detallePlan', function ($query) use ($idPeriodo) {
                 $query->where('id_periodo_contable', $idPeriodo);
             })

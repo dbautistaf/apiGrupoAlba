@@ -153,6 +153,21 @@ class PeriodosContablesRepository
         return PeriodosContablesEntity::where('activo', '1')
             ->first();
     }
+    public function findByPeriodoContableActivoNow()
+    {
+        // Buscar el periodo activo que contiene la fecha actual
+        $fecha = $this->fechaActual->toDateString();
+
+        $periodo = PeriodosContablesEntity::where('activo', '1')
+            ->where('id_tipo_periodo', 1)
+            ->whereDate('periodo_inicio', '<=', $fecha)
+            ->whereDate('periodo_fin', '>=', $fecha)
+            ->first();
+
+
+
+        return $periodo;
+    }
 
     public function toggleActivo($id)
     {
@@ -175,5 +190,19 @@ class PeriodosContablesRepository
     public function findById($id)
     {
         return PeriodosContablesEntity::find($id);
+    }
+
+    /**
+     * Abrir o cerrar (activo) el periodo anual y todos los mensuales del mismo año
+     * $activo: true => abrir (1), false => cerrar (0)
+     */
+    public function setActivoByAnio($anio, bool $activo)
+    {
+        PeriodosContablesEntity::where('anio_periodo', $anio)
+            ->update([
+                'activo' => $activo ? '1' : '0',
+                'cod_usuario_modifica' => $this->user->cod_usuario,
+                'fecha_modifica' => $this->fechaActual
+            ]);
     }
 }

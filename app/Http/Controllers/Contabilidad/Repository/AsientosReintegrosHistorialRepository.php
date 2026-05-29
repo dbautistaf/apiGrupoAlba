@@ -3,13 +3,13 @@
 namespace App\Http\Controllers\Contabilidad\Repository;
 
 use App\Models\Contabilidad\AsientosContablesEntity;
-use App\Models\Contabilidad\AsientosFacturacionHistorialEntity;
+use App\Models\Contabilidad\AsientosReintegrosHistorialEntity;
 use Exception;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
-class AsientosFacturacionHistorialRepository
+class AsientosReintegrosHistorialRepository
 {
     private $user;
     private $fechaActual;
@@ -23,12 +23,12 @@ class AsientosFacturacionHistorialRepository
     }
 
     /**
-     * 1. Obtener asiento vigente de una factura
+     * 1. Obtener asiento vigente de un reintegro
      */
-    public function obtenerAsientoVigenteFactura($idFactura)
+    public function obtenerAsientoVigenteReintegro($idReintegro)
     {
-        return AsientosFacturacionHistorialEntity::with(['asientoContable', 'asientoContable.detalle'])
-            ->where('id_factura', $idFactura)
+        return AsientosReintegrosHistorialEntity::with(['asientoContable', 'asientoContable.detalle'])
+            ->where('id_reintegro', $idReintegro)
             ->where('tipo_evento', 'ALTA')
             ->where('es_contraasiento', false)
             ->whereHas('asientoContable', function ($query) {
@@ -40,7 +40,7 @@ class AsientosFacturacionHistorialRepository
     /**
      * 2. Generar contraasiento para anulación/modificación
      */
-    public function generarContraasiento($idAsientoOriginal, $tipoEvento, $idFactura, $observacion = null)
+    public function generarContraasiento($idAsientoOriginal, $tipoEvento, $idReintegro, $observacion = null)
     {
         DB::beginTransaction();
         try {
@@ -70,6 +70,7 @@ class AsientosFacturacionHistorialRepository
                 $this->asientoContableRepository->findByCrearDetalleAsiento([
                     'id_asiento_contable' => $contraasiento->id_asiento_contable,
                     'id_proveedor_cuenta_contable' => $detalleOriginal->id_proveedor_cuenta_contable,
+                    'id_tipo_prestador_cuenta_contable' => $detalleOriginal->id_tipo_prestador_cuenta_contable,
                     'id_forma_pago_cuenta_contable' => $detalleOriginal->id_forma_pago_cuenta_contable,
                     'id_familia_cuenta_contable' => $detalleOriginal->id_familia_cuenta_contable,
                     'id_cuenta_bancaria_cuenta_contable' => $detalleOriginal->id_cuenta_bancaria_cuenta_contable,
@@ -85,12 +86,12 @@ class AsientosFacturacionHistorialRepository
 
             // Guardar en historial
             $this->guardarHistorial(
-                $idFactura,
+                $idReintegro,
                 $contraasiento->id_asiento_contable,
                 $tipoEvento,
                 true, // es_contraasiento
                 $idAsientoOriginal,
-                $observacion ?? "Contraasiento generado por $tipoEvento de factura"
+                $observacion ?? "Contraasiento generado por $tipoEvento de reintegro"
             );
 
             DB::commit();
@@ -103,12 +104,12 @@ class AsientosFacturacionHistorialRepository
     }
 
     /**
-     * 3. Guardar historial de asiento de facturación
+     * 3. Guardar historial de asiento de reintegro
      */
-    public function guardarHistorial($idFactura, $idAsientoContable, $tipoEvento, $esContraasiento = false, $idAsientoOrigen = null, $observacion = null)
+    public function guardarHistorial($idReintegro, $idAsientoContable, $tipoEvento, $esContraasiento = false, $idAsientoOrigen = null, $observacion = null)
     {
-        return AsientosFacturacionHistorialEntity::create([
-            'id_factura' => $idFactura,
+        return AsientosReintegrosHistorialEntity::create([
+            'id_reintegro' => $idReintegro,
             'id_asiento_contable' => $idAsientoContable,
             'tipo_evento' => $tipoEvento,
             'es_contraasiento' => $esContraasiento,
@@ -120,40 +121,25 @@ class AsientosFacturacionHistorialRepository
     }
 
     /**
-     * Obtener historial completo de una factura
+     * 4. Procesar anulación de reintegro
      */
-    public function obtenerHistorialFactura($idFactura)
-    {
-        return AsientosFacturacionHistorialEntity::with([
-            'asientoContable',
-            'asientoOrigen',
-            'factura'
-        ])
-            ->where('id_factura', $idFactura)
-            ->orderBy('fecha_registra', 'desc')
-            ->get();
-    }
-
-    /**
-     * Procesar anulación de factura
-     */
-    public function procesarAnulacionFactura($idFactura, $observacion = null)
+    public function procesarAnulacionReintegro($idReintegro, $observacion = null)
     {
         DB::beginTransaction();
         try {
-            // Obtener asiento vigente
-            $historialVigente = $this->obtenerAsientoVigenteFactura($idFactura);
+            // Obtener asiento vigente del reintegro
+            $asientoVigente = $this->obtenerAsientoVigenteReintegro($idReintegro);
 
-            if (!$historialVigente) {
-                throw new Exception("No se encontró un asiento contable vigente para esta factura");
+            if (!$asientoVigente) {
+                throw new Exception("No se encontró asiento vigente para el reintegro");
             }
 
             // Generar contraasiento
             $contraasiento = $this->generarContraasiento(
-                $historialVigente->id_asiento_contable,
+                $asientoVigente->id_asiento_contable,
                 'ANULACION',
-                $idFactura,
-                $observacion
+                $idReintegro,
+                $observacion ?? 'Reintegro anulado por el usuario'
             );
 
             DB::commit();
@@ -166,44 +152,39 @@ class AsientosFacturacionHistorialRepository
     }
 
     /**
-     * Procesar modificación de factura
+     * 5. Procesar modificación de reintegro (contraasiento + nuevo asiento)
      */
-    public function procesarModificacionFactura($idFactura, $nuevoDatosFactura, $idPeriodoContable, $observacion = null)
+    public function procesarModificacionReintegro($idReintegro, $nuevoDatosReintegro, $idPeriodoContable, $observacion = null)
     {
-        //logs
-        \Log::info("Iniciando proceso de modificación contable para factura ID: {$idFactura}");
-        \Log::info("Nuevo datos de factura: " . json_encode($nuevoDatosFactura));
         DB::beginTransaction();
         try {
             // Obtener asiento vigente
-            $historialVigente = $this->obtenerAsientoVigenteFactura($idFactura);
+            $asientoVigente = $this->obtenerAsientoVigenteReintegro($idReintegro);
 
-            if (!$historialVigente) {
-                throw new Exception("No se encontró un asiento contable vigente para esta factura");
+            if ($asientoVigente) {
+                // Generar contraasiento del asiento anterior
+                $this->generarContraasiento(
+                    $asientoVigente->id_asiento_contable,
+                    'MODIFICACION',
+                    $idReintegro,
+                    $observacion ?? 'Modificación de reintegro'
+                );
             }
 
-            // Generar contraasiento del asiento original
-            $this->generarContraasiento(
-                $historialVigente->id_asiento_contable,
-                'MODIFICACION',
-                $idFactura,
-                'Contraasiento por modificación de factura'
-            );
-
             // Crear nuevo asiento con los datos actualizados
-            $nuevoAsiento = $this->asientoContableRepository->crearAsientoFactura(
-                $nuevoDatosFactura,
+            $nuevoAsiento = $this->asientoContableRepository->crearAsientoReintegro(
+                $nuevoDatosReintegro,
                 $idPeriodoContable
             );
 
             // Guardar en historial el nuevo asiento
             $this->guardarHistorial(
-                $idFactura,
+                $idReintegro,
                 $nuevoAsiento->id_asiento_contable,
                 'ALTA',
                 false,
                 null,
-                $observacion ?? 'Nuevo asiento por modificación de factura'
+                $observacion ?? 'Nuevo asiento por modificación de reintegro'
             );
 
             DB::commit();
@@ -216,40 +197,21 @@ class AsientosFacturacionHistorialRepository
     }
 
     /**
-     * Verificar si una factura tiene asientos contables
+     * Verificar si un reintegro tiene asientos contables
      */
-    public function facturaTieneAsientos($idFactura)
+    public function reintegroTieneAsientos($idReintegro)
     {
-        return AsientosFacturacionHistorialEntity::where('id_factura', $idFactura)->exists();
+        return AsientosReintegrosHistorialEntity::where('id_reintegro', $idReintegro)->exists();
     }
 
     /**
-     * Obtener último asiento de una factura por tipo de evento
+     * Obtener todos los asientos de un reintegro (incluyendo contraasientos)
      */
-    public function obtenerUltimoAsientoPorTipo($idFactura, $tipoEvento)
+    public function obtenerHistorialCompleto($idReintegro)
     {
-        return AsientosFacturacionHistorialEntity::with('asientoContable')
-            ->where('id_factura', $idFactura)
-            ->where('tipo_evento', $tipoEvento)
+        return AsientosReintegrosHistorialEntity::with(['asientoContable', 'asientoContable.detalle', 'asientoOrigen'])
+            ->where('id_reintegro', $idReintegro)
             ->orderBy('fecha_registra', 'desc')
-            ->first();
-    }
-
-    /**
-     * Listar facturas con problemas contables
-     */
-    public function listarFacturasConProblemasContables()
-    {
-        return DB::select("
-            SELECT f.id_factura, f.numero, f.total_neto, f.fecha_comprobante,
-                   COUNT(h.id_facturacion_asiento) as total_asientos,
-                   SUM(CASE WHEN ac.vigente = 'ACTIVO' THEN 1 ELSE 0 END) as asientos_activos
-            FROM tb_facturacion_datos f
-            LEFT JOIN tb_cont_asientos_facturacion_historial h ON f.id_factura = h.id_factura
-            LEFT JOIN tb_cont_asientos_contables ac ON h.id_asiento_contable = ac.id_asiento_contable
-            GROUP BY f.id_factura, f.numero, f.total_neto, f.fecha_comprobante
-            HAVING asientos_activos != 1 OR asientos_activos IS NULL
-            ORDER BY f.fecha_comprobante DESC
-        ");
+            ->get();
     }
 }

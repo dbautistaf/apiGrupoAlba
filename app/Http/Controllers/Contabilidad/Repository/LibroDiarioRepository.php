@@ -38,7 +38,7 @@ class LibroDiarioRepository
             }
         }
 
-        $query->orderByDesc('id_asiento_contable');
+        $query->orderBy('id_asiento_contable');
 
         // Si vienen parámetros de paginación, aplicarlos
         if (isset($filters->page) && isset($filters->limit)) {

@@ -42,6 +42,19 @@ class AsientoContableController extends Controller
 
     public function getEliminarDetalleId(Request $request)
     {
+        // Validar periodo del asiento asociado
+        $detalle = $this->asientoContableRepository->findDetalleById($request->id);
+        if (!$detalle) {
+            return response()->json(['error_type' => 'DETAIL_NOT_FOUND', 'message' => 'Detalle no encontrado'], 404);
+        }
+        $asiento = $this->asientoContableRepository->findById($detalle->id_asiento_contable);
+        $periodo = $this->periodoContableRepositorio->findById($asiento->id_periodo_contable ?? null);
+        if (!$periodo || $periodo->activo != '1') {
+            return response()->json([
+                'error_type' => 'PERIOD_INACTIVE',
+                'message' => 'No se puede eliminar detalle: el período contable está cerrado o inactivo'
+            ], 400);
+        }
         $this->asientoContableRepository->findByDeleteDetalleId($request->id);
         return response()->json(['message' => 'Registro eliminado correctamente']);
     }
@@ -56,6 +69,35 @@ class AsientoContableController extends Controller
     {
         DB::beginTransaction();
         try {
+
+            // VALIDACION: impedir crear/editar si el periodo no está activo
+            if (is_null($request->id_asiento_contable)) {
+                // creación: validar periodo enviado
+                $periodo = $this->periodoContableRepositorio->findById($request->id_periodo_contable ?? null);
+                if (!$periodo || $periodo->activo != '1') {
+                    return response()->json([
+                        'error_type' => 'PERIOD_INACTIVE',
+                        'message' => 'No se puede crear asiento: el período contable está cerrado o inactivo'
+                    ], 400);
+                }
+            } else {
+                // actualización: validar periodo asociado al asiento existente
+                $asientoExistente = $this->asientoContableRepository->findById($request->id_asiento_contable);
+                if (!$asientoExistente) {
+                    return response()->json([
+                        'error_type' => 'ASIENTO_NOT_FOUND',
+                        'message' => 'El asiento contable no existe',
+                        'id_asiento' => $request->id_asiento_contable
+                    ], 404);
+                }
+                $periodo = $this->periodoContableRepositorio->findById($asientoExistente->id_periodo_contable ?? null);
+                if (!$periodo || $periodo->activo != '1') {
+                    return response()->json([
+                        'error_type' => 'PERIOD_INACTIVE',
+                        'message' => 'No se puede modificar asiento: el período contable está cerrado o inactivo'
+                    ], 400);
+                }
+            }
 
             if (is_null($request->id_asiento_contable)) {
 
@@ -103,7 +145,7 @@ class AsientoContableController extends Controller
                             "monto_haber" => $key['monto_haber'],
                             "observaciones" => $key['observaciones'],
                             "id_detalle_plan" => $key['id_detalle_plan'],
-                            "asiento_modelo" => $request['asiento_modelo']
+                            "asiento_modelo" => $request->asiento_modelo
                         ]
                     );
                     //=========================== 
@@ -206,19 +248,19 @@ class AsientoContableController extends Controller
                     }
                 }
 
+                // NUEVO: abrir/cerrar periodos por año según tipo de asiento
+                $tipoAsiento = (int) $request->id_tipo_asiento;
+                if ($tipoAsiento === 5 || $tipoAsiento === 6) {
+                    $periodo = $this->periodoContableRepositorio->findById($request->id_periodo_contable);
+                    if ($periodo) {
+                        $this->periodoContableRepositorio->setActivoByAnio($periodo->anio_periodo, $tipoAsiento === 5);
+                    }
+                }
+
                 DB::commit();
                 return response()->json(['message' => 'Registro procesado correctamente'], 200);
             } else {
-                // Validar que el asiento existe
-                $asientoExistente = $this->asientoContableRepository->findById($request->id_asiento_contable);
-                if (!$asientoExistente) {
-                    return response()->json([
-                        'error_type' => 'ASIENTO_NOT_FOUND',
-                        'message' => 'El asiento contable no existe',
-                        'id_asiento' => $request->id_asiento_contable
-                    ], 404);
-                }
-
+                // Actualizar asiento principal
                 $this->asientoContableRepository->findByUpdateAsiento(
                     $request->id_tipo_asiento,
                     $request->fecha_asiento,
@@ -231,22 +273,125 @@ class AsientoContableController extends Controller
                     $request->id_asiento_contable
                 );
 
+                // Procesar detalles: actualizar existentes o crear nuevos (con misma lógica de tesorería que en creación)
                 foreach ($request->detalle as $key) {
-                    $this->asientoContableRepository->findByUpdateDetalleItemAsiento(
-                        [
-                            "id_asiento_contable" => $key['id_asiento_contable'],
-                            "id_proveedor_cuenta_contable" => $key['id_proveedor_cuenta_contable'] ?? null,
-                            "id_forma_pago_cuenta_contable" => $key['id_forma_pago_cuenta_contable'] ?? null,
-                            "id_familia_cuenta_contable" => $key['id_familia_cuenta_contable'] ?? null,
-                            "id_cuenta_bancaria_cuenta_contable" => $key['id_cuenta_bancaria_cuenta_contable'] ?? null,
-                            "monto_debe" => $key['monto_debe'],
-                            "monto_haber" => $key['monto_haber'],
-                            "observaciones" => $key['observaciones'],
-                            "id_detalle_plan" => $key['id_detalle_plan']
-                        ],
-                        $key['id_asiento_contable_detalle']
-                    );
+                    $detalleId = $key['id_asiento_contable_detalle'] ?? null;
+                    if ($detalleId) {
+                        // Actualizar detalle existente
+                        $this->asientoContableRepository->findByUpdateDetalleItemAsiento(
+                            [
+                                "id_asiento_contable" => $key['id_asiento_contable'],
+                                "id_proveedor_cuenta_contable" => $key['id_proveedor_cuenta_contable'] ?? null,
+                                "id_forma_pago_cuenta_contable" => $key['id_forma_pago_cuenta_contable'] ?? null,
+                                "id_familia_cuenta_contable" => $key['id_familia_cuenta_contable'] ?? null,
+                                "id_cuenta_bancaria_cuenta_contable" => $key['id_cuenta_bancaria_cuenta_contable'] ?? null,
+                                "monto_debe" => $key['monto_debe'],
+                                "monto_haber" => $key['monto_haber'],
+                                "observaciones" => $key['observaciones'],
+                                "id_detalle_plan" => $key['id_detalle_plan']
+                            ],
+                            $detalleId
+                        );
+                    } else {
+                        // Crear nuevo detalle
+                        $cuentaBancaria = $this->asientoContableRepository->obtenerCuentaBancariaPorPlanContable($key['id_detalle_plan']);
+
+                        if ($cuentaBancaria && $request->id_tipo_asiento != '5') {
+                            if (!$this->asientoContableRepository->verificarCuentaBancariaTieneCuentaContable($cuentaBancaria->id_cuenta_bancaria)) {
+                                DB::rollBack();
+                                return response()->json([
+                                    'error_type' => 'BANK_ACCOUNT_NO_ACCOUNTING_ASSOCIATION',
+                                    'message' => 'La cuenta bancaria asociada a esta cuenta contable no tiene una relación configurada. Por favor, configure la asociación antes de continuar.',
+                                    'id_cuenta_bancaria' => $cuentaBancaria->id_cuenta_bancaria,
+                                    'numero_cuenta' => $cuentaBancaria->numero_cuenta ?? 'N/A',
+                                    'id_detalle_plan' => $key['id_detalle_plan']
+                                ], 400);
+                            }
+                        }
+
+                        $nuevoDetalle = $this->asientoContableRepository->findByCrearDetalleAsiento(
+                            [
+                                "id_asiento_contable" => $request->id_asiento_contable,
+                                "id_proveedor_cuenta_contable" => $key['id_proveedor_cuenta_contable'] ?? null,
+                                "id_forma_pago_cuenta_contable" => $key['id_forma_pago_cuenta_contable'] ?? null,
+                                "id_familia_cuenta_contable" => $key['id_familia_cuenta_contable'] ?? null,
+                                "id_cuenta_bancaria_cuenta_contable" => $key['id_cuenta_bancaria_cuenta_contable'] ?? null,
+                                "monto_debe" => $key['monto_debe'],
+                                "monto_haber" => $key['monto_haber'],
+                                "observaciones" => $key['observaciones'],
+                                "id_detalle_plan" => $key['id_detalle_plan'],
+                                "asiento_modelo" => $request->asiento_modelo
+                            ]
+                        );
+
+                        // Manejo de tesorería similar a creación
+                        if ($cuentaBancaria && $request->id_tipo_asiento == '4' && $key['monto_haber'] > 0 && $request['asiento_modelo'] != 'ASIENTO MANUAL') {
+                            // manual especial (igual que en creación)
+                            $montoEgreso = $key['monto_haber'];
+                            if (!$this->tesCuentasBancariasRepository->findByVerificarSaldoCuenta($cuentaBancaria->id_cuenta_bancaria, $montoEgreso)) {
+                                DB::rollBack();
+                                return response()->json([
+                                    'error_type' => 'INSUFFICIENT_FUNDS_MANUAL',
+                                    'message' => 'Fondos insuficientes en la cuenta bancaria para el asiento manual',
+                                    'cuenta_bancaria' => $cuentaBancaria->numero_cuenta ?? 'N/A',
+                                    'plan_cuenta' => $key['plan_cuenta'] ?? 'N/A',
+                                    'monto_requerido' => $montoEgreso
+                                ], 400);
+                            }
+                            $this->tesCuentasBancariasRepository->findByRetiroCuenta($cuentaBancaria->id_cuenta_bancaria, $montoEgreso);
+                            $this->tesCuentasBancariasRepository->findByRegistrarMovimiento(
+                                $cuentaBancaria->id_cuenta_bancaria,
+                                $montoEgreso,
+                                'EGRESO',
+                                null,
+                                $request->id_asiento_contable,
+                                'ASIENTO MANUAL - ' . $request->asiento_modelo . ' - ' . $request->asiento_leyenda
+                            );
+                        } elseif ($cuentaBancaria && $request->id_tipo_asiento != '4') {
+                            try {
+                                $monto = $key['monto_haber'] > 0 ? $key['monto_haber'] : $key['monto_debe'];
+                                $tipoMovimiento = $key['monto_haber'] > 0 ? 'EGRESO' : 'INGRESO';
+                                if ($tipoMovimiento === 'EGRESO') {
+                                    if (!$this->tesCuentasBancariasRepository->findByVerificarSaldoCuenta($cuentaBancaria->id_cuenta_bancaria, $monto)) {
+                                        throw new \Exception("INSUFFICIENT_FUNDS");
+                                    }
+                                    $this->tesCuentasBancariasRepository->findByRetiroCuenta($cuentaBancaria->id_cuenta_bancaria, $monto);
+                                } else {
+                                    $this->tesCuentasBancariasRepository->findByDepositoCuenta($cuentaBancaria->id_cuenta_bancaria, $monto);
+                                }
+                                $this->tesCuentasBancariasRepository->findByRegistrarMovimiento(
+                                    $cuentaBancaria->id_cuenta_bancaria,
+                                    $monto,
+                                    $tipoMovimiento,
+                                    null,
+                                    $request->id_asiento_contable,
+                                    'ASIENTO MANUAL - ' . $request->asiento_modelo . ' - ' . $request->asiento_leyenda
+                                );
+                            } catch (\Exception $e) {
+                                if ($e->getMessage() === "INSUFFICIENT_FUNDS") {
+                                    DB::rollBack();
+                                    return response()->json([
+                                        'error_type' => 'INSUFFICIENT_FUNDS',
+                                        'message' => 'Fondos insuficientes en la cuenta bancaria para realizar el egreso',
+                                        'cuenta_bancaria' => $cuentaBancaria->numero_cuenta ?? 'N/A',
+                                        'monto_requerido' => $monto
+                                    ], 400);
+                                }
+                                throw $e;
+                            }
+                        }
+                    }
                 }
+
+                // NUEVO: abrir/cerrar periodos por año según tipo de asiento (actualización)
+                $tipoAsiento = (int) $request->id_tipo_asiento;
+                if ($tipoAsiento === 5 || $tipoAsiento === 6) {
+                    $periodo = $this->periodoContableRepositorio->findById($request->id_periodo_contable);
+                    if ($periodo) {
+                        $this->periodoContableRepositorio->setActivoByAnio($periodo->anio_periodo, $tipoAsiento === 5);
+                    }
+                }
+
                 DB::commit();
                 return response()->json(['message' => 'Registro modificado correctamente'], 200);
             }

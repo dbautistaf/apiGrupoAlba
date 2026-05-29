@@ -6,6 +6,8 @@ use App\Http\Controllers\Contabilidad\Repository\LibroDiarioRepository;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\View;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\LibroDiarioExport;
 
 class LibroDiarioController extends Controller
 {
@@ -83,7 +85,7 @@ class LibroDiarioController extends Controller
     /**
      * Generar el reporte del libro diario listo para PDF
      */
-    public function getReporteLibroDiario(Request $request, LibroDiarioRepository $libroDiarioRepository)
+    public function getReportePDFLibroDiario(Request $request, LibroDiarioRepository $libroDiarioRepository)
     {
         try {
             // Obtener los datos del libro diario
@@ -182,6 +184,37 @@ class LibroDiarioController extends Controller
             return response()->json([
                 'message' => 'Error al generar el reporte libro diario: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    public function getExportLibroDiarioExcel(Request $request, LibroDiarioRepository $libroDiarioRepository)
+    {
+        try {
+            $data = $libroDiarioRepository->findListDetalleResumenDiario($request);
+
+            $rows = [];
+            // encabezados de filas (cada detalle por línea)
+            foreach ($data as $asiento) {
+                foreach ($asiento->detalle as $det) {
+                    $rows[] = [
+                        'periodo' => $asiento->periodoContable->periodo ?? '',
+                        'fecha' => $asiento->fecha_asiento,
+                        'numero' => $asiento->numero,
+                        'leyenda' => $asiento->asiento_leyenda,
+                        'cuenta' => ($det->planCuenta->codigo_cuenta ?? '') . ' - ' . ($det->planCuenta->cuenta ?? ''),
+                        'dDebe' => (float) $det->monto_debe,
+                        'dHaber' => (float) $det->monto_haber,
+                        'recurso' => $det->recursor
+                    ];
+                }
+            }
+
+            $export = new LibroDiarioExport(collect($rows));
+
+            return Excel::download($export, 'libro-diario.xlsx');
+
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error al exportar libro diario: ' . $e->getMessage()], 500);
         }
     }
 }

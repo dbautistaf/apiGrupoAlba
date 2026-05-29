@@ -204,6 +204,7 @@ class PlanesCuentasRepository
             ->where('id_nivel_plan_cuenta', $idNivel)
             ->get();
     }
+
     public function findByDetalleCuentasPlanesCompleto($search = null)
     {
         $query = DetallePlanCuentasEntity::with(['tipo', 'plan']);
