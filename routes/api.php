@@ -599,6 +599,11 @@ Route::group([
     Route::get('list-prestaciones-autorizadas-rn', [App\Http\Controllers\Internaciones\Services\InternacionesController::class, 'getListAutorizadasRN']);
     Route::post('delete-prestaciones-autorizadas-rn', [App\Http\Controllers\Internaciones\Services\InternacionesController::class, 'postDeletePrestacionesAutorizadasRN']);
     
+    // Rutas para la Autorización de Recién Nacido
+    Route::get('autorizaciones-rn', [App\Http\Controllers\Internaciones\Services\AutorizacionDatosRNController::class, 'getConsultarAutorizaciones']);
+    Route::get('autorizacion-rn', [App\Http\Controllers\Internaciones\Services\AutorizacionDatosRNController::class, 'getObtenerAutorizacion']);
+    Route::post('save-autorizacion-rn', [App\Http\Controllers\Internaciones\Services\AutorizacionDatosRNController::class, 'postGuardarAutorizacion']);
+    Route::delete('delete-autorizacion-rn', [App\Http\Controllers\Internaciones\Services\AutorizacionDatosRNController::class, 'deleteEliminarAutorizacion']);
 });
 
 Route::group([

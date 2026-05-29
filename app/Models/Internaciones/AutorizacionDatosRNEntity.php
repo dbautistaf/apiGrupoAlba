@@ -11,6 +11,7 @@ class AutorizacionDatosRNEntity extends Model
     protected $table = 'tb_prestaciones_medicas_rn';
     protected $primaryKey = 'cod_prestacion_rn';
     public $timestamps = false;
+    protected $appends = ['numero_tramite', 'cod_prestacion'];
 
     protected $fillable = [
         'fecha_registra',
@@ -32,4 +33,19 @@ class AutorizacionDatosRNEntity extends Model
         'observacion_interna',
         'fecha_modifica'
     ];
+
+    public function detalle_prestacion()
+    {
+        return $this->hasMany(AutorizacionDetalleRNEntity::class, 'cod_prestacion_rn', 'cod_prestacion_rn');
+    }
+
+    public function getNumeroTramiteAttribute()
+    {
+        return $this->cod_prestacion_rn;
+    }
+
+    public function getCodPrestacionAttribute()
+    {
+        return $this->cod_prestacion_rn;
+    }
 }

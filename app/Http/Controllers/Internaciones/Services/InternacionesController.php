@@ -206,6 +206,22 @@ class InternacionesController  extends Controller
         Request $request
     ) {
         $data = $repoInterAut->findById($request->cod_internacion);
+        
+        if ($data && !empty($data->recien_nacido)) {
+            foreach ($data->recien_nacido as $rn) {
+                // Fetch direct newborn authorizations
+                $directAuths = \App\Models\Internaciones\AutorizacionDatosRNEntity::with(['detalle_prestacion.practica'])
+                    ->where('cod_recien_nacido', $rn->cod_recien_nacido)
+                    ->get();
+                
+                // Merge direct authorizations into the existing autorizacion collection
+                $merged = $rn->autorizacion->merge($directAuths);
+                
+                // Assign the merged collection back to the relation
+                $rn->setRelation('autorizacion', $merged);
+            }
+        }
+        
         return response()->json($data, 200);
     }
 
