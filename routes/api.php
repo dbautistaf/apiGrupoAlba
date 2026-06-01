@@ -604,6 +604,7 @@ Route::group([
     Route::get('autorizacion-rn', [App\Http\Controllers\Internaciones\Services\AutorizacionDatosRNController::class, 'getObtenerAutorizacion']);
     Route::post('save-autorizacion-rn', [App\Http\Controllers\Internaciones\Services\AutorizacionDatosRNController::class, 'postGuardarAutorizacion']);
     Route::delete('delete-autorizacion-rn', [App\Http\Controllers\Internaciones\Services\AutorizacionDatosRNController::class, 'deleteEliminarAutorizacion']);
+    Route::post('migrar-autorizaciones-rn', [App\Http\Controllers\Internaciones\Services\AutorizacionDatosRNController::class, 'postMigrarAutorizaciones']);
 });
 
 Route::group([

@@ -84,4 +84,34 @@ class AutorizacionDatosRNController extends Controller
             ], 500);
         }
     }
+
+    public function postMigrarAutorizaciones(Request $request, AutorizacionDatosRNRepository $repo)
+    {
+        try {
+            $cod_recien_nacido = $request->cod_recien_nacido;
+            $dni_rn = $request->dni_rn;
+
+            if (empty($cod_recien_nacido)) {
+                return response()->json(['message' => 'El código de recién nacido es requerido'], 400);
+            }
+            if (empty($dni_rn)) {
+                return response()->json(['message' => 'El DNI del recién nacido es requerido'], 400);
+            }
+
+            DB::beginTransaction();
+            $migratedCount = $repo->migrarAutorizaciones($cod_recien_nacido, $dni_rn);
+            DB::commit();
+
+            return response()->json([
+                'message' => "Se migraron correctamente {$migratedCount} autorizaciones al Visor Administrativo.",
+                'migrated_count' => $migratedCount
+            ], 200);
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return response()->json([
+                'code' => $th->getCode(),
+                'message' => $th->getMessage()
+            ], 500);
+        }
+    }
 }
