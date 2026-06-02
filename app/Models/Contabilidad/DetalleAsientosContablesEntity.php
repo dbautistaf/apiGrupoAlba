@@ -17,7 +17,9 @@ class DetalleAsientosContablesEntity extends Model
     protected $fillable = [
         'id_asiento_contable',
         'cod_proveedor',
+        'id_imputacion_proveedor',
         'cod_prestador',
+        'id_imputacion_prestador',
         'id_proveedor_cuenta_contable',
         'id_tipo_prestador_cuenta_contable',
         'id_forma_pago_cuenta_contable',

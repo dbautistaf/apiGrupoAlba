@@ -52,7 +52,9 @@ class AsientoContableRepository
         return DetalleAsientosContablesEntity::create([
             'id_asiento_contable' => $params['id_asiento_contable'],
             'cod_proveedor' => $params['cod_proveedor'] ?? null,
+            'id_imputacion_proveedor' => $params['id_imputacion_proveedor'] ?? null,
             'cod_prestador' => $params['cod_prestador'] ?? null,
+            'id_imputacion_prestador' => $params['id_imputacion_prestador'] ?? null,
             'id_proveedor_cuenta_contable' => $params['id_proveedor_cuenta_contable'] ?? null,
             'id_tipo_prestador_cuenta_contable' => $params['id_tipo_prestador_cuenta_contable'] ?? null,
             'id_forma_pago_cuenta_contable' => $params['id_forma_pago_cuenta_contable'] ?? null,
@@ -401,38 +403,42 @@ class AsientoContableRepository
             'ACTIVO'
         );
 
-        // DEBE — imputación dinámica desde tb_cont_imputacion_cuenta_contable
+        $esFacturaProveedor = $datosFactura['id_tipo_factura'] == 16;
+
+        // DEBE — imputación dinámica desde tb_cont_imputacion_prestadores/proveedores_cuenta_contable
         $this->findByCrearDetalleAsiento([
-            'id_asiento_contable'              => $asiento->id_asiento_contable,
-            'cod_proveedor'                    => null,
-            'cod_prestador'                    => null,
-            'id_proveedor_cuenta_contable'     => null,
-            'id_tipo_prestador_cuenta_contable'=> null,
-            'id_forma_pago_cuenta_contable'    => null,
-            'id_familia_cuenta_contable'       => null,
+            'id_asiento_contable' => $asiento->id_asiento_contable,
+            'cod_proveedor' => null,
+            'id_imputacion_proveedor' => $esFacturaProveedor ? $idImputacionDebe : null,
+            'cod_prestador' => null,
+            'id_imputacion_prestador' => !$esFacturaProveedor ? $idImputacionDebe : null,
+            'id_proveedor_cuenta_contable' => null,
+            'id_tipo_prestador_cuenta_contable' => null,
+            'id_forma_pago_cuenta_contable' => null,
+            'id_familia_cuenta_contable' => null,
             'id_cuenta_bancaria_cuenta_contable' => null,
-            'id_retencion_cuenta_contable'     => null,
-            'monto_debe'                       => $datosFactura['total_factura'],
-            'monto_haber'                      => 0,
-            'observaciones'                    => 'Gasto - ' . ($imputacionDebe->imputacion ?? ''),
-            'id_detalle_plan'                  => $imputacionDebe->id_detalle_plan,
+            'id_retencion_cuenta_contable' => null,
+            'monto_debe' => $datosFactura['total_factura'],
+            'monto_haber' => 0,
+            'observaciones' => 'Gasto - ' . ($imputacionDebe->imputacion ?? ''),
+            'id_detalle_plan' => $imputacionDebe->id_detalle_plan,
         ]);
 
         // HABER — hardcodeado: prestador = 35 (DEUDAS PRESTACIONALES), proveedor = 36 (PROVEEDORES)
         $this->findByCrearDetalleAsiento([
-            'id_asiento_contable'              => $asiento->id_asiento_contable,
-            'cod_proveedor'                    => $datosFactura['id_proveedor'] ?? null,
-            'cod_prestador'                    => $datosFactura['id_prestador'] ?? null,
-            'id_proveedor_cuenta_contable'     => null,
-            'id_tipo_prestador_cuenta_contable'=> null,
-            'id_forma_pago_cuenta_contable'    => null,
-            'id_familia_cuenta_contable'       => null,
+            'id_asiento_contable' => $asiento->id_asiento_contable,
+            'cod_proveedor' => $esFacturaProveedor ? ($datosFactura['id_proveedor'] ?? null) : null,
+            'cod_prestador' => !$esFacturaProveedor ? ($datosFactura['id_prestador'] ?? null) : null,
+            'id_proveedor_cuenta_contable' => null,
+            'id_tipo_prestador_cuenta_contable' => null,
+            'id_forma_pago_cuenta_contable' => null,
+            'id_familia_cuenta_contable' => null,
             'id_cuenta_bancaria_cuenta_contable' => null,
-            'id_retencion_cuenta_contable'     => null,
-            'monto_debe'                       => 0,
-            'monto_haber'                      => $datosFactura['total_factura'],
-            'observaciones'                    => $esPrestador ? 'Deudas prestacionales' : 'Proveedores a pagar',
-            'id_detalle_plan'                  => $idDetallePlanHaber,
+            'id_retencion_cuenta_contable' => null,
+            'monto_debe' => 0,
+            'monto_haber' => $datosFactura['total_factura'],
+            'observaciones' => $esFacturaProveedor ? 'Proveedores a pagar' : 'Deudas prestacionales',
+            'id_detalle_plan' => $idDetallePlanHaber,
         ]);
 
         return $asiento;
