@@ -223,7 +223,13 @@ class FacturaRepository
             'prestador',
             'comprobantes',
             'razonSocial',
-            'opa.fechapagos'
+            'opa.fechapagos',
+            'historialAsientos' => function ($query) {
+                $query->where('tipo_evento', 'ALTA')
+                    ->where('es_contraasiento', false)
+                    ->whereHas('asientoContable', fn($q) => $q->where('vigente', 'ACTIVO'))
+                    ->with(['asientoContable.detalle']);
+            }
         ])
             ->find($id);
     }
