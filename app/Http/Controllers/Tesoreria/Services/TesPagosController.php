@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Tesoreria\Services;
 
 use App\Http\Controllers\Contabilidad\Repository\AsientoContableRepository;
+use App\Http\Controllers\Contabilidad\Repository\AsientosPagoHistorialRepository;
 use App\Http\Controllers\Contabilidad\Repository\FormaPagoCuentaContableRepository;
 use App\Http\Controllers\Contabilidad\Repository\PeriodosContablesRepository;
 use App\Http\Controllers\Contabilidad\Repository\ProveedorPlanesCuentaRepository;
@@ -104,7 +105,7 @@ class TesPagosController extends Controller
         GeneradorCodigosUtils $generadorCodigos,
         FacturaRepository $facturaRepository,
         AsientoContableRepository $asientoContableRepository,
-        PeriodosContablesRepository $periodoContableRepositorio,
+        AsientosPagoHistorialRepository $historialPagoRepository,
     ) {
         try {
 
@@ -198,58 +199,48 @@ class TesPagosController extends Controller
             $cuenta->findByRegistrarMovimiento($params->id_cuenta_bancaria, $monto_total, 'EGRESO', $params->id_pago, null, 'OPA');
 
             // ============================================================
-            // CREAR ASIENTO CONTABLE AUTOMÁTICO
-            // =========================================================== 
-            // if (!is_null($opaFactus)) {
-            //     if (is_null($this->periodoContableActivo)) {
-            //         DB::rollBack();
-            //         return response()->json(['message' => "No se encontro un periodo contable activo."], 409);
-            //     }
+            // CREAR ASIENTO CONTABLE AUTOMÁTICO DE PAGO
+            // ============================================================
+            if (!is_null($opaFactus)) {
+                try {
+                    if (is_null($this->periodoContableActivo)) {
+                        throw new \Exception("No se encontró un período contable activo para registrar el asiento contable del pago.");
+                    }
 
-            //     // Obtener datos del proveedor y factura
-            //     $factura = $opaFactus->factura;
-            //     $facturaTipoComprobante = $opaFactus->factura->tipoComprobante;
-            //     $proveedorPrestador = $opaFactus->proveedor ?? $opaFactus->prestador;
-            //     // $detalle = $params->detalleImputacionesHaber;
+                    // Cargar relaciones de OPA — independiente de cuántas facturas tenga
+                    $opaFactus->loadMissing(['proveedor', 'prestador']);
+                    $proveedorPrestador = $opaFactus->proveedor ?? $opaFactus->prestador;
 
-            //     //Período contable activo
-            //     try {
-            //         $formatoCorto = substr($factura->periodo, 2, 2) . substr($factura->periodo, 5, 2);
-            //         $periodoContableActivo = $periodoContableRepositorio->findByExistsPeriodoActivo($formatoCorto);
+                    $datosPago = [
+                        'id_pago'            => $pagoDb->id_pago,
+                        'id_proveedor'       => $opaFactus->id_proveedor,
+                        'id_prestador'       => $opaFactus->id_prestador,
+                        'cuit'               => $proveedorPrestador->cuit ?? '',
+                        'nombre'             => $proveedorPrestador->razon_social ?? '',
+                        'numero_pago'        => 'PAGO-' . $pagoDb->num_pago,
+                        'fecha_registra'     => $pagoDb->fecha_registra,
+                        'id_cuenta_bancaria' => $params->id_cuenta_bancaria,
+                        'monto_total'        => $monto_total,
+                    ];
 
-            //         if (!$periodoContableActivo) {
-            //             throw new \Exception("No se encontró un período contable activo para registrar el asiento contable del pago.");
-            //         }
-            //     } catch (\Throwable $th) {
-            //         DB::rollBack();
-            //         return response()->json([
-            //             'message' => $th->getMessage()
-            //         ], 404);
-            //     }
+                    $asiento = $asientoContableRepository->crearAsientoPago($datosPago, $this->periodoContableActivo->id_periodo_contable);
 
+                    $historialPagoRepository->guardarHistorial(
+                        $pagoDb->id_pago,
+                        $asiento->id_asiento_contable,
+                        'ALTA',
+                        false,
+                        null,
+                        'Asiento contable creado automáticamente al confirmar el pago'
+                    );
 
-            //     $datosPago = [
-            //         'cuit' => $proveedorPrestador->cuit ?? 'S/CUIT',
-            //         'nombre' => $proveedorPrestador->razon_social ?? 'S/NOMBRE',
-            //         'numero_pago' => "PAGO-" . $pagoDb->num_pago,
-            // 'fecha_registra' => $pagoDb->fecha_registra,
-            //         // 'monto_pago' => $monto_Validar,
-            //         'id_cuenta_bancaria' => $params->id_cuenta_bancaria,
-            //         'id_metodo_pago' => $params->id_forma_pago,
-            //         'idImputacionDebe' => $params->idImputacionDebe,
-            //         'ImputacionHaber' => [
-            //             // 'idImputacionHaber' => $params->idImputacionHaber,
-            //             // 'nombreHaber' => $params->nombreHaber,
-            //             // 'codigoHaber' => $params->codigoHaber,
-            //             'totalImporteHaber' => $params->monto_pago,
-            //         ]
-
-
-            //     ];
-
-            //     // Crear asiento contable (las validaciones ya se hicieron arriba)
-            //     $asientoContableRepository->crearAsientoPago($datosPago, $periodoContableActivo->id_periodo_contable);
-            // }
+                } catch (\Exception $e) {
+                    DB::rollBack();
+                    return response()->json([
+                        'message' => 'Error al registrar el asiento contable del pago: ' . $e->getMessage()
+                    ], 423);
+                }
+            }
 
             DB::commit();
             return response()->json(['message' => 'El Pago ha sido confirmado y procesado con éxito.']);
@@ -265,14 +256,24 @@ class TesPagosController extends Controller
     public function getAnularPago(
         Request $request,
         TesPagosRepository $pago,
-        TestOrdenPagoRepository $opa
+        TestOrdenPagoRepository $opa,
+        AsientosPagoHistorialRepository $historialPagoRepository
     ) {
         try {
             DB::beginTransaction();
-            // @ANULAMOS EL PAGO
+
+            // Contraasiento contable si tiene asiento registrado
+            if ($historialPagoRepository->pagoTieneAsientos($request->id_pago)) {
+                $historialPagoRepository->procesarAnulacionPago(
+                    $request->id_pago,
+                    'Pago anulado por el usuario'
+                );
+            }
+
+            // Anular pago y OPA
             $pago->findByAnularPago($request->id_pago, $request->motivo_rechazo);
-            // @ANULAMOS LA OPA
             $opa->findByUpdateEstado($request->id_orden_pago, '3', $request->motivo_rechazo);
+
             DB::commit();
             return response()->json(['message' => 'El Pago ha sido anulado con éxito.']);
         } catch (\Throwable $th) {
