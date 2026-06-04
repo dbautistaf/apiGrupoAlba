@@ -84,7 +84,18 @@ class PrestacionMedicaController  extends Controller
     {
         try {
             $data = [];
-            if (is_numeric($request->search)) {
+            if ($request->solo_rn == 'true' || $request->solo_rn === true || $request->solo_rn == 1 || !empty($request->dni_madre) || !empty($request->dni_rn)) {
+                $data = $repoFiltro->findByFiltersNewborn(
+                    $request->desde,
+                    $request->hasta,
+                    $request->tramite,
+                    $request->estado,
+                    $request->persona,
+                    $request->solo_rn,
+                    $request->dni_madre,
+                    $request->dni_rn
+                );
+            } else if (is_numeric($request->search)) {
                 if (strlen($request->search) == 8) {
                     $data =  $repoFiltro->findByListFechaRegistraBetweenAndDniAfiliado($request->desde, $request->hasta, $request->search, $request->tramite);
                 } else if (strlen($request->search) == 11) {

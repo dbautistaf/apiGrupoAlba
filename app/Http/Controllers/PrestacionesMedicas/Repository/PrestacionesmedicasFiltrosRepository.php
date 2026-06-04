@@ -170,4 +170,55 @@ class PrestacionesmedicasFiltrosRepository
     {
         return PrestacionesPracticaLaboratorioEntity::whereIn('cod_prestacion', $ids)->get();
     }
+
+    public function findByFiltersNewborn($desde, $hasta, $tramite, $estado, $usuario, $solo_rn, $dni_madre, $dni_rn)
+    {
+        $relations = array_merge($this->allRelations, [
+            "autorizacion_rn",
+            "autorizacion_rn.recien_nacido",
+            "autorizacion_rn.recien_nacido.internacion"
+        ]);
+
+        $query = PrestacionesPracticaLaboratorioEntity::with($relations);
+
+        if (!empty($desde) && !empty($hasta)) {
+            $query->whereBetween('fecha_registra', [$desde, $hasta]);
+        }
+
+        if (!empty($tramite)) {
+            $query->where('numero_tramite', 'like', $tramite . '%');
+        }
+
+        if (!empty($estado)) {
+            $query->where('cod_tipo_estado', $estado);
+        }
+
+        if (!empty($usuario)) {
+            $query->where('usuario_registra', $usuario);
+        }
+
+        // Filter for Solo RN or Newborn DNI
+        if ($solo_rn == 'true' || $solo_rn === true || $solo_rn == 1 || !empty($dni_rn)) {
+            $query->whereHas('autorizacion_rn', function ($q) use ($dni_rn) {
+                if (!empty($dni_rn)) {
+                    $q->whereHas('recien_nacido', function ($rnQuery) use ($dni_rn) {
+                        $rnQuery->where('dni_rn', 'like', $dni_rn . '%');
+                    });
+                }
+            });
+        }
+
+        // Filter for Mother's DNI
+        if (!empty($dni_madre)) {
+            $query->where(function ($q) use ($dni_madre) {
+                $q->where('dni_afiliado', 'like', $dni_madre . '%')
+                  ->orWhereHas('autorizacion_rn.recien_nacido.internacion', function ($internacionQuery) use ($dni_madre) {
+                      $internacionQuery->where('dni_afiliado', 'like', $dni_madre . '%');
+                  });
+            });
+        }
+
+        $results = $query->orderByDesc('cod_prestacion')->get();
+        return $results;
+    }
 }

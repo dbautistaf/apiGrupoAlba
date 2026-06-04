@@ -87,4 +87,9 @@ class PrestacionesPracticaLaboratorioEntity extends Model
     {
         return $this->hasOne(DetalleTramitePrestacionMedicaEntity::class, 'id_detalle_tramite', 'id_detalle_tramite');
     }
+
+    public function autorizacion_rn()
+    {
+        return $this->hasOne(\App\Models\Internaciones\AutorizacionRecienNacidoEntity::class, 'cod_prestacion', 'cod_prestacion');
+    }
 }
