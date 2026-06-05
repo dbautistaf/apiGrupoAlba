@@ -29,4 +29,9 @@ class AutorizacionRecienNacidoEntity extends Model
     {
         return $this->hasOne(PrestacionesPracticaLaboratorioEntity::class, 'cod_prestacion', 'cod_prestacion');
     }
+
+    public function recien_nacido()
+    {
+        return $this->belongsTo(RecienNacidoEntity::class, 'cod_recien_nacido', 'cod_recien_nacido');
+    }
 }

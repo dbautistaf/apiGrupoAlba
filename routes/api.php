@@ -599,6 +599,12 @@ Route::group([
     Route::get('list-prestaciones-autorizadas-rn', [App\Http\Controllers\Internaciones\Services\InternacionesController::class, 'getListAutorizadasRN']);
     Route::post('delete-prestaciones-autorizadas-rn', [App\Http\Controllers\Internaciones\Services\InternacionesController::class, 'postDeletePrestacionesAutorizadasRN']);
     
+    // Rutas para la Autorización de Recién Nacido
+    Route::get('autorizaciones-rn', [App\Http\Controllers\Internaciones\Services\AutorizacionDatosRNController::class, 'getConsultarAutorizaciones']);
+    Route::get('autorizacion-rn', [App\Http\Controllers\Internaciones\Services\AutorizacionDatosRNController::class, 'getObtenerAutorizacion']);
+    Route::post('save-autorizacion-rn', [App\Http\Controllers\Internaciones\Services\AutorizacionDatosRNController::class, 'postGuardarAutorizacion']);
+    Route::delete('delete-autorizacion-rn', [App\Http\Controllers\Internaciones\Services\AutorizacionDatosRNController::class, 'deleteEliminarAutorizacion']);
+    Route::post('migrar-autorizaciones-rn', [App\Http\Controllers\Internaciones\Services\AutorizacionDatosRNController::class, 'postMigrarAutorizaciones']);
 });
 
 Route::group([
@@ -1520,4 +1526,11 @@ Route::group([
     Route::post('procesar', [App\Http\Controllers\Tesoreria\Services\ChequerasBancariasController::class, 'proceso']);
     Route::put('estado', [App\Http\Controllers\Tesoreria\Services\ChequerasBancariasController::class, 'estado']);
     Route::delete('eliminar', [App\Http\Controllers\Tesoreria\Services\ChequerasBancariasController::class, 'eliminar']);
+});
+
+Route::group([
+    'middleware' => ['jwt.verify'],
+    'prefix' => '/v1/portal-prestador'
+], function () {
+    Route::get('buscar-dashboard', [App\Http\Controllers\PortalPrestadores\dashboard::class, 'getDashboard']);
 });

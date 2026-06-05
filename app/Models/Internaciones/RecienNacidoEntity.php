@@ -28,4 +28,9 @@ class RecienNacidoEntity extends Model
     {
         return $this->hasMany(AutorizacionRecienNacidoEntity::class, 'cod_recien_nacido', 'cod_recien_nacido');
     }
+
+    public function internacion()
+    {
+        return $this->belongsTo(InternacionesEntity::class, 'cod_internacion', 'cod_internacion');
+    }
 }

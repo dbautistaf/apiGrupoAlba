@@ -128,5 +128,12 @@ class InternacionesAutorizacionRepository
         if ($internacion != null) {
             $internacion->delete();
         }
+
+        // También eliminar si es una autorización directa de recién nacido
+        $direct = \App\Models\Internaciones\AutorizacionDatosRNEntity::find($cod_prestacion);
+        if ($direct != null) {
+            \App\Models\Internaciones\AutorizacionDetalleRNEntity::where('cod_prestacion_rn', $direct->cod_prestacion_rn)->delete();
+            $direct->delete();
+        }
     }
 }
