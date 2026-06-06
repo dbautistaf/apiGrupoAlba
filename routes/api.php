@@ -186,7 +186,6 @@ Route::group([
     Route::post('procesar-tesoreria', [App\Http\Controllers\Discapacidad\RendicionFondosTesoreriaController::class, 'postProcesar']);
 });
 
-
 Route::group([
     'middleware' => ['jwt.verify'],
     'prefix' => '/v1/credencial'
@@ -298,7 +297,7 @@ Route::group([
     Route::get('getIdTicket/{id}', [App\Http\Controllers\TicketSoporteController::class, 'getIdticket']);
 
     Route::get('notificaciones', [App\Http\Controllers\Notificaciones\Services\NotificacionesController::class, 'listar']);
-    //tickets
+    // tickets
     Route::get('getArchivosPorTicket/{id}', [App\Http\Controllers\TicketSoporteController::class, 'getArchivosPorTicket']);
     Route::get('getArchivoAdjunto', [App\Http\Controllers\TicketSoporteController::class, 'getArchivoAdjunto']);
     Route::get('getHistorial/{id}', [App\Http\Controllers\TicketSoporteController::class, 'getHistorial']);
@@ -473,7 +472,6 @@ Route::group([
     Route::get('getIdHospital/{id}', [App\Http\Controllers\prestadores\HospitalPublicoController::class, 'getIdHospital']);
     Route::get('filterHospital', [App\Http\Controllers\prestadores\HospitalPublicoController::class, 'getListaHospital']);
 
-
     Route::get('/facturas-impagas/excel', [App\Http\Controllers\prestadores\ReportesPrestadorController::class, 'exportarExcelFacturasImpagas']);
     Route::get('/facturas-impagas/resumen/excel', [App\Http\Controllers\prestadores\ReportesPrestadorController::class, 'exportarExcelResumenFacturasImpagas']);
 });
@@ -484,7 +482,6 @@ Route::group([
 ], function () {
     Route::get('tipoMatriculas', [App\Http\Controllers\filtros\AlimentadoresController::class, 'getListarTipoMatriculas']);
     Route::get('especialidadesMedicas', [App\Http\Controllers\filtros\AlimentadoresController::class, 'getListarEspecialidadesMedicas']);
-
 
     Route::post('registrar', [App\Http\Controllers\prestadores\PrestadoresMedicosController::class, 'postCrearProfesional']);
     Route::post('crear-flash', [App\Http\Controllers\Profesionales\ProfesionalMedicoController::class, 'getRegistroRapido']);
@@ -504,6 +501,7 @@ Route::group([
     Route::get('obtenerPracticaLaboratorioId/{id}', [App\Http\Controllers\filtros\FiltrosPracticasLaboratorioController::class, 'getBuscarPracticaId']);
     Route::get('buscarPrestacionesDNI', [App\Http\Controllers\mantenimiento\PrestacionesController::class, 'getBuscarPrestacionesDNI']);
     Route::get('getImprimirPrestacion', [App\Http\Controllers\mantenimiento\PrestacionesController::class, 'getImprimirReporte']);
+    Route::get('getImprimirPrestacionRN', [App\Http\Controllers\mantenimiento\PrestacionesController::class, 'getImprimirReporteRN']);
     Route::get('consultar-prestaciones-medicas', [App\Http\Controllers\PrestacionesMedicas\Services\PrestacionMedicaController::class, 'getConsultarPrestaciones']);
     Route::get('obtener-prestacion-medica', [App\Http\Controllers\PrestacionesMedicas\Services\PrestacionMedicaController::class, 'getBuscarPrestacionId']);
     Route::get('listar-tipo-tramite', [App\Http\Controllers\PrestacionesMedicas\Services\CatalogoPrestacionesMedicasController::class, 'getListarTipoTramites']);
@@ -529,7 +527,6 @@ Route::group([
     Route::get('getListPrestacion', [App\Http\Controllers\PrestacionesMedicas\Services\PrestacionMedicaController::class, 'getListPrestacion']);
     Route::get('getListPrestacionIds', [App\Http\Controllers\PrestacionesMedicas\Services\PrestacionMedicaController::class, 'getListPrestacionIds']);
 });
-
 
 Route::group([
     'middleware' => ['jwt.verify'],
@@ -561,7 +558,6 @@ Route::group([
     Route::get('getImprimirRecetario', [App\Http\Controllers\mantenimiento\RecetariosController::class, 'getImprimirReporte']);
 });
 
-
 Route::group([
     'middleware' => ['jwt.verify'],
     'prefix' => '/v1/internaciones'
@@ -580,7 +576,6 @@ Route::group([
     Route::get('obtener-internaciones-dni', [App\Http\Controllers\Internaciones\Services\InternacionesController::class, 'getBuscarInternacionesDNI']);
     Route::get('obtener-internacion-prestaciones', [App\Http\Controllers\Internaciones\Services\InternacionesController::class, 'getObtenerInternacionId']);
 
-
     Route::post('procesar-internacion', [App\Http\Controllers\Internaciones\Services\InternacionesController::class, 'getProcesarInternacion']);
     Route::post('autorizar-internacion', [App\Http\Controllers\Internaciones\Services\AuditarInternacionController::class, 'getAuditarInternacion']);
     Route::post('crear-tipo-diagnostico-internacion', [App\Http\Controllers\Internaciones\Services\CatalogoInternacionController::class, 'getCrearDiagnostico']);
@@ -598,7 +593,7 @@ Route::group([
     Route::post('save-prestaciones-autorizadas-rn', [App\Http\Controllers\Internaciones\Services\InternacionesController::class, 'postSavePrestacionesAutorizadasRN']);
     Route::get('list-prestaciones-autorizadas-rn', [App\Http\Controllers\Internaciones\Services\InternacionesController::class, 'getListAutorizadasRN']);
     Route::post('delete-prestaciones-autorizadas-rn', [App\Http\Controllers\Internaciones\Services\InternacionesController::class, 'postDeletePrestacionesAutorizadasRN']);
-    
+
     // Rutas para la Autorización de Recién Nacido
     Route::get('autorizaciones-rn', [App\Http\Controllers\Internaciones\Services\AutorizacionDatosRNController::class, 'getConsultarAutorizaciones']);
     Route::get('autorizacion-rn', [App\Http\Controllers\Internaciones\Services\AutorizacionDatosRNController::class, 'getObtenerAutorizacion']);
@@ -677,7 +672,6 @@ Route::group([
     'middleware' => ['jwt.verify'],
     'prefix' => '/v1/convenios'
 ], function () {
-
     Route::get('obtenerCategoriaPagos', [App\Http\Controllers\convenios\ConveniosAlimentadoresController::class, 'getListarCategoriaPagos']);
     Route::get('obtenerAltaCategorias', [App\Http\Controllers\convenios\ConveniosAlimentadoresController::class, 'getListarAltaCategorias']);
     Route::get('obtenerTipoValorizacion', [App\Http\Controllers\convenios\ConveniosAlimentadoresController::class, 'getListarTipoValorizacion']);
@@ -737,7 +731,6 @@ Route::group([
     Route::post('aplicarajustelineal', [App\Http\Controllers\convenios\PracticasConvenioController::class, 'getAplicarAjusteLineal']);
     Route::post('registrar-observacion', [App\Http\Controllers\convenios\PracticasConvenioController::class, 'getInsertarObservacion']);
 
-
     Route::delete('eliminarConvenio/{id}', [App\Http\Controllers\convenios\ConveniosMantenimientoController::class, 'deleteConvenioId']);
     Route::delete('eliminarConvenioPrestador/{id}', [App\Http\Controllers\convenios\ConveniosMantenimientoController::class, 'deleteConvenioPrestadorId']);
     Route::delete('eliminarConvenioGaleno', [App\Http\Controllers\convenios\ConvenioGalenosController::class, 'eliminarGalenoConvenio']);
@@ -770,7 +763,6 @@ Route::group([
     Route::get('obtener-id', [App\Http\Controllers\matrizPracticas\MantenimientoController::class, 'getBuscarPracticaId']);
     Route::get('combo-matriz', [App\Http\Controllers\matrizPracticas\BuscardoresController::class, 'getComboMatriz']);
 
-
     Route::post('altaNomenclador', [App\Http\Controllers\matrizPracticas\MantenimientoController::class, 'postAltaNomenclador']);
     Route::post('altaSeccionNomenclador', [App\Http\Controllers\matrizPracticas\MantenimientoController::class, 'postAltaSeccionNomenclador']);
     Route::post('alta-practica', [App\Http\Controllers\matrizPracticas\MantenimientoController::class, 'postAltaPractica']);
@@ -782,7 +774,6 @@ Route::group([
     Route::get('getExportTractica', [App\Http\Controllers\matrizPracticas\MantenimientoController::class, 'getExportarPractica']);
 });
 
-
 Route::group([
     'middleware' => ['jwt.verify'],
     'prefix' => '/v1/setting'
@@ -790,7 +781,6 @@ Route::group([
     Route::get('listarTipoGalenos', [App\Http\Controllers\configuracion\MantenimientoGalenosController::class, 'getListarGalenos']);
     Route::get('listarPlanesGalenos', [App\Http\Controllers\configuracion\MantenimientoGalenosController::class, 'getListarTipoPlanesGalenos']);
 });
-
 
 Route::group([
     'middleware' => ['jwt.verify'],
@@ -804,7 +794,6 @@ Route::group([
     Route::get('ocr', [App\Http\Controllers\Ocr\PruebaController::class, 'getLeerArchivo']);
 });
 
-
 Route::group([
     'middleware' => ['jwt.verify'],
     'prefix' => '/v1/recursos'
@@ -812,7 +801,6 @@ Route::group([
     Route::get('formato-practicas', [App\Http\Controllers\storage\StorageController::class, 'getDescargarFormatoImportadorPracticas']);
     Route::get('formato-liquidaciones', [App\Http\Controllers\storage\StorageController::class, 'getDescargarFormatoImportadorLiquidaciones']);
 });
-
 
 Route::group([
     'middleware' => ['jwt.verify'],
@@ -841,7 +829,6 @@ Route::group([
     Route::post('procesar', [App\Http\Controllers\facturacion\FacturacionProcesosController::class, 'postProcesarFactura']);
     // Route para recibir facturas automatizadas (API externa)
     Route::post('automation', [App\Http\Controllers\facturacion\Services\FacturaAutomaticaController::class, 'recibirFactura']);
-
 
     Route::post('auditar', [App\Http\Controllers\facturacion\AuditarFacturaController::class, 'postAuditarFactura']);
     Route::post('alta-tipo-letra-factura', [App\Http\Controllers\facturacion\FacturacionTipoLetraController::class, 'getProcesarTipoLetraFactura']);
@@ -970,7 +957,6 @@ Route::group([
     Route::get('lista-participantes-licitacion-productos', [App\Http\Controllers\Protesis\Services\DetallePrestadoreslicitacionController::class, 'getListarMatrizParticipantesProductos']);
     Route::get('ver-adjunto-cotizacion', [App\Http\Controllers\Protesis\Services\DetallePrestadoreslicitacionController::class, 'getVerAdjunto']);
 
-
     Route::post('crea-update-matriz-diagnostico', [App\Http\Controllers\Protesis\Services\MatrizDiagnosticosController::class, 'getProcesar']);
     Route::post('crea-update-matriz-producto', [App\Http\Controllers\Protesis\Services\MatrizProductoController::class, 'getProcesar']);
     Route::post('procesar-protesis', [App\Http\Controllers\Protesis\Services\ProtesisController::class, 'getProcesar']);
@@ -1018,7 +1004,6 @@ Route::group([
     Route::post('saveCartilla', [App\Http\Controllers\CartillaController::class, 'postSaveCartilla']);
     Route::post('deleteCartilla', [App\Http\Controllers\CartillaController::class, 'getfilterpostdeleteCartillaCartilla']);
 });
-
 
 Route::group([
     'middleware' => ['jwt.verify'],
@@ -1218,42 +1203,41 @@ Route::group(
 
         Route::post('enviar-email-reporte-pago-opa/{id}', [App\Http\Controllers\Tesoreria\Services\TesOrdenPagoController::class, 'printOrderPay']);
 
-        //Rutas de Cash
-    
-        Route::post('postCrear', [App\Http\Controllers\Tesoreria\Services\TesCashEgresosController::class, 'postCrear']); // Crear nuevo egreso
-        Route::get('cash-egresos', [App\Http\Controllers\Tesoreria\Services\TesCashEgresosController::class, 'getListEgresos']); // Listado general entre fechas
+        // Rutas de Cash
+
+        Route::post('postCrear', [App\Http\Controllers\Tesoreria\Services\TesCashEgresosController::class, 'postCrear']);  // Crear nuevo egreso
+        Route::get('cash-egresos', [App\Http\Controllers\Tesoreria\Services\TesCashEgresosController::class, 'getListEgresos']);  // Listado general entre fechas
         Route::get('getImputacionesByPrestador/{id}', [App\Http\Controllers\Tesoreria\Services\TesCashEgresosController::class, 'getImputacionesByPrestador']);
-        Route::get('cash-egresos/{id}', [App\Http\Controllers\Tesoreria\Services\TesCashEgresosController::class, 'getEgresoById']); // Obtener un egreso por ID
-        Route::delete('eliminarEgreso/{id}', [App\Http\Controllers\Tesoreria\Services\TesCashEgresosController::class, 'eliminarEgreso']); // Obtener un egreso por ID
+        Route::get('cash-egresos/{id}', [App\Http\Controllers\Tesoreria\Services\TesCashEgresosController::class, 'getEgresoById']);  // Obtener un egreso por ID
+        Route::delete('eliminarEgreso/{id}', [App\Http\Controllers\Tesoreria\Services\TesCashEgresosController::class, 'eliminarEgreso']);  // Obtener un egreso por ID
         // Route::put('cash-egresos/{id}', [CashEgresosController::class, 'update']); // Actualizar egreso
         Route::delete('anular-cheque', [App\Http\Controllers\Tesoreria\Services\TesChequesController::class, 'anularCheque']);
 
-        //Endpoints de opa facturacion
-        Route::get('getFacturasOpaId/{id}', [App\Http\Controllers\Tesoreria\Services\FacturasOpaController::class, 'getFacturasOpa']); // Obtener un egreso por ID
-    
-        //Endpoint de detalle de pagos
+        // Endpoints de opa facturacion
+        Route::get('getFacturasOpaId/{id}', [App\Http\Controllers\Tesoreria\Services\FacturasOpaController::class, 'getFacturasOpa']);  // Obtener un egreso por ID
+
+        // Endpoint de detalle de pagos
         // Endpoints para TesPagoDetalleController
-        Route::post('postCrearPagoDetalle', [App\Http\Controllers\Tesoreria\Services\TesPagoDetalleController::class, 'store']); // Crear nuevo detalle de pago
-        Route::put('updatePagoDetalle/{id}', [App\Http\Controllers\Tesoreria\Services\TesPagoDetalleController::class, 'update']); // Actualizar detalle de pago por ID
-        Route::delete('eliminarPagoDetalle/{id}', [App\Http\Controllers\Tesoreria\Services\TesPagoDetalleController::class, 'destroy']); // Eliminar detalle de pago por ID
-        Route::get('getPdfPagoDetalle', [App\Http\Controllers\Tesoreria\Services\TesPagoDetalleController::class, 'generarPdfPagoDetalle']); // Obtener detalle de pago por ID
-        Route::get('pagos-excel', [App\Http\Controllers\Tesoreria\Services\TesPagosController::class, 'exportarExcelPagos']); // Exportar pagos a Excel
-    
-        //Endpoints de retenciones en pagos
-        Route::get('retenciones/listar', [App\Http\Controllers\Tesoreria\Services\PagoRetencionesController::class, 'getListarRetenciones']); // Listar retenciones con filtros
-        Route::get('pago-retenciones/{idPago}', [App\Http\Controllers\Tesoreria\Services\PagoRetencionesController::class, 'listar']); // Listar retenciones de un pago
-        Route::get('pago-retencion-regla-vigente', [App\Http\Controllers\Tesoreria\Services\PagoRetencionesController::class, 'getReglaVigente']); // Obtener regla vigente de una retención
-        Route::post('pago-retencion', [App\Http\Controllers\Tesoreria\Services\PagoRetencionesController::class, 'store']); // Crear nueva retención
-        Route::put('pago-retencion/{id}', [App\Http\Controllers\Tesoreria\Services\PagoRetencionesController::class, 'update']); // Actualizar retención
-        Route::delete('pago-retencion/{id}', [App\Http\Controllers\Tesoreria\Services\PagoRetencionesController::class, 'destroy']); // Eliminar retención
-    
-        //Endpoints de saldos - deudas pendientes
-        Route::get('saldos-proveedores-prestadores', [App\Http\Controllers\Tesoreria\Services\SaldosController::class, 'getListarProveedoresPrestadoresConDeudas']); // Lista proveedores/prestadores con deudas
-        Route::get('detalle-facturas-pendientes', [App\Http\Controllers\Tesoreria\Services\SaldosController::class, 'getDetalleFacturasPendientes']); // Detalle de facturas pendientes específicas
-        Route::get('resumen-deudas', [App\Http\Controllers\Tesoreria\Services\SaldosController::class, 'getResumenDeudas']); // Resumen general de deudas
+        Route::post('postCrearPagoDetalle', [App\Http\Controllers\Tesoreria\Services\TesPagoDetalleController::class, 'store']);  // Crear nuevo detalle de pago
+        Route::put('updatePagoDetalle/{id}', [App\Http\Controllers\Tesoreria\Services\TesPagoDetalleController::class, 'update']);  // Actualizar detalle de pago por ID
+        Route::delete('eliminarPagoDetalle/{id}', [App\Http\Controllers\Tesoreria\Services\TesPagoDetalleController::class, 'destroy']);  // Eliminar detalle de pago por ID
+        Route::get('getPdfPagoDetalle', [App\Http\Controllers\Tesoreria\Services\TesPagoDetalleController::class, 'generarPdfPagoDetalle']);  // Obtener detalle de pago por ID
+        Route::get('pagos-excel', [App\Http\Controllers\Tesoreria\Services\TesPagosController::class, 'exportarExcelPagos']);  // Exportar pagos a Excel
+
+        // Endpoints de retenciones en pagos
+        Route::get('retenciones/listar', [App\Http\Controllers\Tesoreria\Services\PagoRetencionesController::class, 'getListarRetenciones']);  // Listar retenciones con filtros
+        Route::get('pago-retenciones/{idPago}', [App\Http\Controllers\Tesoreria\Services\PagoRetencionesController::class, 'listar']);  // Listar retenciones de un pago
+        Route::get('pago-retencion-regla-vigente', [App\Http\Controllers\Tesoreria\Services\PagoRetencionesController::class, 'getReglaVigente']);  // Obtener regla vigente de una retención
+        Route::post('pago-retencion', [App\Http\Controllers\Tesoreria\Services\PagoRetencionesController::class, 'store']);  // Crear nueva retención
+        Route::put('pago-retencion/{id}', [App\Http\Controllers\Tesoreria\Services\PagoRetencionesController::class, 'update']);  // Actualizar retención
+        Route::delete('pago-retencion/{id}', [App\Http\Controllers\Tesoreria\Services\PagoRetencionesController::class, 'destroy']);  // Eliminar retención
+
+        // Endpoints de saldos - deudas pendientes
+        Route::get('saldos-proveedores-prestadores', [App\Http\Controllers\Tesoreria\Services\SaldosController::class, 'getListarProveedoresPrestadoresConDeudas']);  // Lista proveedores/prestadores con deudas
+        Route::get('detalle-facturas-pendientes', [App\Http\Controllers\Tesoreria\Services\SaldosController::class, 'getDetalleFacturasPendientes']);  // Detalle de facturas pendientes específicas
+        Route::get('resumen-deudas', [App\Http\Controllers\Tesoreria\Services\SaldosController::class, 'getResumenDeudas']);  // Resumen general de deudas
     }
 );
-
 
 Route::group([
     'middleware' => ['api'],
@@ -1318,7 +1302,6 @@ Route::group([
     Route::get('listProgramaAfiliado', [App\Http\Controllers\afiliados\Services\ProgramaEspecialController::class, 'getByfindProgramasAfiliados']);
 });
 
-
 Route::group([
     'middleware' => ['api'],
     'prefix' => '/v1/nube-comprabantes'
@@ -1328,35 +1311,31 @@ Route::group([
     Route::post('procesar', [App\Http\Controllers\NubeComprobantes\NubeComprobantesController::class, 'procesar']);
 });
 
-
 Route::group(
     [
         'middleware' => ['jwt.verify'],
         'prefix' => '/v1/fiscalizacion'
     ],
     function () {
-
         // Rutas para tb_fisca_cuotas
         Route::get('getListCuotas', [App\Http\Controllers\Fiscalizacion\CuotaController::class, 'getListCuotas']);
         Route::post('procesar-cuota', [App\Http\Controllers\Fiscalizacion\CuotaController::class, 'postSaveCuota']);
         Route::post('postPagarCuota', [App\Http\Controllers\Fiscalizacion\CuotaController::class, 'postPagarCuota']);
         Route::get('cuota/{id}', [App\Http\Controllers\Fiscalizacion\CuotaController::class, 'getCuotaById']);
-        //comprobantes de cuotas
+        // comprobantes de cuotas
         Route::get('getArchivosPorCuota/{id}', [App\Http\Controllers\Fiscalizacion\CuotaController::class, 'getArchivosPorCuota']);
         Route::get('getArchivoAdjuntocuota', action: [App\Http\Controllers\Fiscalizacion\CuotaController::class, 'getArchivoAdjunto']);
-
 
         // Rutas para tb_fisca_acuerdo_pago_periodo
         Route::get('acuerdos-pago-periodo', [App\Http\Controllers\Fiscalizacion\AcuerdoPagoPeriodoController::class, 'getListAcuerdosPagoPeriodo']);
         Route::get('acuerdo-pago-periodo/{id}', [App\Http\Controllers\Fiscalizacion\AcuerdoPagoPeriodoController::class, 'getAcuerdoPagoPeriodoById']);
         Route::post('procesar-acuerdo-pago-periodo', [App\Http\Controllers\Fiscalizacion\AcuerdoPagoPeriodoController::class, 'postSaveAcuerdoPagoPeriodo']);
 
-        //Deudas de empressas
+        // Deudas de empressas
         Route::get('buscarDeudasEmpresa/{id}', [App\Http\Controllers\Fiscalizacion\DeudaAporteEmpresaController::class, 'buscarPorEmpresa']);
         Route::get('getListDeudas', [App\Http\Controllers\Fiscalizacion\DeudaAporteEmpresaController::class, 'getListDeudas']);
         Route::get('detalleDeuda', [App\Http\Controllers\Fiscalizacion\DeudaAporteEmpresaController::class, 'detalleDeuda']);
         Route::get('deuda-empresa', [App\Http\Controllers\Fiscalizacion\DeudaAporteEmpresaController::class, 'pdfDeudaEmpresa']);
-
 
         // Rutas para tb_fisca_cobranzas
         Route::get('listarCobranzas', [App\Http\Controllers\Fiscalizacion\CobranzaController::class, 'listarCobranzas']);
@@ -1365,7 +1344,7 @@ Route::group(
         Route::get('buscarDeudasEmpresaExpediente/{id}', [App\Http\Controllers\Fiscalizacion\CobranzaController::class, 'buscarDeudasPorExpediente']);
         Route::post('procesar-cobranza', [App\Http\Controllers\Fiscalizacion\CobranzaController::class, 'postSaveCobranza']);
         Route::delete('eliminarCobranza/{id}', [App\Http\Controllers\Fiscalizacion\CobranzaController::class, 'eliminarCobranza']);
-        //Comprobantes de cobranzas
+        // Comprobantes de cobranzas
         Route::get('getArchivoAdjunto', action: [App\Http\Controllers\Fiscalizacion\CobranzaController::class, 'getArchivoAdjunto']);
         Route::get('getArchivosPorCobranza/{id}', [App\Http\Controllers\Fiscalizacion\CobranzaController::class, 'getArchivosPorCobranza']);
 
@@ -1375,7 +1354,7 @@ Route::group(
         Route::get('getListAcuerdosPago', [App\Http\Controllers\Fiscalizacion\AcuerdoPagoController::class, 'getListAcuerdosPago']);
         Route::delete('eliminarAcuerdo/{id}', [App\Http\Controllers\Fiscalizacion\AcuerdoPagoController::class, 'eliminarAcuerdo']);
         // Route::get('acuerdo-pago/{id}', [App\Http\Controllers\Fiscalizacion\AcuerdoPagoController::class, 'getAcuerdoPagoById']);
-    
+
         // Rutas para tb_fisca_cobranza_periodo
         Route::get('cobranzas-periodo', [App\Http\Controllers\Fiscalizacion\CobranzaPeriodoController::class, 'getListCobranzasPeriodo']);
         Route::get('cobranza-periodo/{id}', [App\Http\Controllers\Fiscalizacion\CobranzaPeriodoController::class, 'getCobranzaPeriodoById']);
@@ -1405,26 +1384,23 @@ Route::group(
         Route::get('movimiento/{id}', [App\Http\Controllers\Fiscalizacion\MovimientoController::class, 'getMovimientoById']);
         Route::post('procesar-movimiento', [App\Http\Controllers\Fiscalizacion\MovimientoController::class, 'postSaveMovimiento']);
 
-        //Rutas de sistema anterior
+        // Rutas de sistema anterior
         Route::get('/seguimientos-anteriores', [App\Http\Controllers\Fiscalizacion\SeguimientoAnteriorController::class, 'getListSeguimientos']);
         Route::post('/contarIntimacionesActivas', [App\Http\Controllers\Fiscalizacion\SeguimientoAnteriorController::class, 'contarIntimacionesActivas']);
 
-        //Rutas de cobranzas anteriores
+        // Rutas de cobranzas anteriores
         Route::get('/cobranzas-anteriores', [App\Http\Controllers\Fiscalizacion\CobranzaAnteriorController::class, 'getListCobranzas']);
 
-        //Rutas de instituciones
+        // Rutas de instituciones
         Route::get('instituciones', [App\Http\Controllers\Fiscalizacion\InstitucionesController::class, 'getListInstituciones']);
 
-        //Rutas de bancos
+        // Rutas de bancos
         Route::get('getBancosCobranza', [App\Http\Controllers\Fiscalizacion\BancosCobranzaController::class, 'getListBancosCobranza']);
 
-        //Rutas de Formas de pago
+        // Rutas de Formas de pago
         Route::get('getFormasPago', [App\Http\Controllers\Fiscalizacion\FormasPagoController::class, 'getListFormasPago']);
     }
-
-
 );
-
 
 Route::group([
     'middleware' => ['jwt.verify'],
@@ -1479,17 +1455,16 @@ Route::group([
     Route::delete('eliminar-nivel', [App\Http\Controllers\Contabilidad\Services\PlanesCuentasController::class, 'getEliminarNivel']);
     Route::delete('eliminar-item-plan-cuenta', [App\Http\Controllers\Contabilidad\Services\PlanesCuentasController::class, 'getEliminarDetalleItem']);
     Route::delete('eliminar-asiento-detalle-item', [App\Http\Controllers\Contabilidad\Services\AsientoContableController::class, 'getEliminarDetalleId']);
-    //libro Diario
+    // libro Diario
     Route::get('cs-resumen-libro-diario', [App\Http\Controllers\Contabilidad\Services\LibroDiarioController::class, 'getListarResumenDiario']);
     Route::get('getReporteLibroDiario', [App\Http\Controllers\Contabilidad\Services\LibroDiarioController::class, 'getReporteLibroDiario']);
-    //Libro Mayor
+    // Libro Mayor
     Route::get('getLibroMayor', [App\Http\Controllers\Contabilidad\Services\LibroMayorController::class, 'getLibroMayor']);
     Route::get('getReporteLibroMayor', [App\Http\Controllers\Contabilidad\Services\LibroMayorController::class, 'getReporteLibroMayor']);
-    //Balance
+    // Balance
     Route::get('getBalanceSaldo', [App\Http\Controllers\Contabilidad\Services\BalanceController::class, 'getBalanceSaldo']);
     Route::get('getExportarBalanceSaldo', [App\Http\Controllers\Contabilidad\Services\BalanceController::class, 'getExportarBalanceSaldo']);
 });
-
 
 Route::group([
     'middleware' => ['jwt.verify'],
