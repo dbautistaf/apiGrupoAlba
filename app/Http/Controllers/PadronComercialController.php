@@ -556,10 +556,10 @@ class PadronComercialController extends Controller
                         'cod_perfil' => 25,
                         'actualizo_datos' => 0
                     ]);
-                    $afiliado = AfiliadoPadronEntity::with(['obrasocial', 'tipoParentesco', 'origen'])->where('dni', $request->dni)->first();
-                    Mail::mailer('gmail_padron')
-                        ->to($afiliado->email)
-                        ->send(new NotificarUsuario($afiliado));
+                    //$afiliado = AfiliadoPadronEntity::with(['obrasocial', 'tipoParentesco', 'origen'])->where('dni', $request->dni)->first();
+                    //Mail::mailer('gmail_padron')
+                    //    ->to($afiliado->email)
+                    //    ->send(new NotificarUsuario($afiliado));
                 }
             }
         } else {
