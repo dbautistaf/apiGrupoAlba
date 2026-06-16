@@ -3,6 +3,7 @@
 namespace App\Models\facturacion;
 
 use App\Models\configuracion\RazonSocialModelo;
+use App\Models\Contabilidad\AsientosFacturacionHistorialEntity;
 use App\Models\LocatorioModelos;
 use App\Models\prestadores\PrestadorEntity;
 use App\Models\proveedor\MatrizProveedoresEntity;
@@ -112,5 +113,10 @@ class FacturacionDatosEntity extends Model
     public function opa()
     {
         return $this->hasOne(TesOrdenPagoEntity::class, 'id_factura');
+    }
+
+    public function historialAsientos()
+    {
+        return $this->hasMany(AsientosFacturacionHistorialEntity::class, 'id_factura', 'id_factura');
     }
 }
