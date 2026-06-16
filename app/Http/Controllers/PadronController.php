@@ -6,23 +6,23 @@ use App\Exports\PadronExport;
 use App\Exports\PadronLiquidacionExport;
 use App\Mail\NotificarUsuario;
 use App\Models\afiliado\AfiliadoCertificadoEntity;
-use App\Models\AuditoriaPadronModelo;
 use App\Models\afiliado\AfiliadoDetalleTipoPlanEntity;
 use App\Models\afiliado\AfiliadoEscolaridadEntity;
-use App\Models\DetalleTipoDocAfiliadoModelo;
 use App\Models\afiliado\AfiliadoPadronEntity;
 use App\Models\Afip\DeclaracionesJuradasModelo;
 use App\Models\Afip\TransferenciasModelo;
-use App\Models\BajasAfiliadosModel;
 use App\Models\Internaciones\InternacionesNotasEntity;
-use App\Models\RelacionLaboralModelo;
-use App\Models\PadronComercialModelo;
 use App\Models\PrestacionesMedicas\PrestacionesPracticaLaboratorioEntity;
+use App\Models\AuditoriaPadronModelo;
+use App\Models\BajasAfiliadosModel;
+use App\Models\DetalleTipoDocAfiliadoModelo;
+use App\Models\PadronComercialModelo;
+use App\Models\RelacionLaboralModelo;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
-use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ServerException;
+use GuzzleHttp\Client;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
@@ -40,8 +40,8 @@ class PadronController extends Controller
             'origen',
             'user',
             'tipoParentesco',
-            'detalleplan.TipoPlan', // relación en cascada
-            'documentos'       // relación definida en el modelo
+            'detalleplan.TipoPlan',  // relación en cascada
+            'documentos'  // relación definida en el modelo
         ])
             ->where('activo', 1)
             ->orderByDesc('cuil_tit')
@@ -60,7 +60,7 @@ class PadronController extends Controller
                         'id_detalle' => $doc->id_detalle,
                         'nombre_archivo' => $doc->nombre_archivo,
                         'url_archivo' => url('/storage/images/' . $doc->nombre_archivo),
-                        'tipo_documentacion' => $doc->tipoDocumentacion->tipo_documentacion ?? null, // Enviar el nombre del tipo de documentación
+                        'tipo_documentacion' => $doc->tipoDocumentacion->tipo_documentacion ?? null,  // Enviar el nombre del tipo de documentación
                         'fecha_carga' => $doc->fecha_carga,
                         'observaciones' => $doc->observacion
                     ];
@@ -74,21 +74,23 @@ class PadronController extends Controller
 
     public function counterDownload()
     {
-        $padron =  AfiliadoPadronEntity::with(['tipoParentesco', 'detallebaja', 'locatario'])
+        $padron = AfiliadoPadronEntity::with(['tipoParentesco', 'detallebaja', 'locatario'])
             ->where('fech_descarga', '!=', null)
             ->count();
-        return response()->json(["counter" => $padron], 200);
+        return response()->json(['counter' => $padron], 200);
     }
 
     public function listPadronDownloadCarnet()
     {
-        $files =  array();
-        $padron =  AfiliadoPadronEntity::with(['tipoParentesco', 'detallebaja', 'locatario'])->where('fech_descarga', '!=', null)
+        $files = array();
+        $padron = AfiliadoPadronEntity::with(['tipoParentesco', 'detallebaja', 'locatario'])
+            ->where('fech_descarga', '!=', null)
             ->get();
 
         foreach ($padron as $file) {
             $plan = AfiliadoDetalleTipoPlanEntity::with(['TipoPlan'])
-                ->where('id_padron', $file->dni)->get();
+                ->where('id_padron', $file->dni)
+                ->get();
             $fechaNacimiento = Carbon::parse($file->fe_nac);
             $fechaActual = Carbon::now();
             $diferencia = $fechaNacimiento->diff($fechaActual);
@@ -98,7 +100,6 @@ class PadronController extends Controller
         }
         return response()->json($files, 200);
     }
-
 
     public function getListPadronEstado($estado)
     {
@@ -119,7 +120,7 @@ class PadronController extends Controller
                     ->select('tb_padron.*', 'tb_credencial.num_carnet')
                     ->get();
             } else {
-                $padron =  AfiliadoPadronEntity::where('activo', '=', $estado)->get();
+                $padron = AfiliadoPadronEntity::where('activo', '=', $estado)->get();
             }
         } else {
             return response()->json(['message' => 'No tiene permisos para realizar el filtro'], 403);
@@ -183,24 +184,29 @@ class PadronController extends Controller
             'user',
             'tipoParentesco',
             'detalleplan.tipoPlan',
-            'documentos.tipoDocumentacion' // Relación para obtener la descripción del tipo de documentación
+            'documentos.tipoDocumentacion'  // Relación para obtener la descripción del tipo de documentación
         ]);
         $hayFiltro = false;
 
         if (!empty($request->dni)) {
             $hayFiltro = true;
 
-            $query->where(function ($q) use ($request) {
-                $q->where('dni', 'like', $request->dni . '%')
-                    ->orWhere('cuil_tit', 'like', '%' . $request->dni . '%')
-                    ->orWhere('cuil_benef', 'like', '%' . $request->dni . '%')
-                    ->orWhere('nombre', 'like', '%' . $request->dni . '%')
-                    ->orWhere('apellidos', 'like', '%' . $request->dni . '%');
-            });
+            $afiliado = AfiliadoPadronEntity::where('dni', $request->dni)->first();
+
+            if ($afiliado) {
+                $query->where('cuil_tit', $afiliado->cuil_tit);
+            } else {
+                $query->where(function ($q) use ($request) {
+                    $q
+                        ->where('nombre', 'like', '%' . $request->dni . '%')
+                        ->orWhere('apellidos', 'like', '%' . $request->dni . '%')
+                        ->orWhere('cuil_tit', 'like', $request->dni . '%')
+                        ->orWhere('cuil_benef', 'like', $request->dni . '%');
+                });
+            }
         }
 
         if ($user->cod_usuario == 23 || $user->cod_usuario == 25 || $user->cod_usuario == 2) {
-
             if (!empty($request->cuil)) {
                 $hayFiltro = true;
                 $query->where('cuil_tit', 'like', '%' . $request->cuil . '%');
@@ -244,7 +250,7 @@ class PadronController extends Controller
                         'id_detalle' => $doc->id_detalle,
                         'nombre_archivo' => $doc->nombre_archivo,
                         'url_archivo' => url('/storage/images/' . $doc->nombre_archivo),
-                        'tipo_documentacion' => $doc->tipoDocumentacion->tipo_documentacion ?? null, // Enviar el nombre del tipo de documentación
+                        'tipo_documentacion' => $doc->tipoDocumentacion->tipo_documentacion ?? null,  // Enviar el nombre del tipo de documentación
                         'fecha_carga' => $doc->fecha_carga,
                         'observaciones' => $doc->observacion
                     ];
@@ -262,7 +268,8 @@ class PadronController extends Controller
     public function getPadronFamiliar($cuit_titular)
     {
         $files = [];
-        $query = AfiliadoPadronEntity::with(['tipoParentesco', 'origen'])->where('cuil_tit', '=', "$cuit_titular")
+        $query = AfiliadoPadronEntity::with(['tipoParentesco', 'origen'])
+            ->where('cuil_tit', '=', "$cuit_titular")
             ->limit(50)
             ->get();
         foreach ($query as $file) {
@@ -283,8 +290,10 @@ class PadronController extends Controller
         $arrayRelacion = [];
         $query = AfiliadoPadronEntity::with('detalleplan.TipoPlan')->where('dni', $user->documento)->first();
         if ($query) {
-            $relacionLaboral = RelacionLaboralModelo::with(['relacionEmpresa'])->where('id_padron', $query->dni)
-                ->where('fecha_baja_empresa', '=', '1900-01-01')->get();
+            $relacionLaboral = RelacionLaboralModelo::with(['relacionEmpresa'])
+                ->where('id_padron', $query->dni)
+                ->where('fecha_baja_empresa', '=', '1900-01-01')
+                ->get();
 
             $fechaNacimiento = Carbon::parse($query->fe_nac);
             $fechaActual = Carbon::now();
@@ -339,7 +348,7 @@ class PadronController extends Controller
                 if ($ahora !== '[]') {
                     AuditoriaPadronModelo::create([
                         'fecha' => $now->format('Y-m-d H:i:s'),
-                        'antes' =>  $antes,
+                        'antes' => $antes,
                         'ahora' => $ahora,
                         'id_padron' => $query->dni,
                         'cod_usuario' => $user->cod_usuario,
@@ -358,7 +367,7 @@ class PadronController extends Controller
                     if ($ahora !== '[]') {
                         AuditoriaPadronModelo::create([
                             'fecha' => $now->format('Y-m-d H:i:s'),
-                            'antes' =>  $antes,
+                            'antes' => $antes,
                             'ahora' => $ahora,
                             'id_padron' => $array->dni,
                             'cod_usuario' => $user->cod_usuario,
@@ -395,7 +404,7 @@ class PadronController extends Controller
                 if ($ahora !== '[]') {
                     AuditoriaPadronModelo::create([
                         'fecha' => $now->format('Y-m-d H:i:s'),
-                        'antes' =>  $antes,
+                        'antes' => $antes,
                         'ahora' => $ahora,
                         'id_padron' => $array->dni,
                         'cod_usuario' => $user->cod_usuario,
@@ -424,7 +433,7 @@ class PadronController extends Controller
 
         if ($request->activo == 0) {
             $query = AfiliadoPadronEntity::with('detalleplan.addplan', 'tipoParentesco', 'obrasocial')->where('dni', $request->id)->first();
-            $pdf = Pdf::loadView('baja_afiliado', ["padron" => $query]);
+            $pdf = Pdf::loadView('baja_afiliado', ['padron' => $query]);
             $pdf->setPaper('A4');
             return response($pdf->output(), 200)
                 ->header('Content-Type', 'application/pdf');
@@ -432,8 +441,6 @@ class PadronController extends Controller
             return response()->json(['message' => 'Estado cambiado correctamente'], 200);
         }
     }
-
-
 
     public function postSavePadron(Request $request)
     {
@@ -443,13 +450,12 @@ class PadronController extends Controller
         $arrayEmpresa = explode(',', $request->id_empresa);
         $titular = json_decode($request->input('newComercial'));
         $familiar = json_decode($request->input('familiarComercial'));
-        //return response()->json($titular->empresa,200);
+        // return response()->json($titular->empresa,200);
         if ($titular->fe_alta > $now->format('Y-m-d')) {
             $titular->activo = 0;
         }
         if ($titular->id != '') {
             try {
-
                 DB::beginTransaction();
                 $nombreTabla = (new AfiliadoPadronEntity)->getTable();
                 $nombresDeColumnas = Schema::getColumnListing($nombreTabla);
@@ -480,10 +486,9 @@ class PadronController extends Controller
                 foreach ($nombresDeColumnas as $nombreColumna) {
                     // Evitar error si alguna columna no existe en $titular
                     if (isset($titular->$nombreColumna) && $query->$nombreColumna != $titular->$nombreColumna) {
-
                         // Guardar solo los campos que cambiaron
-                        $arrayUpdate[$nombreColumna] = $titular->$nombreColumna; // nuevo valor
-                        $arrayAntes[$nombreColumna] = $query->$nombreColumna;     // valor anterior
+                        $arrayUpdate[$nombreColumna] = $titular->$nombreColumna;  // nuevo valor
+                        $arrayAntes[$nombreColumna] = $query->$nombreColumna;  // valor anterior
                     }
                 }
                 $user = Auth::user();
@@ -492,7 +497,7 @@ class PadronController extends Controller
                 if ($ahora !== '[]') {
                     AuditoriaPadronModelo::create([
                         'fecha' => $now->format('Y-m-d H:i:s'),
-                        'antes' =>  $antes,
+                        'antes' => $antes,
                         'ahora' => $ahora,
                         'id_padron' => $query->dni,
                         'cod_usuario' => $user->cod_usuario,
@@ -544,7 +549,7 @@ class PadronController extends Controller
                 $query->orden_grupo = $titular->orden_grupo;
                 $query->save();
                 $this->postSavePadronComercial($titular);
-                //AfiliadoDetalleTipoPlanEntity::where('id_padron', $request->id)->delete();
+                // AfiliadoDetalleTipoPlanEntity::where('id_padron', $request->id)->delete();
                 if (count($titular->plan) > 0) {
                     AfiliadoDetalleTipoPlanEntity::where('id_padron', $titular->dni)->delete();
                     foreach ($titular->plan as $plan) {
@@ -577,8 +582,7 @@ class PadronController extends Controller
                         DetalleTipoDocAfiliadoModelo::create([
                             'nombre_archivo' => $fileName,
                             'id_padron' => $titular->id,
-                            'id_tipo_documentacion' =>  $request->id_tipo_doc[$index]
-
+                            'id_tipo_documentacion' => $request->id_tipo_doc[$index]
                         ]);
                     }
                 }
@@ -598,7 +602,6 @@ class PadronController extends Controller
                 $dni = AfiliadoPadronEntity::where('dni', $titular->dni)->first();
 
                 if (!$dni) {
-
                     $user = Auth::user();
                     $titular->id_usuario = $user->cod_usuario;
                     $padron = AfiliadoPadronEntity::create([
@@ -652,7 +655,7 @@ class PadronController extends Controller
                     ]);
                     AuditoriaPadronModelo::create([
                         'fecha' => $now->format('Y-m-d H:i:s'),
-                        'antes' =>  '-',
+                        'antes' => '-',
                         'ahora' => $padron->nombre . ' ' . $padron->apellidos,
                         'id_padron' => $padron->dni,
                         'cod_usuario' => $user->cod_usuario,
@@ -669,7 +672,6 @@ class PadronController extends Controller
                             ]);
                         }
                     }
-
 
                     if (count($titular->plan) > 0) {
                         foreach ($titular->plan as $plan) {
@@ -689,8 +691,7 @@ class PadronController extends Controller
                             DetalleTipoDocAfiliadoModelo::create([
                                 'nombre_archivo' => $fileName,
                                 'id_padron' => $padron->id,
-                                'id_tipo_documentacion' =>  $request->id_tipo_doc[$index]
-
+                                'id_tipo_documentacion' => $request->id_tipo_doc[$index]
                             ]);
                         }
                     }
@@ -711,8 +712,8 @@ class PadronController extends Controller
                                 'cod_perfil' => 25,
                                 'actualizo_datos' => 0
                             ]);
-                            //$afiliado = AfiliadoPadronEntity::with(['obrasocial', 'tipoParentesco', 'origen'])->where('dni', $padron->dni)->first();
-                            //Mail::to($afiliado->email)->send(new NotificarUsuario($afiliado));
+                            // $afiliado = AfiliadoPadronEntity::with(['obrasocial', 'tipoParentesco', 'origen'])->where('dni', $padron->dni)->first();
+                            // Mail::to($afiliado->email)->send(new NotificarUsuario($afiliado));
                         }
                     }
                     $msg = 'Datos registrados correctamente';
@@ -781,7 +782,7 @@ class PadronController extends Controller
             $data = json_decode($response->getBody(), true);
             return response()->json($data);
         } catch (ServerException $e) {
-            //throw $th;
+            // throw $th;
             return response()->json(['message' => 'El número de documento no existe en la base de datos, llenar los campos manualmente'], 500);
         }
     }
@@ -847,7 +848,7 @@ class PadronController extends Controller
     {
         $files = [];
         if ($estado == 'Pendiente') {
-            $padron =  AfiliadoPadronEntity::where('credencial', 'Pendiente')->limit(50)->get();
+            $padron = AfiliadoPadronEntity::where('credencial', 'Pendiente')->limit(50)->get();
             foreach ($padron as $file) {
                 $plan = AfiliadoDetalleTipoPlanEntity::with(['TipoPlan'])
                     ->where('id_padron', $file->id)
@@ -862,7 +863,7 @@ class PadronController extends Controller
             }
             return response()->json($files, 200);
         } else if ($estado == 'Rechazado') {
-            $padron =  AfiliadoPadronEntity::where('credencial', 'Rechazado')->limit(50)->get();
+            $padron = AfiliadoPadronEntity::where('credencial', 'Rechazado')->limit(50)->get();
             foreach ($padron as $file) {
                 $plan = AfiliadoDetalleTipoPlanEntity::with(['TipoPlan'])
                     ->where('id_padron', $file->id)
@@ -877,7 +878,7 @@ class PadronController extends Controller
             }
             return response()->json($files, 200);
         } else if ($estado == 'Autorizado') {
-            $padron =  AfiliadoPadronEntity::where('credencial', 'Autorizado')->limit(50)->get();
+            $padron = AfiliadoPadronEntity::where('credencial', 'Autorizado')->limit(50)->get();
             foreach ($padron as $file) {
                 $plan = AfiliadoDetalleTipoPlanEntity::with(['TipoPlan'])
                     ->where('id_padron', $file->id)
@@ -949,8 +950,10 @@ class PadronController extends Controller
         }
         $query = AfiliadoPadronEntity::with(['tipoParentesco', 'origen', 'obrasocial', 'caja', 'baja'])->where('cuil_tit', $titular->cuil_tit)->get();
         $notas = InternacionesNotasEntity::with(['usuario'])->where('dni_afiliado', $titular->dni)->get();
-        $prestaciones = PrestacionesPracticaLaboratorioEntity::with(["detalle", "detalle.practica", "estadoPrestacion", "afiliado", "afiliado.obrasocial", "usuario", "prestador", "profesional", "datosTramite", "datosTramite.tramite", "datosTramite.prioridad", "datosTramite.obrasocial"])
-            ->where('dni_afiliado', $request->dni)->orderByDesc('fecha_registra')->get();
+        $prestaciones = PrestacionesPracticaLaboratorioEntity::with(['detalle', 'detalle.practica', 'estadoPrestacion', 'afiliado', 'afiliado.obrasocial', 'usuario', 'prestador', 'profesional', 'datosTramite', 'datosTramite.tramite', 'datosTramite.prioridad', 'datosTramite.obrasocial'])
+            ->where('dni_afiliado', $request->dni)
+            ->orderByDesc('fecha_registra')
+            ->get();
         foreach ($query as $file) {
             $plan = AfiliadoDetalleTipoPlanEntity::with('TipoPlan')->where('id_padron', $file->dni)->get();
             $escolaridad = AfiliadoEscolaridadEntity::where('id_padron', $file->dni)->first();
@@ -960,7 +963,7 @@ class PadronController extends Controller
             $fechaNacimiento = Carbon::parse($file->fe_nac);
             $fechaActual = Carbon::now();
             $diferencia = $fechaNacimiento->diff($fechaActual);
-            $file["edad"] = $diferencia->y;
+            $file['edad'] = $diferencia->y;
             $file['plan'] = $plan;
             $file['autorizacion'] = $prestaciones;
             $file['notas'] = $notas;
@@ -1037,7 +1040,7 @@ class PadronController extends Controller
             ]);
             AuditoriaPadronModelo::create([
                 'fecha' => $now->format('Y-m-d H:i:s'),
-                'antes' =>  '-',
+                'antes' => '-',
                 'ahora' => $padron->nombre . ' ' . $padron->apellidos,
                 'id_padron' => $padron->dni,
                 'cod_usuario' => $user->cod_usuario,
@@ -1079,7 +1082,7 @@ class PadronController extends Controller
                 DetalleTipoDocAfiliadoModelo::create([
                     'nombre_archivo' => $fileName,
                     'id_padron' => $request->id_afiliado,
-                    'id_tipo_documentacion' =>  $request->id_tipo_doc[$index],
+                    'id_tipo_documentacion' => $request->id_tipo_doc[$index],
                     'fecha_carga' => $now->format('Y-m-d'),
                     'observacion' => $request->observaciones[$index]
                 ]);
@@ -1097,7 +1100,6 @@ class PadronController extends Controller
         $plan = AfiliadoDetalleTipoPlanEntity::where('id_padron', $request->dni)->get();
         if ($Afiliados) {
             foreach ($Afiliados as $afiliado) {
-
                 if ($afiliado->id_parentesco != '00') {
                     $afiliado->id_comercial_caja = $request->id_comercial_caja;
                     $afiliado->id_comercial_origen = $request->id_comercial_origen;
@@ -1106,15 +1108,15 @@ class PadronController extends Controller
                     $afiliado->celular = $request->celular;
                     $afiliado->telefono = $request->telefono;
                     $afiliado->domicilio_laboral = $request->domicilio_laboral;
-                    $afiliado->id_provincia =$request->id_provincia;
-                    $afiliado->id_partido=$request->id_partido;
-                    $afiliado->id_localidad=$request->id_localidad;
-                    $afiliado->id_cpostal=$request->id_cpostal;
-                    $afiliado->calle=$request->calle;
-                    $afiliado->numero=$request->numero;
-                    $afiliado->piso=$request->piso;
-                    $afiliado->depto=$request->depto;
-                    $afiliado->id_tipo_domicilio=$request->id_tipo_domicilio;
+                    $afiliado->id_provincia = $request->id_provincia;
+                    $afiliado->id_partido = $request->id_partido;
+                    $afiliado->id_localidad = $request->id_localidad;
+                    $afiliado->id_cpostal = $request->id_cpostal;
+                    $afiliado->calle = $request->calle;
+                    $afiliado->numero = $request->numero;
+                    $afiliado->piso = $request->piso;
+                    $afiliado->depto = $request->depto;
+                    $afiliado->id_tipo_domicilio = $request->id_tipo_domicilio;
                     $afiliado->save();
 
                     if ($plan && count($plan) > 0) {
@@ -1148,7 +1150,6 @@ class PadronController extends Controller
 
     public function deleteDetalleTipoDoc(Request $request)
     {
-
         $doc = DetalleTipoDocAfiliadoModelo::where('id_detalle', $request->id)->first();
 
         if (!$doc) {
@@ -1161,7 +1162,7 @@ class PadronController extends Controller
 
     public function srvReportesAfiliado(Request $request)
     {
-        $query = AfiliadoPadronEntity::with(['obrasocial', 'tipoParentesco', 'delegacion', 'baja', 'empresadetalle.relacionEmpresa', 'provincia', 'partido', 'localidad','origen']);
+        $query = AfiliadoPadronEntity::with(['obrasocial', 'tipoParentesco', 'delegacion', 'baja', 'empresadetalle.relacionEmpresa', 'provincia', 'partido', 'localidad', 'origen']);
 
         if ($request->id_filial != null) {
             $query->whereIn('id_delegacion', $request->id_filial);
@@ -1212,35 +1213,26 @@ class PadronController extends Controller
         $query = AfiliadoPadronEntity::select(
             'tb_delegacion.id as id_filial',
             'tb_delegacion.delegacion',
-
             DB::raw('COUNT(tb_padron.dni) as total_afiliados'),
-
             DB::raw("COUNT(CASE 
                 WHEN tb_padron.id_parentesco = '00' 
                 THEN 1 END) as total_titulares"),
-
             DB::raw("COUNT(CASE 
                 WHEN tb_padron.id_parentesco IN ('01','02') 
                 THEN 1 END) as total_conyugue"),
-
             DB::raw("COUNT(CASE 
                 WHEN tb_padron.id_parentesco IN ('08') 
                 THEN 1 END) as total_familiar"),
-
             DB::raw("COUNT(CASE 
                 WHEN tb_padron.id_parentesco = '10' 
                 THEN 1 END) as total_adherente"),
-
             DB::raw("COUNT(CASE 
                 WHEN tb_padron.id_parentesco = '99' 
                 THEN 1 END) as sin_identificar"),
-
             DB::raw("COUNT(CASE 
                 WHEN tb_padron.id_parentesco NOT IN ('00','01','02','10','99','08') 
                 THEN 1 END) as total_hijos")
-
         )
-
             ->join('tb_delegacion', 'tb_delegacion.id', '=', 'tb_padron.id_delegacion')
             ->groupBy('tb_delegacion.id', 'tb_delegacion.delegacion');
 
@@ -1277,14 +1269,14 @@ class PadronController extends Controller
                     'tb_locatorio.id_locatorio',
                     'tb_locatorio.locatorio',
                     'tb_delegacion.id',
-                'tb_delegacion.delegacion',
+                    'tb_delegacion.delegacion',
                 )
                 ->orderBy('tb_locatorio.id_locatorio')
                 ->orderBy('tb_delegacion.id')
                 ->get()
                 ->groupBy('locatorio');
 
-            $pdf = Pdf::loadView('memorando.memorando_general', ["tipo" => $request->tipo, "locatarios" => $query2]);
+            $pdf = Pdf::loadView('memorando.memorando_general', ['tipo' => $request->tipo, 'locatarios' => $query2]);
             $pdf->setPaper('A4');
             return $pdf->download('memorando.pdf');
         } else {
@@ -1297,15 +1289,13 @@ class PadronController extends Controller
                 ->groupBy('tb_delegacion.id', 'tb_delegacion.delegacion');
 
             if ($request->tipo == 'alta') {
-
                 $inicioMes = Carbon::now()->startOfMonth()->toDateString();
-                $finMes    = Carbon::now()->endOfMonth()->toDateString();
+                $finMes = Carbon::now()->endOfMonth()->toDateString();
 
                 $query->whereBetween('fe_alta', [$inicioMes, $finMes]);
             }
 
             if ($request->tipo == 'baja' && $request->desde) {
-
                 $inicio = Carbon::createFromFormat('Y-m', $request->desde)
                     ->startOfMonth()
                     ->toDateString();
@@ -1319,7 +1309,7 @@ class PadronController extends Controller
 
             $model = $query
                 ->get();
-            $pdf = Pdf::loadView('memorando.memorando', ["data" => $model, "tipo" => $request->tipo, "periodo" => $request->desde]);
+            $pdf = Pdf::loadView('memorando.memorando', ['data' => $model, 'tipo' => $request->tipo, 'periodo' => $request->desde]);
             $pdf->setPaper('A4');
             return $pdf->download('memorando.pdf');
         }
