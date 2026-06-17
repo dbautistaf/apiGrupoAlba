@@ -60,7 +60,8 @@ class PeriodosContablesService extends Controller
     {
         DB::beginTransaction();
         try {
-            $periodosContablesRepository->toggleActivo($id_periodo_contable);
+            $idRazon = request()->id_razon ?? null;
+            $periodosContablesRepository->toggleActivo($id_periodo_contable, $idRazon);
             DB::commit();
             return response()->json(["message" => "Estado 'activo' actualizado correctamente."], 200);
         } catch (\Throwable $th) {
@@ -76,7 +77,8 @@ class PeriodosContablesService extends Controller
     {
         DB::beginTransaction();
         try {
-            $periodosContablesRepository->toggleVigente($id_periodo_contable);
+            $idRazon = request()->id_razon ?? null;
+            $periodosContablesRepository->toggleVigente($id_periodo_contable, $idRazon);
             DB::commit();
             return response()->json(["message" => "Estado 'vigente' actualizado correctamente."], 200);
         } catch (\Throwable $th) {

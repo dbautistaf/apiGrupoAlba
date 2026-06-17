@@ -35,12 +35,94 @@ ALTER TABLE tb_cont_planes_cuentas ADD COLUMN id_razon INT NULL;
 
 ### 0.2 `tb_cont_periodos_contables` — Períodos contables
 
-**`app/Models/Contabilidad/PeriodosContablesEntity.php`**
-- `'id_razon'` agregado a `$fillable`
+**Decisión arquitectónica:** los períodos son globales (compartidos entre todas las razones sociales del grupo). Lo que varía por empresa es si ese período está abierto o cerrado, modelado en una tabla separada.
 
-**DB:**
+#### Modelo `tb_cont_periodos_contables` (global)
+
+**`app/Models/Contabilidad/PeriodosContablesEntity.php`**
+- `'id_razon'` **eliminado** del `$fillable`
+- Relaciones agregadas:
+  - `estadosRazon()` → `hasMany(PeriodoEstadoRazonEntity)`
+  - `estadoRazon()` → `hasOne(PeriodoEstadoRazonEntity)`
+
+#### Modelo nuevo `tb_cont_periodo_estado_razon` (por empresa)
+
+**`app/Models/Contabilidad/PeriodoEstadoRazonEntity.php`** _(nuevo)_
+- `$fillable`: `id_periodo_contable`, `id_razon`, `activo`, `vigente`, `cod_usuario`, `fecha_registra`, `cod_usuario_modifica`, `fecha_modifica`
+- Relación `periodoContable()` → `belongsTo(PeriodosContablesEntity)`
+
+#### `PeriodosContablesRepository.php` — cambios
+
+| Método | Cambio |
+|---|---|
+| `findByCreate` | Usa `firstOrCreate` para el período global; luego crea fila en `PeriodoEstadoRazonEntity` para la razón |
+| `findByUpdate` | Actualiza el período global + el estado de la razón en `PeriodoEstadoRazonEntity` |
+| `findByList` | Si viene `id_razon`: JOIN con `tb_cont_periodo_estado_razon` para filtrar y traer `activo`/`vigente` de la empresa |
+| `findByListAnual` | Ídem, con filtro adicional `id_tipo_periodo = 2` |
+| `findByExistsPeriodoMensual` | Valida que esta razón social no tenga ya ese período via `whereHas('estadosRazon')` |
+| `findByExistsPeriodoAnual` | Ídem anual |
+| `findByExistsPeriodoActivo` | Verifica `activo = 1` en `estadosRazon` para la razón social dada |
+| `findByPeriodoContableActivo` | Ídem |
+| `findByPeriodoContableActivoNow` | Ídem + filtro por fechas |
+| `toggleActivo($id, $idRazon)` | Si viene `$idRazon`: toglea en `PeriodoEstadoRazonEntity`; si no: toglea en la tabla principal |
+| `toggleVigente($id, $idRazon)` | Ídem |
+| `setActivoByAnio($anio, $activo, $idRazon)` | Si viene `$idRazon`: actualiza estados de esa razón; si no: actualiza tabla principal |
+
+#### `PeriodosContablesService.php` — cambios
+
+- `toggleActivo` y `toggleVigente`: leen `request()->id_razon` y lo pasan al repository
+
+#### DB — secuencia de migración
+
 ```sql
-ALTER TABLE tb_cont_periodos_contables ADD COLUMN id_razon INT NULL;
+-- 1. Crear tabla de estado por razón social
+CREATE TABLE tb_cont_periodo_estado_razon (
+    id_periodo_estado_razon INT        NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    id_periodo_contable     INT        NOT NULL,
+    id_razon                INT        NOT NULL,
+    activo                  TINYINT(1) NOT NULL DEFAULT 0,
+    vigente                 TINYINT(1) NOT NULL DEFAULT 1,
+    cod_usuario             INT        NULL,
+    fecha_registra          DATETIME   NULL,
+    cod_usuario_modifica    INT        NULL,
+    fecha_modifica          DATETIME   NULL,
+    UNIQUE KEY uk_periodo_razon (id_periodo_contable, id_razon),
+    CONSTRAINT fk_per_est_periodo FOREIGN KEY (id_periodo_contable)
+        REFERENCES tb_cont_periodos_contables (id_periodo_contable),
+    CONSTRAINT fk_per_est_razon FOREIGN KEY (id_razon)
+        REFERENCES tb_razones_sociales (id_razon)
+);
+
+-- 2. Identificar el período canónico por grupo (el de id menor)
+CREATE TEMPORARY TABLE tmp_canonicos AS
+SELECT MIN(id_periodo_contable) AS id_canonico,
+       periodo, anio_periodo, COALESCE(mes, 0) AS mes_key
+FROM tb_cont_periodos_contables
+GROUP BY periodo, anio_periodo, COALESCE(mes, 0);
+
+-- 3. Backfill de estado por razón social desde datos existentes
+INSERT INTO tb_cont_periodo_estado_razon
+    (id_periodo_contable, id_razon, activo, vigente, cod_usuario, fecha_registra)
+SELECT c.id_canonico, p.id_razon, p.activo, p.vigente, p.cod_usuario_crea, p.fecha_registra
+FROM tb_cont_periodos_contables p
+JOIN tmp_canonicos c
+    ON c.periodo = p.periodo AND c.anio_periodo = p.anio_periodo AND c.mes_key = COALESCE(p.mes, 0)
+WHERE p.id_razon IS NOT NULL;
+
+-- 4. Redirigir FKs de asientos al período canónico
+UPDATE tb_cont_asientos_contables a
+JOIN tb_cont_periodos_contables p ON p.id_periodo_contable = a.id_periodo_contable
+JOIN tmp_canonicos c
+    ON c.periodo = p.periodo AND c.anio_periodo = p.anio_periodo AND c.mes_key = COALESCE(p.mes, 0)
+SET a.id_periodo_contable = c.id_canonico
+WHERE a.id_periodo_contable <> c.id_canonico;
+
+-- 5. Eliminar períodos duplicados (no canónicos)
+DELETE FROM tb_cont_periodos_contables
+WHERE id_periodo_contable NOT IN (SELECT id_canonico FROM tmp_canonicos);
+
+-- 6. Quitar id_razon de la tabla de períodos
+ALTER TABLE tb_cont_periodos_contables DROP COLUMN id_razon;
 ```
 
 ---
@@ -108,17 +190,15 @@ ALTER TABLE tb_cont_asientos_contables ADD COLUMN id_razon INT NULL;
 
 ### 1.1 Validación de períodos contables por razón social
 
-**Problema:** `findByExistsPeriodoMensual` y `findByExistsPeriodoAnual` no filtraban por `id_razon`, causando un 409 al crear un período para una razón social distinta si el mes/año ya existía para otra.
-
-**Archivos modificados:**
+Con el modelo nuevo, la unicidad del período es **global** (un solo row por mes/año). Lo que se valida es que esta razón social no tenga ya ese período abierto en `tb_cont_periodo_estado_razon`.
 
 **`app/Http/Controllers/Contabilidad/Repository/PeriodosContablesRepository.php`**
-- `findByExistsPeriodoMensual($anio, $mes, $idRazon = null)` — agrega `WHERE id_razon = ?` cuando se provee `$idRazon`
-- `findByExistsPeriodoAnual($anio, $idRazon = null)` — mismo patrón
+- `findByExistsPeriodoMensual($anio, $mes, $idRazon)` — verifica via `whereHas('estadosRazon')` que la empresa no tenga ya ese período
+- `findByExistsPeriodoAnual($anio, $idRazon)` — ídem anual
 
 **`app/Http/Controllers/Contabilidad/Services/PeriodosContablesService.php`**
 - `getProcesar`: pasa `$request->id_razon` a ambos métodos de validación
-- Mensaje de error actualizado: `"...ya existe para esta razón social."`
+- Mensaje de error: `"...ya existe para esta razón social."`
 
 ---
 
