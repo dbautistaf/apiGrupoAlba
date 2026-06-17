@@ -65,6 +65,7 @@ class PrestacionMedicaExport implements FromCollection, WithHeadings, ShouldAuto
                     'practica'             => $d->practica?->nombre_practica ?? 'N/A',
                     'importe_facturado'    => number_format($d->monto_pagar ?? 0, 2, '.', ''),
                     'importe_aprobado'     => number_format($d->monto_pagar ?? 0, 2, '.', ''),
+                    'usuario'               => $p->usuario?->nombre_apellidos ?? 'N/A',
                 ]);
             }
         }
@@ -90,6 +91,7 @@ class PrestacionMedicaExport implements FromCollection, WithHeadings, ShouldAuto
             'Practica/Medicamento Descripción',
             'Importe Facturado',
             'Importe Aprobado',
+            'Usuario'
 
         ];
     }
@@ -120,6 +122,7 @@ class PrestacionMedicaExport implements FromCollection, WithHeadings, ShouldAuto
             $row['practica'],
             $row['importe_facturado'],
             $row['importe_aprobado'],
+            $row['usuario'],
         ];
     }
 }
