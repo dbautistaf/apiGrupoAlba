@@ -25,7 +25,6 @@ use Illuminate\Support\Facades\Log;
 class TesPagosController extends Controller
 {
     private $periodoContableRepositorio;
-    private $periodoContableActivo;
     private $proveedorPlanesCuentaRepository;
     private $formaPagoCuentaContableRepository;
     private $correlativosOspfRepository;
@@ -40,7 +39,6 @@ class TesPagosController extends Controller
         $this->proveedorPlanesCuentaRepository = $proveedorPlanesCuentaRepository;
         $this->formaPagoCuentaContableRepository = $formaPagoCuentaContableRepository;
         $this->correlativosOspfRepository = $correlativosOspfRepository;
-        $this->periodoContableActivo = $this->periodoContableRepositorio->findByPeriodoContableActivo();
     }
 
 
@@ -209,7 +207,8 @@ class TesPagosController extends Controller
                     ], 422);
                 }
                 try {
-                    if (is_null($this->periodoContableActivo)) {
+                    $periodoContableActivo = $this->periodoContableRepositorio->findByPeriodoContableActivo($params->id_razon ?? null);
+                    if (is_null($periodoContableActivo)) {
                         throw new \Exception("No se encontró un período contable activo para registrar el asiento contable del pago.");
                     }
 
@@ -230,7 +229,7 @@ class TesPagosController extends Controller
                         'monto_total'        => $monto_total,
                     ];
 
-                    $asiento = $asientoContableRepository->crearAsientoPago($datosPago, $this->periodoContableActivo->id_periodo_contable);
+                    $asiento = $asientoContableRepository->crearAsientoPago($datosPago, $periodoContableActivo->id_periodo_contable);
 
                     $historialPagoRepository->guardarHistorial(
                         $pagoDb->id_pago,

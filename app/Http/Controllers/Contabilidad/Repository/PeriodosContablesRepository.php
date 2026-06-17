@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Contabilidad\Repository;
 
 use App\Models\Contabilidad\PeriodosContablesEntity;
 use App\Models\Contabilidad\PeriodoEstadoRazonEntity;
+use App\Models\configuracion\RazonSocialModelo;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 
@@ -43,15 +44,22 @@ class PeriodosContablesRepository
             ]
         );
 
-        // Crear el estado activo/vigente para esta razón social
-        PeriodoEstadoRazonEntity::create([
-            'id_periodo_contable' => $periodoDb->id_periodo_contable,
-            'id_razon'            => $params->id_razon,
-            'activo'              => $params->activo,
-            'vigente'             => $params->vigente,
-            'cod_usuario'         => $this->user->cod_usuario,
-            'fecha_registra'      => $this->fechaActual,
-        ]);
+        // Crear el estado activo/vigente para TODAS las razones sociales
+        $razones = RazonSocialModelo::all();
+        foreach ($razones as $razon) {
+            PeriodoEstadoRazonEntity::firstOrCreate(
+                [
+                    'id_periodo_contable' => $periodoDb->id_periodo_contable,
+                    'id_razon'            => $razon->id_razon,
+                ],
+                [
+                    'activo'         => $params->activo,
+                    'vigente'        => $params->vigente,
+                    'cod_usuario'    => $this->user->cod_usuario,
+                    'fecha_registra' => $this->fechaActual,
+                ]
+            );
+        }
 
         return $periodoDb;
     }
@@ -195,31 +203,21 @@ class PeriodosContablesRepository
             ->exists();
     }
 
-    // Valida si esta razón social ya tiene este período abierto
+    // El período es global: existe si ya hay una fila para ese año/tipo, sin importar la razón
     public function findByExistsPeriodoAnual($anio, $idRazon = null)
     {
-        $query = PeriodosContablesEntity::where('id_tipo_periodo', 2)
-            ->where('anio_periodo', $anio);
-
-        if ($idRazon) {
-            $query->whereHas('estadosRazon', fn($q) => $q->where('id_razon', $idRazon));
-        }
-
-        return $query->exists();
+        return PeriodosContablesEntity::where('id_tipo_periodo', 2)
+            ->where('anio_periodo', $anio)
+            ->exists();
     }
 
-    // Valida si esta razón social ya tiene este período abierto
+    // El período es global: existe si ya hay una fila para ese año/mes, sin importar la razón
     public function findByExistsPeriodoMensual($anio, $mes, $idRazon = null)
     {
-        $query = PeriodosContablesEntity::where('id_tipo_periodo', 1)
+        return PeriodosContablesEntity::where('id_tipo_periodo', 1)
             ->where('anio_periodo', $anio)
-            ->where('mes', $mes);
-
-        if ($idRazon) {
-            $query->whereHas('estadosRazon', fn($q) => $q->where('id_razon', $idRazon));
-        }
-
-        return $query->exists();
+            ->where('mes', $mes)
+            ->exists();
     }
 
     public function findByExistsPeriodoActivo($periodo, $idRazon = null)

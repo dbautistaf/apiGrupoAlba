@@ -115,7 +115,7 @@ class FacturacionProcesosController extends Controller
                     //Período contable activo
                     try {
                         $formatoCorto = substr($cabecera->periodo, 2, 2) . substr($cabecera->periodo, 5, 2);
-                        $periodoContableActivo = $periodoContableRepositorio->findByExistsPeriodoActivo($formatoCorto);
+                        $periodoContableActivo = $periodoContableRepositorio->findByExistsPeriodoActivo($formatoCorto, $cabecera->id_razon ?? null);
 
                         if (!$periodoContableActivo) {
                             throw new \Exception("No se encontró un período contable activo para registrar el asiento contable de la factura.");
@@ -263,7 +263,7 @@ class FacturacionProcesosController extends Controller
                     }
                     try {
                         $formatoCorto = substr($cabecera->periodo, 2, 2) . substr($cabecera->periodo, 5, 2);
-                        $periodoContableActivo = $periodoContableRepositorio->findByExistsPeriodoActivo($formatoCorto);
+                        $periodoContableActivo = $periodoContableRepositorio->findByExistsPeriodoActivo($formatoCorto, $cabecera->id_razon ?? null);
 
                         if (!$periodoContableActivo) {
                             throw new \Exception("No se encontró un período contable activo para modificar el asiento contable de la factura.");

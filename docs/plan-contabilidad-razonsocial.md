@@ -55,11 +55,11 @@ ALTER TABLE tb_cont_planes_cuentas ADD COLUMN id_razon INT NULL;
 
 | Método | Cambio |
 |---|---|
-| `findByCreate` | Usa `firstOrCreate` para el período global; luego crea fila en `PeriodoEstadoRazonEntity` para la razón |
-| `findByUpdate` | Actualiza el período global + el estado de la razón en `PeriodoEstadoRazonEntity` |
+| `findByCreate` | `firstOrCreate` para el período global; luego itera **todas las razones sociales** (`RazonSocialModelo::all()`) y crea un `PeriodoEstadoRazonEntity` para cada una via `firstOrCreate` |
+| `findByUpdate` | Actualiza el período global + el estado de la razón específica en `PeriodoEstadoRazonEntity` |
 | `findByList` | Si viene `id_razon`: JOIN con `tb_cont_periodo_estado_razon` para filtrar y traer `activo`/`vigente` de la empresa |
 | `findByListAnual` | Ídem, con filtro adicional `id_tipo_periodo = 2` |
-| `findByExistsPeriodoMensual` | Valida que esta razón social no tenga ya ese período via `whereHas('estadosRazon')` |
+| `findByExistsPeriodoMensual` | Verifica si el período **ya existe globalmente** (un row en `tb_cont_periodos_contables`). Como se crea para todas las razones, si existe para una existe para todas — no tiene sentido crearlo de nuevo |
 | `findByExistsPeriodoAnual` | Ídem anual |
 | `findByExistsPeriodoActivo` | Verifica `activo = 1` en `estadosRazon` para la razón social dada |
 | `findByPeriodoContableActivo` | Ídem |
@@ -100,7 +100,7 @@ SELECT MIN(id_periodo_contable) AS id_canonico,
 FROM tb_cont_periodos_contables
 GROUP BY periodo, anio_periodo, COALESCE(mes, 0);
 
--- 3. Backfill de estado por razón social desde datos existentes
+-- 3. Backfill de estado para los períodos que ya tenían id_razon asignado
 INSERT INTO tb_cont_periodo_estado_razon
     (id_periodo_contable, id_razon, activo, vigente, cod_usuario, fecha_registra)
 SELECT c.id_canonico, p.id_razon, p.activo, p.vigente, p.cod_usuario_crea, p.fecha_registra
@@ -108,6 +108,14 @@ FROM tb_cont_periodos_contables p
 JOIN tmp_canonicos c
     ON c.periodo = p.periodo AND c.anio_periodo = p.anio_periodo AND c.mes_key = COALESCE(p.mes, 0)
 WHERE p.id_razon IS NOT NULL;
+
+-- 3b. Completar backfill: crear estado para TODAS las razones × TODOS los períodos canónicos
+--     (los que no estaban cubiertos por el paso 3, con activo/vigente = 1 por defecto)
+INSERT IGNORE INTO tb_cont_periodo_estado_razon
+    (id_periodo_contable, id_razon, activo, vigente, fecha_registra)
+SELECT c.id_canonico, r.id_razon, 1, 1, NOW()
+FROM tmp_canonicos c
+CROSS JOIN tb_razones_sociales r;
 
 -- 4. Redirigir FKs de asientos al período canónico
 UPDATE tb_cont_asientos_contables a
@@ -188,17 +196,17 @@ ALTER TABLE tb_cont_asientos_contables ADD COLUMN id_razon INT NULL;
 
 ## 1. Backend — Correcciones y cambios
 
-### 1.1 Validación de períodos contables por razón social
+### 1.1 Validación de períodos contables
 
-Con el modelo nuevo, la unicidad del período es **global** (un solo row por mes/año). Lo que se valida es que esta razón social no tenga ya ese período abierto en `tb_cont_periodo_estado_razon`.
+Con el modelo nuevo, el período es **global** (un solo row en `tb_cont_periodos_contables` por mes/año, compartido entre todas las razones). Crear el mismo período dos veces es redundante para todas las empresas, por lo que la validación es también global.
 
 **`app/Http/Controllers/Contabilidad/Repository/PeriodosContablesRepository.php`**
-- `findByExistsPeriodoMensual($anio, $mes, $idRazon)` — verifica via `whereHas('estadosRazon')` que la empresa no tenga ya ese período
-- `findByExistsPeriodoAnual($anio, $idRazon)` — ídem anual
+- `findByExistsPeriodoMensual($anio, $mes, $idRazon = null)` — verifica si ya existe un row global para ese año/mes (el parámetro `$idRazon` se mantiene por compatibilidad de firma pero no se usa)
+- `findByExistsPeriodoAnual($anio, $idRazon = null)` — ídem anual
 
 **`app/Http/Controllers/Contabilidad/Services/PeriodosContablesService.php`**
-- `getProcesar`: pasa `$request->id_razon` a ambos métodos de validación
-- Mensaje de error: `"...ya existe para esta razón social."`
+- `getProcesar`: llama a ambos métodos de validación antes de intentar crear
+- Mensaje de error: `"...ya existe para esta razón social."` (se puede refinar a "ya existe" en una futura iteración)
 
 ---
 
