@@ -43,6 +43,11 @@ class FacturacionProcesosController extends Controller
             $impuestos = json_decode($request->impuestos);
             $descuentos = json_decode($request->descuentos);
 
+            // id_locatorio es el campo que el frontend usa para la razón social
+            if (empty($cabecera->id_razon) && !empty($cabecera->id_locatorio)) {
+                $cabecera->id_razon = $cabecera->id_locatorio;
+            }
+
             $nombre_archivo = null;
             // @SUBIR ARCHIVO
 
