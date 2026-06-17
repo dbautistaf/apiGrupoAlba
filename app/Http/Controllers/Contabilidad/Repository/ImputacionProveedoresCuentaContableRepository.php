@@ -21,6 +21,7 @@ class ImputacionProveedoresCuentaContableRepository
     {
         return ImputacionesProveedoresCuentaContableEntity::create([
             'id_detalle_plan' => $params->id_detalle_plan,
+            'id_razon'        => $params->id_razon ?? null,
             'imputacion'      => $params->descripcion,
             'codigo'          => $params->codigo_cuenta,
             'vigente'         => $params->vigente ?? true,
@@ -41,6 +42,7 @@ class ImputacionProveedoresCuentaContableRepository
     {
         $imputacion = ImputacionesProveedoresCuentaContableEntity::find($id);
         $imputacion->id_detalle_plan       = $params->id_detalle_plan;
+        $imputacion->id_razon              = $params->id_razon ?? $imputacion->id_razon;
         $imputacion->imputacion            = $params->imputacion;
         $imputacion->codigo                = $params->codigo;
         $imputacion->vigente               = $params->vigente ?? $imputacion->vigente;
@@ -68,6 +70,10 @@ class ImputacionProveedoresCuentaContableRepository
 
         if (isset($filtros['id_detalle_plan'])) {
             $query->where('id_detalle_plan', $filtros['id_detalle_plan']);
+        }
+
+        if (isset($filtros['id_razon']) && !empty($filtros['id_razon'])) {
+            $query->where('id_razon', $filtros['id_razon']);
         }
 
         if (isset($filtros['codigo'])) {

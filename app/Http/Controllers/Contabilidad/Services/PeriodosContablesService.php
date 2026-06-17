@@ -26,16 +26,16 @@ class PeriodosContablesService extends Controller
             if (is_null($request->id_periodo_contable)) {
                 // Validar si es período anual o mensual
                 if (isset($request->mes)) {
-                    // Validación para período mensual: tipo, año y mes
-                    if ($periodosContablesRepository->findByExistsPeriodoMensual($request->anio_periodo, $request->mes)) {
+                    // Validación para período mensual: tipo, año, mes y razón social
+                    if ($periodosContablesRepository->findByExistsPeriodoMensual($request->anio_periodo, $request->mes, $request->id_razon)) {
                         DB::rollBack();
-                        return response()->json(["message" => "El Periodo contable mensual <b>{$request->anio_periodo}-{$request->mes}</b> ya existe."], 409);
+                        return response()->json(["message" => "El Periodo contable mensual <b>{$request->anio_periodo}-{$request->mes}</b> ya existe para esta razón social."], 409);
                     }
                 } else {
-                    // Validación para período anual: tipo y año
-                    if ($periodosContablesRepository->findByExistsPeriodoAnual($request->anio_periodo)) {
+                    // Validación para período anual: tipo, año y razón social
+                    if ($periodosContablesRepository->findByExistsPeriodoAnual($request->anio_periodo, $request->id_razon)) {
                         DB::rollBack();
-                        return response()->json(["message" => "El Periodo contable anual <b>{$request->anio_periodo}</b> ya existe."], 409);
+                        return response()->json(["message" => "El Periodo contable anual <b>{$request->anio_periodo}</b> ya existe para esta razón social."], 409);
                     }
                 }
 

@@ -21,6 +21,7 @@ class FamiliaPlanesCuentaRepository
         return FamiliaCuentaContableEntity::create([
             'id_tipo_familia' => $params->id_familia,
             'id_detalle_plan' => $params->id_detalle_plan,
+            'id_razon' => $params->id_razon ?? null,
             'cod_usuario_crea' => $this->user->cod_usuario,
             'fecha_registra' => $this->fechaActual
         ]);
@@ -38,6 +39,7 @@ class FamiliaPlanesCuentaRepository
         $familia = FamiliaCuentaContableEntity::find($id);
         $familia->id_tipo_familia = $params->id_familia;
         $familia->id_detalle_plan = $params->id_detalle_plan;
+        $familia->id_razon = $params->id_razon ?? null;
         $familia->cod_usuario_modifica = $this->user->cod_usuario;
         $familia->fecha_modifica = $this->fechaActual;
         return $familia->update();
@@ -49,12 +51,12 @@ class FamiliaPlanesCuentaRepository
             ->get();
     }
 
-    public function findByBuscarRelacionFamilia($idTipoFactura, $idPeriodo)
+    public function findByBuscarRelacionFamilia($idTipoFamilia, $idRazon = null)
     {
-        return FamiliaCuentaContableEntity::where('id_tipo_factura', $idTipoFactura)
-            ->whereHas('detallePlan', function ($query) use ($idPeriodo) {
-                $query->where('id_periodo_contable', $idPeriodo);
-            })
-            ->first();
+        $query = FamiliaCuentaContableEntity::where('id_tipo_familia', $idTipoFamilia);
+        if ($idRazon) {
+            $query->where('id_razon', $idRazon);
+        }
+        return $query->first();
     }
 }

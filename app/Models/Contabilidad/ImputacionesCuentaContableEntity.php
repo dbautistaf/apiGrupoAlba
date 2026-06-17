@@ -14,6 +14,7 @@ class ImputacionesCuentaContableEntity extends Model
 
     protected $fillable = [
         'id_detalle_plan',
+        'id_razon',
         'imputacion',
         'codigo',
         'vigente',

@@ -22,6 +22,7 @@ class ProveedorPlanesCuentaRepository
         return ProveedorCuentaContableEntity::create([
             'id_proveedor' => $params->id_proveedor,
             'id_detalle_plan' => $params->id_detalle_plan,
+            'id_razon' => $params->id_razon ?? null,
             'cod_usuario_crea' => $this->user->cod_usuario,
             'fecha_registra' => $this->fechaActual
         ]);
@@ -39,6 +40,7 @@ class ProveedorPlanesCuentaRepository
         $proveedor = ProveedorCuentaContableEntity::find($id);
         $proveedor->id_proveedor = $params->id_proveedor;
         $proveedor->id_detalle_plan = $params->id_detalle_plan;
+        $proveedor->id_razon = $params->id_razon ?? null;
         $proveedor->cod_usuario_modifica = $this->user->cod_usuario;
         $proveedor->fecha_modifica = $this->fechaActual;
         return $proveedor->update();
@@ -50,12 +52,12 @@ class ProveedorPlanesCuentaRepository
             ->get();
     }
 
-    public function findByBuscarRelacionProveedor($idProveedor, $idPeriodo)
+    public function findByBuscarRelacionProveedor($idProveedor, $idRazon = null)
     {
-        return ProveedorCuentaContableEntity::where('id_proveedor', $idProveedor)
-            ->whereHas('detallePlan', function ($query) use ($idPeriodo) {
-                $query->where('id_periodo_contable', $idPeriodo);
-            })
-            ->first();
+        $query = ProveedorCuentaContableEntity::where('id_proveedor', $idProveedor);
+        if ($idRazon) {
+            $query->where('id_razon', $idRazon);
+        }
+        return $query->first();
     }
 }

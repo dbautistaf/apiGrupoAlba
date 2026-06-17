@@ -31,7 +31,7 @@ class AsientoContableRepository
         $this->fechaActual = Carbon::now();
     }
 
-    public function findByCrearAsiento($id_tipo_asiento, $asiento_modelo, $asiento_leyenda, $numero, $id_periodo_contable, $numero_referencia, $vigente)
+    public function findByCrearAsiento($id_tipo_asiento, $asiento_modelo, $asiento_leyenda, $numero, $id_periodo_contable, $numero_referencia, $vigente, $id_razon = null)
     {
         return AsientosContablesEntity::create([
             'id_tipo_asiento' => $id_tipo_asiento,
@@ -41,6 +41,7 @@ class AsientoContableRepository
             'numero' => $numero,
             'numero_referencia' => $numero_referencia,
             'id_periodo_contable' => $id_periodo_contable,
+            'id_razon' => $id_razon,
             'cod_usuario_crea' => $this->user->cod_usuario,
             'fecha_registra' => $this->fechaActual,
             'vigente' => $vigente
@@ -113,6 +114,10 @@ class AsientoContableRepository
     public function findByListar($params)
     {
         $query = AsientosContablesEntity::with(['tipo']);
+
+        if (!is_null($params->id_razon ?? null) && !empty($params->id_razon)) {
+            $query->where('id_razon', $params->id_razon);
+        }
 
         if (!is_null($params->id_periodo_contable)) {
             $query->where('id_periodo_contable', $params->id_periodo_contable);
@@ -359,6 +364,11 @@ class AsientoContableRepository
 
     public function crearAsientoFactura($datosFactura, $idPeriodoContable)
     {
+        $idRazon = $datosFactura['id_razon'] ?? null;
+        if (!$idRazon) {
+            throw new Exception("Falta la razón social para registrar el asiento de la factura. Por favor contacte con el administrador.");
+        }
+
         // Determinar tipo: prestador o proveedor
         $esPrestador = !empty($datosFactura['id_prestador']);
         $esProveedor = !empty($datosFactura['id_proveedor']);
@@ -384,6 +394,7 @@ class AsientoContableRepository
         }
 
         $idDetallePlanHaber = $esPrestador ? 35 : 36;
+        $idRazon = $datosFactura['id_razon'] ?? null;
 
         // Leyenda: FACTURA - CUIT - NOMBRE - NUMERO - FECHA
         $leyenda = 'FACTURA - ' . ($datosFactura['cuit'] ?? '') . ' - ' .
@@ -400,7 +411,8 @@ class AsientoContableRepository
             $numeroCorrelativo,
             $idPeriodoContable,
             $datosFactura['id_factura'],
-            'ACTIVO'
+            'ACTIVO',
+            $idRazon
         );
 
         $esFacturaProveedor = $datosFactura['id_tipo_factura'] == 16;
@@ -446,6 +458,11 @@ class AsientoContableRepository
 
     public function crearAsientoPago($datosPago, $idPeriodoContable)
     {
+        $idRazon = $datosPago['id_razon'] ?? null;
+        if (!$idRazon) {
+            throw new Exception("Falta la razón social para registrar el asiento del pago. Por favor contacte con el administrador.");
+        }
+
         // Determinar tipo por id_tipo_factura: 16 = proveedor, resto = prestador
         $esFacturaProveedor = ($datosPago['id_tipo_factura'] ?? null) == 16;
 
@@ -469,6 +486,7 @@ class AsientoContableRepository
 
         // DEBE hardcodeado: proveedor = 36 (PROVEEDORES), prestador = 35 (DEUDAS PRESTACIONALES)
         $idDetallePlanDebe = $esFacturaProveedor ? 36 : 35;
+        $idRazon = $datosPago['id_razon'] ?? null;
 
         // Leyenda: PAGO - CUIT - NOMBRE - NRO_PAGO - FECHA
         $leyenda = 'PAGO - ' . ($datosPago['cuit'] ?? '') . ' - ' .
@@ -486,7 +504,8 @@ class AsientoContableRepository
             $numeroCorrelativo,
             $idPeriodoContable,
             $datosPago['id_pago'],
-            'ACTIVO'
+            'ACTIVO',
+            $idRazon
         );
 
         // DEBE — reduce el pasivo (proveedor/prestador a pagar)
@@ -569,13 +588,14 @@ class AsientoContableRepository
 
         // Crear asiento principal
         $asiento = $this->findByCrearAsiento(
-            id_tipo_asiento: 1, // ID del tipo de asiento
+            id_tipo_asiento: 1,
             asiento_modelo: $tipo,
             asiento_leyenda: $leyenda,
             numero: $numeroCorrelativo,
             id_periodo_contable: $idPeriodoContable,
             numero_referencia: $datosTransaccion['id_operacion'],
-            vigente: 'ACTIVO'
+            vigente: 'ACTIVO',
+            id_razon: $datosTransaccion['id_razon'] ?? null
         );
 
         // === CREACIÓN DE DETALLES ===
@@ -667,13 +687,14 @@ class AsientoContableRepository
 
         // Crear asiento
         $asiento = $this->findByCrearAsiento(
-            1, // ID tipo asiento para reintegros (ajustar según configuración)
+            1,
             'REINTEGRO',
             $leyenda,
             $numeroCorrelativo,
             $idPeriodoContable,
-            null, // numero_referencia como null para reintegros normales
-            'ACTIVO'
+            null,
+            'ACTIVO',
+            $datosReintegro['id_razon'] ?? null
         );
 
         $montoReintegro = (float) $datosReintegro['importe_reconocido_total'];
@@ -738,13 +759,14 @@ class AsientoContableRepository
 
             // Crear asiento principal
             $asiento = $this->findByCrearAsiento(
-                1, // Tipo asiento para pagos (ajustar según tu catálogo)
+                1,
                 'PAGO REINTEGROS',
                 $leyenda,
                 $numeroCorrelativo,
                 $idPeriodoContable,
                 null,
-                'ACTIVO'
+                'ACTIVO',
+                $datosReintegrosPago['id_razon'] ?? null
             );
 
             // DEBE: 171 - REINTEGRO A PAGAR (reduce el pasivo - se está pagando la deuda)

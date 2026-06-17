@@ -14,6 +14,7 @@ class PeriodosContablesEntity extends Model
 
     protected $fillable = [
         'id_tipo_periodo',
+        'id_razon',
         'periodo',
         'anio_periodo',
         'mes',

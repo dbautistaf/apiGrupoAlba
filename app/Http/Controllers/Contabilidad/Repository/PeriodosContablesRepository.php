@@ -32,6 +32,7 @@ class PeriodosContablesRepository
 
         return PeriodosContablesEntity::create([
             'id_tipo_periodo' => $id_tipo_periodo,
+            'id_razon' => $params->id_razon ?? null,
             'periodo' => $periodo,
             'anio_periodo' => $params->anio_periodo,
             'mes' => $params->mes ?? null,
@@ -59,6 +60,7 @@ class PeriodosContablesRepository
         $periodoValue = $this->generatePeriodo($params->anio_periodo, $params->mes ?? null);
 
         $periodo->id_tipo_periodo = $id_tipo_periodo;
+        $periodo->id_razon = $params->id_razon ?? null;
         $periodo->periodo = $periodoValue;
         $periodo->anio_periodo = $params->anio_periodo;
         $periodo->mes = $params->mes ?? null;
@@ -124,49 +126,58 @@ class PeriodosContablesRepository
             ->exists();
     }
 
-    public function findByExistsPeriodoAnual($anio)
+    public function findByExistsPeriodoAnual($anio, $idRazon = null)
     {
-        return PeriodosContablesEntity::where('id_tipo_periodo', 2)
+        $query = PeriodosContablesEntity::where('id_tipo_periodo', 2)
             ->where('anio_periodo', $anio)
-            ->where('activo', '1')
-            ->exists();
+            ->where('activo', '1');
+        if ($idRazon) {
+            $query->where('id_razon', $idRazon);
+        }
+        return $query->exists();
     }
 
-    public function findByExistsPeriodoMensual($anio, $mes)
+    public function findByExistsPeriodoMensual($anio, $mes, $idRazon = null)
     {
-        return PeriodosContablesEntity::where('id_tipo_periodo', 1)
+        $query = PeriodosContablesEntity::where('id_tipo_periodo', 1)
             ->where('anio_periodo', $anio)
             ->where('mes', $mes)
-            ->where('activo', '1')
-            ->exists();
+            ->where('activo', '1');
+        if ($idRazon) {
+            $query->where('id_razon', $idRazon);
+        }
+        return $query->exists();
     }
 
-    public function findByExistsPeriodoActivo($periodo)
+    public function findByExistsPeriodoActivo($periodo, $idRazon = null)
     {
-        return PeriodosContablesEntity::where('periodo', $periodo)
-            ->where('activo', '1')
-            ->first();
+        $query = PeriodosContablesEntity::where('periodo', $periodo)->where('activo', '1');
+        if ($idRazon) {
+            $query->where('id_razon', $idRazon);
+        }
+        return $query->first();
     }
 
-    public function findByPeriodoContableActivo()
+    public function findByPeriodoContableActivo($idRazon = null)
     {
-        return PeriodosContablesEntity::where('activo', '1')
-            ->first();
+        $query = PeriodosContablesEntity::where('activo', '1');
+        if ($idRazon) {
+            $query->where('id_razon', $idRazon);
+        }
+        return $query->first();
     }
-    public function findByPeriodoContableActivoNow()
+
+    public function findByPeriodoContableActivoNow($idRazon = null)
     {
-        // Buscar el periodo activo que contiene la fecha actual
         $fecha = $this->fechaActual->toDateString();
-
-        $periodo = PeriodosContablesEntity::where('activo', '1')
+        $query = PeriodosContablesEntity::where('activo', '1')
             ->where('id_tipo_periodo', 1)
             ->whereDate('periodo_inicio', '<=', $fecha)
-            ->whereDate('periodo_fin', '>=', $fecha)
-            ->first();
-
-
-
-        return $periodo;
+            ->whereDate('periodo_fin', '>=', $fecha);
+        if ($idRazon) {
+            $query->where('id_razon', $idRazon);
+        }
+        return $query->first();
     }
 
     public function toggleActivo($id)

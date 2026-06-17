@@ -202,6 +202,12 @@ class TesPagosController extends Controller
             // CREAR ASIENTO CONTABLE AUTOMÁTICO DE PAGO
             // ============================================================
             if (!is_null($opaFactus)) {
+                if (empty($params->id_razon)) {
+                    DB::rollBack();
+                    return response()->json([
+                        'message' => 'Falta la razón social para registrar el asiento contable del pago. Por favor contacte con el administrador.'
+                    ], 422);
+                }
                 try {
                     if (is_null($this->periodoContableActivo)) {
                         throw new \Exception("No se encontró un período contable activo para registrar el asiento contable del pago.");
@@ -215,6 +221,7 @@ class TesPagosController extends Controller
                         'id_pago'            => $pagoDb->id_pago,
                         'id_proveedor'       => $opaFactus->id_proveedor,
                         'id_prestador'       => $opaFactus->id_prestador,
+                        'id_razon'           => $params->id_razon ?? null,
                         'cuit'               => $proveedorPrestador->cuit ?? '',
                         'nombre'             => $proveedorPrestador->razon_social ?? '',
                         'numero_pago'        => 'PAGO-' . $pagoDb->num_pago,

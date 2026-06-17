@@ -14,6 +14,11 @@ class LibroDiarioRepository
         $query = AsientosContablesEntity::with(['detalle', 'detalle.planCuenta', 'periodoContable'])
             ->where('vigente', 'ACTIVO' || 'CONTRAASIENTO');
 
+        // Filtro por razón social
+        if (isset($filters->id_razon) && !empty($filters->id_razon)) {
+            $query->where('id_razon', $filters->id_razon);
+        }
+
         // Si vienen las fechas, aplicamos el filtro de rango
         if (isset($filters->desde) && isset($filters->hasta) && !empty($filters->desde) && !empty($filters->hasta)) {
             $query->whereBetween('fecha_asiento', [$filters->desde, $filters->hasta]);

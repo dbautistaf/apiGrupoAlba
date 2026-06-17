@@ -106,6 +106,12 @@ class FacturacionProcesosController extends Controller
                 // ============================================================
                 // @CREAR ASIENTO CONTABLE AUTOMÁTICO PARA FACTURAS DE PROVEEDOR
                 if ($cabecera->idImputacionDebe) {
+                    if (empty($cabecera->id_razon)) {
+                        DB::rollBack();
+                        return response()->json([
+                            'message' => 'Falta la razón social para registrar el asiento contable. Por favor contacte con el administrador.'
+                        ], 422);
+                    }
                     //Período contable activo
                     try {
                         $formatoCorto = substr($cabecera->periodo, 2, 2) . substr($cabecera->periodo, 5, 2);
@@ -127,6 +133,7 @@ class FacturacionProcesosController extends Controller
                         'id_factura'    => $facturacion->id_factura,
                         'id_proveedor'  => $facturacion->id_proveedor,
                         'id_prestador'  => $facturacion->id_prestador,
+                        'id_razon'      => $cabecera->id_razon ?? null,
                         'cuit'          => $facturaConProveedor->proveedor->cuit ?? $facturaConProveedor->prestador->cuit,
                         'nombre'        => $facturaConProveedor->proveedor->razon_social ?? $facturaConProveedor->prestador->razon_social,
                         'numero_factura'=> $cabecera->tipo_letra . ' ' . $cabecera->sucursal . '-' . $cabecera->numero,
@@ -248,6 +255,12 @@ class FacturacionProcesosController extends Controller
 
                 // Procesar modificación contable si tiene asientos y datos contables
                 if ($tieneAsientos && $cabecera->idImputacionDebe) {
+                    if (empty($cabecera->id_razon)) {
+                        DB::rollBack();
+                        return response()->json([
+                            'message' => 'Falta la razón social para modificar el asiento contable. Por favor contacte con el administrador.'
+                        ], 422);
+                    }
                     try {
                         $formatoCorto = substr($cabecera->periodo, 2, 2) . substr($cabecera->periodo, 5, 2);
                         $periodoContableActivo = $periodoContableRepositorio->findByExistsPeriodoActivo($formatoCorto);
@@ -263,6 +276,7 @@ class FacturacionProcesosController extends Controller
                             'id_factura'    => $facturacion->id_factura,
                             'id_proveedor'  => $facturacion->id_proveedor,
                             'id_prestador'  => $facturacion->id_prestador,
+                            'id_razon'      => $cabecera->id_razon ?? null,
                             'cuit'          => $facturaConProveedor->proveedor->cuit ?? $facturaConProveedor->prestador->cuit,
                             'nombre'        => $facturaConProveedor->proveedor->razon_social ?? $facturaConProveedor->prestador->razon_social,
                             'numero_factura'=> $cabecera->tipo_letra . ' ' . $cabecera->sucursal . '-' . $cabecera->numero,

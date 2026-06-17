@@ -24,6 +24,7 @@ class PlanesCuentasRepository
     {
         return PlanesCuentaEntity::create([
             'id_tipo_plan_cuenta' => $params->id_tipo_plan_cuenta,
+            'id_razon' => $params->id_razon ?? null,
             'plan_cuenta' => $params->plan_cuenta,
             'cod_usuario_crea' => $this->user->cod_usuario,
             'fecha_registra' => $this->fechaActual,

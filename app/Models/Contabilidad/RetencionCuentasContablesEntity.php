@@ -15,6 +15,7 @@ class RetencionCuentasContablesEntity extends Model
     protected $fillable = [
         'id_retencion',
         'id_detalle_plan',
+        'id_razon',
         'cod_usuario_crea',
         'fecha_registra',
         'cod_usuario_modifica',

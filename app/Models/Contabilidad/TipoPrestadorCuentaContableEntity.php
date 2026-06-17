@@ -17,6 +17,7 @@ class TipoPrestadorCuentaContableEntity extends Model
     protected $fillable = [
         'cod_tipo_prestador',
         'id_detalle_plan',
+        'id_razon',
         'cod_usuario_crea',
         'fecha_registra',
         'cod_usuario_modifica',
