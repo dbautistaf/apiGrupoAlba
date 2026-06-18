@@ -30,7 +30,7 @@ class TestOrdenPagoRepository
 
     public function findListAlls($desde, $hasta)
     {
-        return TesOrdenPagoEntity::with(['estado', 'proveedor','prestador'])
+        return TesOrdenPagoEntity::with(['estado', 'proveedor', 'prestador'])
             ->whereBetween(DB::raw('DATE(fecha_genera)'), [$desde, $hasta])
             ->orderByDesc('id_orden_pago')
             ->get();
@@ -443,8 +443,8 @@ class TestOrdenPagoRepository
             ];
         }
 
-        // mejor usar increment
-        $getOpa->increment('monto_orden_pago', $opa->monto_orden_pago ?? 0);
+        $getOpa->monto_orden_pago += $opa->monto_orden_pago;
+        $getOpa->save();
 
         $newOpa = TesOrdenPagoDetalleEntity::create([
             'id_orden_pago' => $getOpa->id_orden_pago,
