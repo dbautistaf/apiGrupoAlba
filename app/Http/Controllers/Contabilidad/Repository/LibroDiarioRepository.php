@@ -12,7 +12,7 @@ class LibroDiarioRepository
     public function findListDetalleResumenDiario($filters)
     {
         $query = AsientosContablesEntity::with(['detalle', 'detalle.planCuenta', 'periodoContable'])
-            ->where('vigente', 'ACTIVO' || 'CONTRAASIENTO');
+            ->whereIn('vigente', ['ACTIVO', 'CONTRAASIENTO']);
 
         // Filtro por razón social
         if (isset($filters->id_razon) && !empty($filters->id_razon)) {
@@ -56,7 +56,7 @@ class LibroDiarioRepository
 
     public function getTotalCount($filters)
     {
-        $query = AsientosContablesEntity::where('vigente', 'ACTIVO' || 'CONTRAASIENTO');
+        $query = AsientosContablesEntity::whereIn('vigente', ['ACTIVO', 'CONTRAASIENTO']);
 
         // Si vienen las fechas, aplicamos el filtro de rango
         if (isset($filters->desde) && isset($filters->hasta) && !empty($filters->desde) && !empty($filters->hasta)) {

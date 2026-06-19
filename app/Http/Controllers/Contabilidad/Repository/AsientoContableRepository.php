@@ -28,14 +28,14 @@ class AsientoContableRepository
     public function __construct()
     {
         $this->user = Auth::user();
-        $this->fechaActual = Carbon::now();
+        $this->fechaActual = Carbon::now('America/Argentina/Buenos_Aires');
     }
 
     public function findByCrearAsiento($id_tipo_asiento, $asiento_modelo, $asiento_leyenda, $numero, $id_periodo_contable, $numero_referencia, $vigente, $id_razon = null)
     {
         return AsientosContablesEntity::create([
             'id_tipo_asiento' => $id_tipo_asiento,
-            'fecha_asiento' => now()->toDateString(),
+            'fecha_asiento' => $this->fechaActual->toDateString(),
             'asiento_modelo' => $asiento_modelo,
             'asiento_leyenda' => $asiento_leyenda,
             'numero' => $numero,
@@ -860,7 +860,7 @@ class AsientoContableRepository
                         'cuit' => $pago->opa->proveedor->cuit ?? $pago->opa->prestador->cod_prestador ?? 'N/A',
                         'nombre' => $pago->opa->proveedor->razon_social ?? $pago->opa->prestador->nombre_prestador ?? 'Desconocido',
                         'numero_pago' => $pago->id_pago,
-                        'fecha_registra' => $pago->fecha_registra ?? now()->toDateString(),
+                        'fecha_registra' => $pago->fecha_registra ?? $this->fechaActual->toDateString(),
                         'ImputacionHaber' => [
                             'totalImporteHaber' => $pago->monto_pago ?? 0
                         ]
