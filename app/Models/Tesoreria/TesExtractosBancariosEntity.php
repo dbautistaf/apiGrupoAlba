@@ -15,23 +15,21 @@ class TesExtractosBancariosEntity extends Model
 
     protected $fillable = [
         'id_entidad_bancaria',
-        'fecha_operacion',
-        'fecha_valor',
+        'fecha',
         'concepto',
-        'codigo',
-        'num_cheque',
-        'oficina',
-        'monto_credito',
-        'monto_debito',
-        'monto_saldo_parcial',
-        'monto_saldo_disponible',
         'importe',
-        'num_documento',
+        'saldo',
+        'referencia',
         'detalle',
-        'causal',
+        // Campos Cygnus Finance AI
+        'estado_conciliacion',
+        'score_matching',
+        'id_comprobante_financiero',
+        // Campos de auditoría
         'id_usuario',
         'fecha_registra',
-        'observaciones'
+        'observaciones',
+        'id_locatario'
     ];
 
     public function entidadBancaria()

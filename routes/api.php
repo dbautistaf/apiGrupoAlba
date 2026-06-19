@@ -1195,6 +1195,7 @@ Route::group(
         Route::post('operacion-manual-enlazar-factura', [App\Http\Controllers\Tesoreria\Services\TesOperacionesManualesController::class, 'getEnalazarFacturaObraSocial']);
         Route::post('procesar-conciliacion-bancaria', [App\Http\Controllers\Tesoreria\Services\TesConciliacionBancariaController::class, 'getProcesar']);
         Route::post('import-extracto-bancario', [App\Http\Controllers\Tesoreria\Services\TesExtractosBacariosController::class, 'getImportarExtracto']);
+        Route::post('ejecutar-cygnus-finance-ai', [App\Http\Controllers\Tesoreria\Services\CygnusFinanceAiController::class, 'ejecutarMotorMatching']);
         Route::post('procesar-cheque', [App\Http\Controllers\Tesoreria\Services\TesChequesController::class, 'getProcesar']);
 
         Route::get('imprimir-reporte-pago-opa/{id}', [App\Http\Controllers\Tesoreria\Services\TesOrdenPagoController::class, 'printOrderPay']);
