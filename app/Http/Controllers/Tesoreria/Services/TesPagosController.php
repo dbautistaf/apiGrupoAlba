@@ -207,9 +207,10 @@ class TesPagosController extends Controller
                     ], 422);
                 }
                 try {
-                    $periodoContableActivo = $this->periodoContableRepositorio->findByPeriodoContableActivo($params->id_razon ?? null);
+                    // Período mensual vigente que contiene la fecha actual (no el anual)
+                    $periodoContableActivo = $this->periodoContableRepositorio->findByPeriodoContableActivoNow($params->id_razon ?? null);
                     if (is_null($periodoContableActivo)) {
-                        throw new \Exception("No se encontró un período contable activo para registrar el asiento contable del pago.");
+                        throw new \Exception("No se encontró un período contable mensual activo para la fecha actual para registrar el asiento contable del pago.");
                     }
 
                     // Cargar relaciones de OPA — independiente de cuántas facturas tenga

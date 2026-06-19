@@ -60,7 +60,8 @@ class AsientosDiscapacidadHistorialRepository
             $numeroCorrelativo,
             $asientoOriginal->id_periodo_contable,
             $asientoOriginal->numero, // Referencia al asiento original
-            'ACTIVO'
+            'ACTIVO',
+            $asientoOriginal->id_razon
         );
 
         // Crear detalles del contraasiento con valores invertidos

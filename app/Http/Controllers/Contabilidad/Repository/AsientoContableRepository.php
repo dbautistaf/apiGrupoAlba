@@ -463,15 +463,15 @@ class AsientoContableRepository
             throw new Exception("Falta la razón social para registrar el asiento del pago. Por favor contacte con el administrador.");
         }
 
-        // Determinar tipo por id_tipo_factura: 16 = proveedor, resto = prestador
-        $esFacturaProveedor = ($datosPago['id_tipo_factura'] ?? null) == 16;
-
         $idProveedor  = $datosPago['id_proveedor'] ?? null;
         $idPrestador  = $datosPago['id_prestador'] ?? null;
 
         if (!$idProveedor && !$idPrestador) {
             throw new Exception("No se pudo determinar si el pago es de proveedor o prestador. Por favor contacte con Contabilidad.");
         }
+
+        // Tipo determinado por los datos reales del pago: si tiene proveedor es proveedor, si no prestador
+        $esFacturaProveedor = !empty($idProveedor);
 
         // Validar cuenta bancaria
         $cuentaBancaria = $this->obtenerCuentaContableByCuentaBancaria($datosPago['id_cuenta_bancaria']);
@@ -984,7 +984,8 @@ class AsientoContableRepository
             $numeroCorrelativo,
             $idPeriodoContable,
             $datosDiscapacidad['id_discapacidad'], // referencia
-            'ACTIVO'
+            'ACTIVO',
+            $datosDiscapacidad['id_razon'] ?? null
         );
 
         $montoTotal = (float) $datosDiscapacidad['monto_solicitado'];

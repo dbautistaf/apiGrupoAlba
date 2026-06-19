@@ -71,7 +71,8 @@ class AsientosPagoHistorialRepository
             $numeroCorrelativo,
             $asientoOriginal->id_periodo_contable,
             $asientoOriginal->numero,
-            'ACTIVO'
+            'ACTIVO',
+            $asientoOriginal->id_razon
         );
 
         foreach ($asientoOriginal->detalle as $detalleOriginal) {
