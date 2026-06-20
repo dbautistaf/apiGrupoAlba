@@ -169,23 +169,33 @@ if (!$idRazon) {
 
 `crearAsientoReintegro()` y `crearAsientoPagoReintegros()` — también pasan `$datosReintegro['id_razon'] ?? null` a `findByCrearAsiento()`.
 
+**Contraasientos heredan `id_razon`:** en los 4 repos de historial (`AsientosFacturacionHistorialRepository`, `AsientosPagoHistorialRepository`, `AsientosReintegrosHistorialRepository`, `AsientosDiscapacidadHistorialRepository`), `generarContraasiento()` pasa `$asientoOriginal->id_razon` a `findByCrearAsiento()`. Sin esto, el contraasiento quedaba con `id_razon = NULL` y no aparecía en vistas filtradas por razón.
+
+**Timezone:** la app está en `UTC`, pero la convención es guardar fechas en hora Argentina. `AsientoContableRepository` y los 4 repos de historial usan `Carbon::now('America/Argentina/Buenos_Aires')`; `fecha_asiento` se deriva de `$this->fechaActual->toDateString()`. Antes, `now()`/`Carbon::now()` en UTC corrían la fecha del asiento un día.
+
+**Determinación proveedor/prestador en pagos:** `crearAsientoPago()` usa `$esFacturaProveedor = !empty($id_proveedor)` (dato real del pago), no `id_tipo_factura` (que no se envía en el payload de pago).
+
 **`app/Http/Controllers/Contabilidad/Services/AsientoContableController.php`**
 - Alta manual de asiento: pasa `$request->id_razon` al llamar `findByCrearAsiento()`
 
 **`app/Http/Controllers/facturacion/FacturacionProcesosController.php`**
+- **Mapeo `id_locatorio → id_razon`:** el frontend manda la razón social como `id_locatorio`. Apenas se decodifica la cabecera: `if (empty($cabecera->id_razon) && !empty($cabecera->id_locatorio)) $cabecera->id_razon = $cabecera->id_locatorio;`
 - Alta de factura: valida `$cabecera->id_razon` antes de crear asiento (HTTP 422 si falta), luego lo incluye en `$datosFactura`
 - Modificación de factura: mismo guard + propagación de `id_razon`
+- `findByIdFactura()` eager-loadea `asientoContable.detalle.planCuenta` para que la edición pueda mostrar el código de cuenta de la imputación DEBE
 
 **`app/Http/Controllers/Tesoreria/Services/TesPagosController.php`**
 - Confirmación de pago: valida `$params->id_razon` antes de crear asiento (rollback + HTTP 422 si falta), luego lo incluye en `$datosPago`
+- Período: usa `findByPeriodoContableActivoNow($params->id_razon)` — período **mensual** vigente de la fecha actual (antes usaba `findByPeriodoContableActivo`, que devolvía cualquier período activo y a veces agarraba el anual)
 
 **`app/Http/Controllers/Contabilidad/Repository/LibroDiarioRepository.php`**
-- `findByLibroDiario()`: filtro por `id_razon`:
+- `findListDetalleResumenDiario()` y `getTotalCount()`: filtro por `id_razon`:
 ```php
 if (isset($filters->id_razon) && !empty($filters->id_razon)) {
     $query->where('id_razon', $filters->id_razon);
 }
 ```
+- **Fix de `vigente`:** estos dos métodos tenían `->where('vigente', 'ACTIVO' || 'CONTRAASIENTO')`. En PHP eso evalúa a `true` → `WHERE vigente = 1`, y como `vigente` es ENUM, `= 1` matchea solo el primer valor (`ACTIVO`), ocultando los asientos originales que quedaron en `CONTRAASIENTO`. Corregido a `->whereIn('vigente', ['ACTIVO', 'CONTRAASIENTO'])`.
 
 **DB:**
 ```sql
@@ -456,9 +466,32 @@ frmRelacion = this.fb.group({
 
 ---
 
+### 3.3 Filtros server-side por razón social (modales y combos)
+
+A diferencia de los visores (filtrado en cliente), estos componentes filtran en el backend para no traer/mostrar datos de otras razones:
+
+**Modal de selección de plan de cuentas** (`modal-planes-cuentas-principales`)
+- Nuevo `@Input() idRazon`; lo agrega al params de `getListarCuentasCompleto` solo si está presente
+- Backend: `PlanesCuentasRepository::findByDetalleCuentasPlanesCompleto($search, $idRazon)` filtra via `whereHas('plan', fn($q) => $q->where('id_razon', $idRazon))`
+- Los **19 componentes de relación** que abren el modal pasan `modalRef.componentInstance.idRazon = this.frmRelacion.get('id_razon')?.value`
+
+**Modal de imputaciones contables** (`modal-imputaciones-contables`, usado en carga de factura)
+- Nuevo `@Input() idRazon`; lo agrega al filtro antes de elegir el endpoint proveedor/prestador (respeta el flag `isProveedor`)
+- Backend: ambos repos (`ImputacionCuentaContableRepository`, `ImputacionProveedoresCuentaContableRepository`) ya filtran por `id_razon` en `findByListarConFiltros`
+- `datos-factura.component.ts`: al abrir el modal pasa `idRazon` desde el control `id_locatorio`
+
+**Combos de período** (`cbo-periodos-contables`, `cbo-periodos-anuales`)
+- Nuevo `@Input() idRazon`; recargan en `ngOnChanges` y lo pasan como `id_razon` al GET
+- En `tap-datos-de-asiento-contable.html` reciben `[idRazon]="fmrAsiento.get('id_razon')?.value"`
+
+**Visor de períodos** (`visor-periodo-contable`)
+- `onListar` pasa `{ id_razon: this.filterRazonSocial }`; toggles activo/vigente pasan `id_razon` al backend
+
+---
+
 ## 4. Notas importantes
 
 - **Columnas nullable:** `id_razon` queda `NULL` hasta que corre el backfill. No convertir a `NOT NULL` hasta verificar que el backfill completó (resultado de la query de verificación = 0 para todas las tablas).
-- **Filtrado en frontend:** El backend devuelve todos los registros; el frontend filtra por `id_razon` en cliente. El valor por defecto del filtro es `1` (Alba).
+- **Filtrado en frontend:** Los **visores** de relaciones (sección 3.1) filtran por `id_razon` en cliente (el backend devuelve todo). En cambio, los **modales de selección** filtran server-side (ver sección 3.3). El valor por defecto del filtro es `1` (Alba).
 - **Rows históricas:** Filas anteriores al cambio tendrán `id_razon = NULL` y no aparecerán en los visores hasta completar el backfill.
 - **Motor de asientos:** Los métodos `obtener*` que usa el motor ya están aislados por razón social a través de la cadena `id_detalle_plan → id_plan_cuenta → id_razon`. Los `findByBuscarRelacion*` corregidos son auxiliares y no afectan el flujo principal de asientos.
