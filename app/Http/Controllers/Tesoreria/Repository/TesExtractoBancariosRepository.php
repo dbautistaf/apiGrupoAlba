@@ -20,8 +20,8 @@ class TesExtractoBancariosRepository
 
     public function findByList($desde,$hasta)
     {
-        return TesExtractosBancariosEntity::with(['entidadBancaria'])
-        ->whereBetween('fecha_operacion',[$desde,$hasta])
+        return TesExtractosBancariosEntity::with(['entidadBancaria','locatario'])
+        ->whereBetween('fecha',[$desde,$hasta])
         ->get();
     }
 }

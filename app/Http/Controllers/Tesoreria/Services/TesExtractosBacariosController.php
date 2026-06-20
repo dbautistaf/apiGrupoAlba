@@ -13,7 +13,6 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class TesExtractosBacariosController extends Controller
 {
-
     public function getImportarExtracto(Request $request, TesExtractoBancariosRepository $repoExtracto)
     {
         try {
@@ -22,32 +21,20 @@ class TesExtractosBacariosController extends Controller
             $message = null;
             if ($archivo) {
                 DB::beginTransaction();
-                if ($data->id_entidad_bancaria === 1) {
-                    //@BANCO DE LA NACION
-                    $importacion = new ExtractoBancarioBancoNacionImport($data->id_entidad_bancaria, $data->observaciones);
-                    Excel::import($importacion, $archivo);
-                    $message = $importacion->message;
-                } else if ($data->id_entidad_bancaria == 2) {
-                    //@BBVA (BANCO FRANCES)
-                    $importacion = new ExtractoBancarioBbvaImport($data->id_entidad_bancaria, $data->observaciones);
-                    Excel::import($importacion, $archivo);
-                    $message = $importacion->message;
-                } else if ($data->id_entidad_bancaria === 3) {
-                    //@BANCO MACRO
-                    $importacion = new ExtractoBancarioMacroImport($data->id_entidad_bancaria, $data->observaciones);
-                    Excel::import($importacion, $archivo);
-                    $message = $importacion->message;
-                }
+                // Se usa el modelo unificado de Cygnus para todos los bancos
+                $importacion = new \App\Imports\ExtractoBancarioCygnusImport($data->id_entidad_bancaria, $data->observaciones, $data->id_locatario);
+                Excel::import($importacion, $archivo);
+                $message = $importacion->message;
 
                 if ($message == 'INVALID') {
                     DB::rollBack();
                     return response()->json([
-                        'message' => 'El archivo seleccionado no cumple con la estructura del banco seleccionado.'
+                        'message' => 'El archivo seleccionado no cumple con la estructura del modelo unificado.'
                     ], 409);
                 }
 
                 DB::commit();
-                return response()->json(['message' => "Archivo importado correctamente "]);
+                return response()->json(['message' => 'Archivo importado correctamente ']);
             } else {
                 DB::rollBack();
                 return response()->json([

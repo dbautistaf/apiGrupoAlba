@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers\Internaciones\Repository;
 
+use App\Models\afiliado\AfiliadoPadronEntity;
 use App\Models\Internaciones\AutorizacionDatosRNEntity;
 use App\Models\Internaciones\AutorizacionDetalleRNEntity;
 use App\Models\Internaciones\RecienNacidoEntity;
-use App\Models\afiliado\AfiliadoPadronEntity;
-use App\Models\PrestacionesMedicas\PrestacionesPracticaLaboratorioEntity;
 use App\Models\PrestacionesMedicas\DetallePrestacionesPracticaLaboratorioEntity;
 use App\Models\PrestacionesMedicas\DetalleTramitePrestacionMedicaEntity;
+use App\Models\PrestacionesMedicas\PrestacionesPracticaLaboratorioEntity;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 
@@ -26,11 +26,11 @@ class AutorizacionDatosRNRepository
     public function findByList($request)
     {
         $query = AutorizacionDatosRNEntity::with(['detalle_prestacion.practica']);
-        
+
         if ($request->has('cod_recien_nacido')) {
             $query->where('cod_recien_nacido', $request->cod_recien_nacido);
         }
-        
+
         if ($request->has('vigente')) {
             $query->where('vigente', $request->vigente);
         }
@@ -63,6 +63,9 @@ class AutorizacionDatosRNRepository
             'domicilio_prestador' => $request->domicilio_prestador,
             'domicilio_profesional' => $request->domicilio_profesional,
             'observacion_interna' => $request->observacion_interna,
+            'id_locatorio' => $request->id_locatorio,
+            'cod_sindicato' => $request->cod_sindicato,
+            'id_tipo_tramite' => $request->id_tipo_tramite,
         ]);
 
         if (!empty($request->detalle)) {
@@ -103,6 +106,9 @@ class AutorizacionDatosRNRepository
             'domicilio_profesional' => $request->domicilio_profesional ?? $parent->domicilio_profesional,
             'observacion_interna' => $request->observacion_interna ?? $parent->observacion_interna,
             'fecha_modifica' => $this->fechaActual,
+            'id_locatorio' => $request->id_locatorio,
+            'cod_sindicato' => $request->cod_sindicato,
+            'id_tipo_tramite' => $request->id_tipo_tramite,
         ]);
 
         if (isset($request->detalle)) {
@@ -151,16 +157,16 @@ class AutorizacionDatosRNRepository
         foreach ($autorizacionesRn as $authRn) {
             // A. Crear el detalle del trámite general
             $detalleTramite = DetalleTramitePrestacionMedicaEntity::create([
-                'id_locatorio' => $afiliado ? $afiliado->id_locatario : 1,
-                'cod_sindicato' => 1,
-                'id_tipo_tramite' => 1,
+                'id_locatorio' => $authRn->id_locatorio,
+                'cod_sindicato' => $authRn->cod_sindicato,
+                'id_tipo_tramite' => $authRn->id_tipo_tramite,
                 'id_tipo_prioridad' => 1
             ]);
 
             // B. Crear la cabecera de la prestación médica general
             $prestacion = PrestacionesPracticaLaboratorioEntity::create([
                 'fecha_registra' => $authRn->fecha_registra,
-                'observaciones' => "AUTORIZACIÓN RN MIGRADA: " . ($authRn->observaciones ?? ''),
+                'observaciones' => 'AUTORIZACIÓN RN MIGRADA: ' . ($authRn->observaciones ?? ''),
                 'fecha_impresion' => $authRn->fecha_impresion,
                 'vigente' => $authRn->vigente ?? 1,
                 'monto_pagar' => $authRn->monto_pagar ?? 0,

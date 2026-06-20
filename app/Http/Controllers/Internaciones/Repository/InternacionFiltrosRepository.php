@@ -96,7 +96,7 @@ class InternacionFiltrosRepository
     public function findByListNombresLike($request)
     {
         $query = InternacionesEntity::with($this->relaciones)
-            ->when(!empty($request->dni), function ($q) use ($request) {
+            ->when(!empty($request->search), function ($q) use ($request) {
                 $q->whereHas('afiliado', function ($query) use ($request) {
                     $query->where('nombre', 'like', '%' . $request->search . '%')
                         ->orWhere('apellidos', 'like', '%' . $request->search . '%')

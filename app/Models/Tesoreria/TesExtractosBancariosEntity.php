@@ -2,6 +2,7 @@
 
 namespace App\Models\Tesoreria;
 
+use App\Models\LocatorioModelos;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -15,27 +16,31 @@ class TesExtractosBancariosEntity extends Model
 
     protected $fillable = [
         'id_entidad_bancaria',
-        'fecha_operacion',
-        'fecha_valor',
+        'fecha',
+        'banco',
         'concepto',
-        'codigo',
-        'num_cheque',
-        'oficina',
-        'monto_credito',
-        'monto_debito',
-        'monto_saldo_parcial',
-        'monto_saldo_disponible',
         'importe',
-        'num_documento',
+        'saldo',
+        'referencia',
         'detalle',
-        'causal',
+        // Campos Cygnus Finance AI
+        'estado_conciliacion',
+        'score_matching',
+        'id_comprobante_financiero',
+        // Campos de auditoría
         'id_usuario',
         'fecha_registra',
-        'observaciones'
+        'observaciones',
+        'id_locatario'
     ];
 
     public function entidadBancaria()
     {
         return $this->hasOne(TesEntidadesBancariasEntity::class, 'id_entidad_bancaria', 'id_entidad_bancaria');
+    }
+
+    public function locatario()
+    {
+        return $this->hasOne(LocatorioModelos::class, 'id_locatorio', 'id_locatario');
     }
 }

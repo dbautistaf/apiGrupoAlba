@@ -83,30 +83,23 @@ class PrestacionMedicaController extends Controller
         try {
             $data = [];
             if ($request->solo_rn == 'true' || $request->solo_rn === true || $request->solo_rn == 1) {
-                $data = $repoFiltro->findByFiltersNewborn(
-                    $request->desde,
-                    $request->hasta,
-                    $request->tramite,
-                    $request->estado,
-                    $request->persona,
-                    $request->solo_rn,
-                    $request->dni_madre,
-                    $request->dni_rn
-                );
-            } else if (is_numeric($request->search)) {
-                if (strlen($request->search) == 8) {
-                    $data = $repoFiltro->findByListFechaRegistraBetweenAndDniAfiliado($request->desde, $request->hasta, $request->search, $request->tramite);
-                } else if (strlen($request->search) == 11) {
-                    $data = $repoFiltro->findByListFechaRegistraBetweenAndCuilAfiliado($request->desde, $request->hasta, $request->search, $request->tramite);
-                } else {
-                    $data = $repoFiltro->findByListFechaRegistraBetweenAndDniAfiliadoLike($request->desde, $request->hasta, $request->search, $request->tramite);
-                }
-            } else if (is_string($request->search)) {
-                $data = $data = $repoFiltro->findByListFechaRegistraBetweenAndNombresAfiliadoLike($request->desde, $request->hasta, $request->search, $request->tramite);
-            } else if (!empty($request->estado) || !empty($request->persona)) {
-                $data = $data = $repoFiltro->findByListEstado($request->estado, $request->persona);
+                $data = $repoFiltro->findByFiltersNewborn($request);
             } else {
-                $data = $repoFiltro->findByListFechaRegistraBetweenAndLimit($request->desde, $request->hasta, 200, $request->tramite);
+                if (is_numeric($request->search)) {
+                    if (strlen($request->search) == 8) {
+                        $data = $repoFiltro->findByListFechaRegistraBetweenAndDniAfiliado($request->desde, $request->hasta, $request->search, $request->tramite);
+                    } else if (strlen($request->search) == 11) {
+                        $data = $repoFiltro->findByListFechaRegistraBetweenAndCuilAfiliado($request->desde, $request->hasta, $request->search, $request->tramite);
+                    } else {
+                        $data = $repoFiltro->findByListFechaRegistraBetweenAndDniAfiliadoLike($request->desde, $request->hasta, $request->search, $request->tramite);
+                    }
+                } else if (is_string($request->search)) {
+                    $data = $repoFiltro->findByListFechaRegistraBetweenAndNombresAfiliadoLike($request->desde, $request->hasta, $request->search, $request->tramite);
+                } else if (!empty($request->estado) || !empty($request->persona)) {
+                    $data = $repoFiltro->findByListEstado($request->estado, $request->persona);
+                } else {
+                    $data = $repoFiltro->findByListFechaRegistraBetweenAndLimit($request->desde, $request->hasta, 200, $request->tramite);
+                }
             }
 
             foreach ($data as $objeto) {

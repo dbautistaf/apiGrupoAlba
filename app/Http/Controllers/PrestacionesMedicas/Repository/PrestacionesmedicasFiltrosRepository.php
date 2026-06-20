@@ -2,19 +2,20 @@
 
 namespace App\Http\Controllers\PrestacionesMedicas\Repository;
 
+use App\Models\Internaciones\AutorizacionDatosRNEntity;
 use App\Models\PrestacionesMedicas\PrestacionesPracticaLaboratorioEntity;
 use App\Models\PrestacionesMedicas\PrestacionMedicaFile;
 use Illuminate\Support\Facades\Auth;
 
 class PrestacionesmedicasFiltrosRepository
 {
-
     private $user;
     private $allRelations;
+
     public function __construct()
     {
         $this->user = Auth::user();
-        $this->allRelations = ["detalle", "detalle.practica", "estadoPrestacion", "afiliado", "afiliado.obrasocial", "usuario", "prestador", "profesional", "datosTramite", "datosTramite.tramite", "datosTramite.prioridad", "datosTramite.obrasocial", "documentacion"];
+        $this->allRelations = ['detalle', 'detalle.practica', 'estadoPrestacion', 'afiliado', 'afiliado.obrasocial', 'usuario', 'prestador', 'profesional', 'datosTramite', 'datosTramite.tramite', 'datosTramite.prioridad', 'datosTramite.obrasocial', 'documentacion'];
     }
 
     public function findByListFechaRegistraBetweenAndDniAfiliado($desde, $hasta, $dni, $tramite)
@@ -23,7 +24,7 @@ class PrestacionesmedicasFiltrosRepository
             ->whereBetween('fecha_registra', [$desde, $hasta])
             ->where('dni_afiliado', $dni);
 
-        if (!is_null($tramite)) {
+        if (!empty($tramite)) {
             $query->where('numero_tramite', 'like', $tramite . '%');
         }
 
@@ -40,7 +41,7 @@ class PrestacionesmedicasFiltrosRepository
                 $query->where('cuil_benef', $cuil);
             });
 
-        if (!is_null($tramite)) {
+        if (!empty($tramite)) {
             $query->where('numero_tramite', 'like', $tramite . '%');
         }
         $results = $query->orderByDesc('cod_prestacion')->get();
@@ -49,11 +50,11 @@ class PrestacionesmedicasFiltrosRepository
 
     public function findByListFechaRegistraBetweenAndDniAfiliadoLike($desde, $hasta, $dni, $tramite)
     {
-        return PrestacionesPracticaLaboratorioEntity::with($this->allRelations)
+        $query = PrestacionesPracticaLaboratorioEntity::with($this->allRelations)
             ->whereBetween('fecha_registra', [$desde, $hasta])
             ->where('dni_afiliado', 'LIKE', $dni . '%');
 
-        if (!is_null($tramite)) {
+        if (!empty($tramite)) {
             $query->where('numero_tramite', 'like', $tramite . '%');
         }
         $results = $query->orderByDesc('fecha_registra')->get();
@@ -62,16 +63,17 @@ class PrestacionesmedicasFiltrosRepository
 
     public function findByListFechaRegistraBetweenAndNombresAfiliadoLike($desde, $hasta, $nombres, $tramite)
     {
-        return PrestacionesPracticaLaboratorioEntity::with($this->allRelations)
+        $query = PrestacionesPracticaLaboratorioEntity::with($this->allRelations)
             ->whereBetween('fecha_registra', [$desde, $hasta])
             ->whereHas('afiliado', function ($query) use ($nombres) {
                 $query->where(function ($q) use ($nombres) {
-                    $q->where('apellidos', 'like', '%' . $nombres . '%')
+                    $q
+                        ->where('apellidos', 'like', '%' . $nombres . '%')
                         ->orWhere('nombre', 'like', '%' . $nombres . '%');
                 });
             });
 
-        if (!is_null($tramite)) {
+        if (!empty($tramite)) {
             $query->where('numero_tramite', 'like', $tramite . '%');
         }
         $results = $query->orderByDesc('fecha_registra')->get();
@@ -82,15 +84,16 @@ class PrestacionesmedicasFiltrosRepository
     {
         $query = PrestacionesPracticaLaboratorioEntity::with($this->allRelations);
 
-        if (!is_null($estado)) {
+        if (!empty($estado)) {
             $query->where('cod_tipo_estado', $estado);
         }
 
-        if (!is_null($usuario)) {
+        if (!empty($usuario)) {
             $query->where('usuario_registra', $usuario);
         }
 
-        $results = $query->orderByDesc('fecha_registra')
+        $results = $query
+            ->orderByDesc('fecha_registra')
             ->get();
         return $results;
     }
@@ -99,7 +102,7 @@ class PrestacionesmedicasFiltrosRepository
     {
         $query = PrestacionesPracticaLaboratorioEntity::with($this->allRelations)
             ->whereBetween('fecha_registra', [$desde, $hasta]);
-        if (!is_null($tramite)) {
+        if (!empty($tramite)) {
             $query->where('numero_tramite', 'like', $tramite . '%');
         }
         $results = $query
@@ -121,21 +124,22 @@ class PrestacionesmedicasFiltrosRepository
         $anioTrabajo = date('Y');
         $prestacion = PrestacionesPracticaLaboratorioEntity::with($this->allRelations)->find($id);
 
-        /* $listFile = PrestacionMedicaFile::where('cod_prestacion', $prestacion->cod_prestacion)->get();
-
-        $files = $listFile->map(function ($file) use ($anioTrabajo) {
-            $file->url = url("/storage/prestaciones/{$anioTrabajo}/{$file->archivo}");
-            return $file;
-        });
-
-        $prestacion->setRelation('url', $files);
- */
+        /*
+         * $listFile = PrestacionMedicaFile::where('cod_prestacion', $prestacion->cod_prestacion)->get();
+         *
+         * $files = $listFile->map(function ($file) use ($anioTrabajo) {
+         *     $file->url = url("/storage/prestaciones/{$anioTrabajo}/{$file->archivo}");
+         *     return $file;
+         * });
+         *
+         * $prestacion->setRelation('url', $files);
+         */
         return $prestacion;
     }
 
     public function findByDeleteId($id)
     {
-        //return PrestacionesPracticaLaboratorioEntity::find($id)->delete();
+        // return PrestacionesPracticaLaboratorioEntity::find($id)->delete();
 
         $registro = PrestacionesPracticaLaboratorioEntity::find($id);
 
@@ -171,54 +175,71 @@ class PrestacionesmedicasFiltrosRepository
         return PrestacionesPracticaLaboratorioEntity::whereIn('cod_prestacion', $ids)->get();
     }
 
-    public function findByFiltersNewborn($desde, $hasta, $tramite, $estado, $usuario, $solo_rn, $dni_madre, $dni_rn)
+    public function findByFiltersNewborn($request)
     {
-        $relations = array_merge($this->allRelations, [
-            "autorizacion_rn",
-            "autorizacion_rn.recien_nacido",
-            "autorizacion_rn.recien_nacido.internacion"
-        ]);
+        $relations = [
+            'detalle',
+            'detalle.practica',
+            'estadoPrestacion',
+            'usuario',
+            'prestador',
+            'profesional',
+            'recien_nacido',
+            'recien_nacido.internacion',
+            'recien_nacido.internacion.afiliado'
+        ];
 
-        $query = PrestacionesPracticaLaboratorioEntity::with($relations);
+        $query = AutorizacionDatosRNEntity::with($relations);
 
-        if (!empty($desde) && !empty($hasta)) {
-            $query->whereBetween('fecha_registra', [$desde, $hasta]);
+        if ($request->filled('desde') && $request->filled('hasta')) {
+            $query->whereBetween('fecha_registra', [$request->desde, $request->hasta]);
         }
 
-        if (!empty($tramite)) {
-            $query->where('numero_tramite', 'like', $tramite . '%');
+        if ($request->filled('tramite')) {
+            $query->where('cod_prestacion_rn', 'like', $request->tramite . '%');
         }
 
-        if (!empty($estado)) {
-            $query->where('cod_tipo_estado', $estado);
+        if ($request->filled('estado')) {
+            $query->where('cod_tipo_estado', $request->estado);
         }
 
-        if (!empty($usuario)) {
-            $query->where('usuario_registra', $usuario);
+        if ($request->filled('persona')) {
+            $query->where('usuario_registra', $request->persona);
         }
 
-        // Filter for Solo RN or Newborn DNI
-        if ($solo_rn == 'true' || $solo_rn === true || $solo_rn == 1 || !empty($dni_rn)) {
-            $query->whereHas('autorizacion_rn', function ($q) use ($dni_rn) {
-                if (!empty($dni_rn)) {
-                    $q->whereHas('recien_nacido', function ($rnQuery) use ($dni_rn) {
-                        $rnQuery->where('dni_rn', 'like', $dni_rn . '%');
-                    });
-                }
+        // Filter for Newborn DNI
+        if ($request->filled('dni_rn')) {
+            $query->whereHas('recien_nacido', function ($q) use ($request) {
+                $q->where('dni_rn', 'like', $request->dni_rn . '%');
             });
         }
 
         // Filter for Mother's DNI
-        if (!empty($dni_madre)) {
-            $query->where(function ($q) use ($dni_madre) {
-                $q->where('dni_afiliado', 'like', $dni_madre . '%')
-                  ->orWhereHas('autorizacion_rn.recien_nacido.internacion', function ($internacionQuery) use ($dni_madre) {
-                      $internacionQuery->where('dni_afiliado', 'like', $dni_madre . '%');
-                  });
+        if ($request->filled('dni_madre')) {
+            $query->whereHas('recien_nacido.internacion', function ($q) use ($request) {
+                $q->where('dni_afiliado', 'like', $request->dni_madre . '%');
             });
         }
 
-        $results = $query->orderByDesc('cod_prestacion')->get();
+        // Filter for newborn's name / newborn's DNI / mother's DNI / transaction ID (search box)
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q
+                    ->where('cod_prestacion_rn', 'like', $search . '%')
+                    ->orWhereHas('recien_nacido', function ($rnQuery) use ($search) {
+                        $rnQuery
+                            ->where('nombre_rn', 'like', '%' . $search . '%')
+                            ->orWhere('apellidos_rn', 'like', '%' . $search . '%')
+                            ->orWhere('dni_rn', 'like', $search . '%');
+                    })
+                    ->orWhereHas('recien_nacido.internacion', function ($intQuery) use ($search) {
+                        $intQuery->where('dni_afiliado', 'like', $search . '%');
+                    });
+            });
+        }
+
+        $results = $query->orderByDesc('cod_prestacion_rn')->get();
         return $results;
     }
 }
