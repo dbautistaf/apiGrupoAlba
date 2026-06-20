@@ -2,6 +2,7 @@
 
 namespace App\Models\Tesoreria;
 
+use App\Models\LocatorioModelos;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -16,6 +17,7 @@ class TesExtractosBancariosEntity extends Model
     protected $fillable = [
         'id_entidad_bancaria',
         'fecha',
+        'banco',
         'concepto',
         'importe',
         'saldo',
@@ -35,5 +37,10 @@ class TesExtractosBancariosEntity extends Model
     public function entidadBancaria()
     {
         return $this->hasOne(TesEntidadesBancariasEntity::class, 'id_entidad_bancaria', 'id_entidad_bancaria');
+    }
+
+    public function locatario()
+    {
+        return $this->hasOne(LocatorioModelos::class, 'id_locatorio', 'id_locatario');
     }
 }

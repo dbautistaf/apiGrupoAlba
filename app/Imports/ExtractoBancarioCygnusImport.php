@@ -44,6 +44,7 @@ class ExtractoBancarioCygnusSheetImport implements ToCollection, WithStartRow
                     TesExtractosBancariosEntity::create([
                         'id_entidad_bancaria' => $this->id_entidad_bancaria,  // Usamos el seleccionado en el frontend
                         'fecha' => $this->formatFecha($row[0]),
+                        'banco'=>$row[1] ?? '-',
                         'concepto' => $row[2] ?? '-',  // Columna C
                         'importe' => $this->formatMonto($row[3] ?? 0),  // Columna D
                         'saldo' => $this->formatMonto($row[4] ?? 0),  // Columna E
