@@ -16,6 +16,7 @@ class BancoCuentasContableEntity extends Model
     protected $fillable = [
         'id_cuenta_bancaria',
         'id_detalle_plan',
+        'id_razon',
         'cod_usuario_crea',
         'fecha_registra',
         'cod_usuario_modifica',

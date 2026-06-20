@@ -21,6 +21,7 @@ class ImputacionCuentaContableRepository
     {
         return ImputacionesCuentaContableEntity::create([
             'id_detalle_plan' => $params->id_detalle_plan,
+            'id_razon' => $params->id_razon ?? null,
             'imputacion' => $params->descripcion,
             'codigo' => $params->codigo_cuenta,
             'vigente' => $params->vigente ?? true,
@@ -41,6 +42,7 @@ class ImputacionCuentaContableRepository
     {
         $imputacion = ImputacionesCuentaContableEntity::find($id);
         $imputacion->id_detalle_plan = $params->id_detalle_plan;
+        $imputacion->id_razon = $params->id_razon ?? $imputacion->id_razon;
         $imputacion->imputacion = $params->imputacion;
         $imputacion->codigo = $params->codigo;
         $imputacion->vigente = $params->vigente ?? $imputacion->vigente;
@@ -80,6 +82,10 @@ class ImputacionCuentaContableRepository
             $query->where('id_detalle_plan', $filtros['id_detalle_plan']);
         }
 
+        if (isset($filtros['id_razon']) && !empty($filtros['id_razon'])) {
+            $query->where('id_razon', $filtros['id_razon']);
+        }
+
         if (isset($filtros['codigo'])) {
             $query->where('codigo', 'like', '%' . $filtros['codigo'] . '%');
         }
@@ -110,6 +116,7 @@ class ImputacionCuentaContableRepository
         return (object) [
             'id_imputacion_cuenta_contable' => $registro->id_imputacion_cuenta_contable,
             'id_detalle_plan' => $registro->id_detalle_plan,
+            'id_razon' => $registro->id_razon,
             'descripcion' => $registro->imputacion,    // coincide con create que usaba 'descripcion'
             'codigo_cuenta' => $registro->codigo,      // coincide con create que usaba 'codigo_cuenta'
             'codigo' => $registro->codigo,             // para compatibilidad con update que usa 'codigo'

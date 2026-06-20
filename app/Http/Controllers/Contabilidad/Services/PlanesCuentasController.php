@@ -181,8 +181,9 @@ class PlanesCuentasController extends Controller
     }
     public function getListarCuentasCompleto(Request $request, PlanesCuentasRepository $repo)
     {
-        $search = $request->query('search');
-        return response()->json($repo->findByDetalleCuentasPlanesCompleto($search));
+        $search  = $request->query('search');
+        $idRazon = $request->query('id_razon');
+        return response()->json($repo->findByDetalleCuentasPlanesCompleto($search, $idRazon));
     }
 
     public function getExportPlanCuentas()

@@ -27,4 +27,14 @@ class PeriodosContablesEntity extends Model
         'vigente',
         'activo'
     ];
+
+    public function estadosRazon()
+    {
+        return $this->hasMany(PeriodoEstadoRazonEntity::class, 'id_periodo_contable', 'id_periodo_contable');
+    }
+
+    public function estadoRazon()
+    {
+        return $this->hasOne(PeriodoEstadoRazonEntity::class, 'id_periodo_contable', 'id_periodo_contable');
+    }
 }

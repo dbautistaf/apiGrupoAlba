@@ -21,6 +21,7 @@ class RetencionCuentaContableRepository
         return RetencionCuentasContablesEntity::create([
             'id_retencion' => $params->id_retencion,
             'id_detalle_plan' => $params->id_detalle_plan,
+            'id_razon' => $params->id_razon ?? null,
             'cod_usuario_crea' => $this->user->cod_usuario,
             'fecha_registra' => $this->fechaActual
         ]);
@@ -38,6 +39,7 @@ class RetencionCuentaContableRepository
         $proveedor = RetencionCuentasContablesEntity::find($id);
         $proveedor->id_retencion = $params->id_retencion;
         $proveedor->id_detalle_plan = $params->id_detalle_plan;
+        $proveedor->id_razon = $params->id_razon ?? null;
         $proveedor->cod_usuario_modifica = $this->user->cod_usuario;
         $proveedor->fecha_modifica = $this->fechaActual;
         return $proveedor->update();
@@ -49,12 +51,12 @@ class RetencionCuentaContableRepository
             ->get();
     }
 
-    public function findByBuscarRelacionFormaPago($id_retencion, $idPeriodo)
+    public function findByBuscarRelacionRetencion($id_retencion, $idRazon = null)
     {
-        return RetencionCuentasContablesEntity::where('id_retencion', $id_retencion)
-            ->whereHas('detallePlan', function ($query) use ($idPeriodo) {
-                $query->where('id_periodo_contable', $idPeriodo);
-            })
-            ->first();
+        $query = RetencionCuentasContablesEntity::where('id_retencion', $id_retencion);
+        if ($idRazon) {
+            $query->where('id_razon', $idRazon);
+        }
+        return $query->first();
     }
 }

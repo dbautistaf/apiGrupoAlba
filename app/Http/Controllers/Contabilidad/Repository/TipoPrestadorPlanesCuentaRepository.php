@@ -22,6 +22,7 @@ class TipoPrestadorPlanesCuentaRepository
         return TipoPrestadorCuentaContableEntity::create([
             'cod_tipo_prestador' => $params->cod_tipo_prestador,
             'id_detalle_plan' => $params->id_detalle_plan,
+            'id_razon' => $params->id_razon ?? null,
             'cod_usuario_crea' => $this->user->cod_usuario,
             'fecha_registra' => $this->fechaActual
         ]);
@@ -39,6 +40,7 @@ class TipoPrestadorPlanesCuentaRepository
         $proveedor = TipoPrestadorCuentaContableEntity::find($id);
         $proveedor->cod_tipo_prestador = $params->cod_tipo_prestador;
         $proveedor->id_detalle_plan = $params->id_detalle_plan;
+        $proveedor->id_razon = $params->id_razon ?? null;
         $proveedor->cod_usuario_modifica = $this->user->cod_usuario;
         $proveedor->fecha_modifica = $this->fechaActual;
         return $proveedor->update();
@@ -50,24 +52,27 @@ class TipoPrestadorPlanesCuentaRepository
             ->get();
     }
 
-    public function findByBuscarRelacionProveedor($cod_tipo_prestador, $idPeriodo)
+    public function findByBuscarRelacionTipoPrestador($cod_tipo_prestador, $idRazon = null)
     {
-        return TipoPrestadorCuentaContableEntity::where('cod_tipo_prestador', $cod_tipo_prestador)
-            ->whereHas('detallePlan', function ($query) use ($idPeriodo) {
-                $query->where('id_periodo_contable', $idPeriodo);
-            })
-            ->first();
+        $query = TipoPrestadorCuentaContableEntity::where('cod_tipo_prestador', $cod_tipo_prestador);
+        if ($idRazon) {
+            $query->where('id_razon', $idRazon);
+        }
+        return $query->first();
     }
 
-    public function findByPlanCuentaPorTipoPrestador($codTipoPrestador)
+    public function findByPlanCuentaPorTipoPrestador($codTipoPrestador, $idRazon = null)
     {
-        return TipoPrestadorCuentaContableEntity::where('cod_tipo_prestador', $codTipoPrestador)
+        $query = TipoPrestadorCuentaContableEntity::where('cod_tipo_prestador', $codTipoPrestador)
             ->where('vigente', 1)
             ->with([
                 'tipoPrestador',
                 'detallePlan.plan',
                 'detallePlan.tipo'
-            ])
-            ->first();
+            ]);
+        if ($idRazon) {
+            $query->where('id_razon', $idRazon);
+        }
+        return $query->first();
     }
 }

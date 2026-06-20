@@ -17,7 +17,7 @@ class AsientosPagoHistorialRepository
     public function __construct(AsientoContableRepository $asientoContableRepository)
     {
         $this->user = Auth::user();
-        $this->fechaActual = Carbon::now();
+        $this->fechaActual = Carbon::now('America/Argentina/Buenos_Aires');
         $this->asientoContableRepository = $asientoContableRepository;
     }
 
@@ -71,7 +71,8 @@ class AsientosPagoHistorialRepository
             $numeroCorrelativo,
             $asientoOriginal->id_periodo_contable,
             $asientoOriginal->numero,
-            'ACTIVO'
+            'ACTIVO',
+            $asientoOriginal->id_razon
         );
 
         foreach ($asientoOriginal->detalle as $detalleOriginal) {

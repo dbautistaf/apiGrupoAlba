@@ -111,7 +111,8 @@ class AsientoContableController extends Controller
                     $numeroCorrelativo,
                     $request->id_periodo_contable,
                     $request->numero_referencia,
-                    $request->vigente
+                    $request->vigente,
+                    $request->id_razon
                 );
 
                 foreach ($request->detalle as $key) {

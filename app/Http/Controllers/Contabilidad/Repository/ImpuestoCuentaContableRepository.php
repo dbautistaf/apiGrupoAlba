@@ -21,6 +21,7 @@ class ImpuestoCuentaContableRepository
         return ImpuestoCuentaContableEntity::create([
             'id_impuesto' => $params->id_impuesto,
             'id_detalle_plan' => $params->id_detalle_plan,
+            'id_razon' => $params->id_razon ?? null,
             'cod_usuario_crea' => $this->user->cod_usuario,
             'fecha_registra' => $this->fechaActual
         ]);
@@ -38,6 +39,7 @@ class ImpuestoCuentaContableRepository
         $impuesto = ImpuestoCuentaContableEntity::find($id);
         $impuesto->id_impuesto = $params->id_impuesto;
         $impuesto->id_detalle_plan = $params->id_detalle_plan;
+        $impuesto->id_razon = $params->id_razon ?? null;
         $impuesto->cod_usuario_modifica = $this->user->cod_usuario;
         $impuesto->fecha_modifica = $this->fechaActual;
         return $impuesto->update();
@@ -49,12 +51,12 @@ class ImpuestoCuentaContableRepository
             ->get();
     }
 
-    public function findByBuscarRelacionImpuesto($idImpuesto, $idPeriodo)
+    public function findByBuscarRelacionImpuesto($idImpuesto, $idRazon = null)
     {
-        return ImpuestoCuentaContableEntity::where('id_impuesto', $idImpuesto)
-            ->whereHas('detallePlan', function ($query) use ($idPeriodo) {
-                $query->where('id_periodo_contable', $idPeriodo);
-            })
-            ->first();
+        $query = ImpuestoCuentaContableEntity::where('id_impuesto', $idImpuesto);
+        if ($idRazon) {
+            $query->where('id_razon', $idRazon);
+        }
+        return $query->first();
     }
 }
