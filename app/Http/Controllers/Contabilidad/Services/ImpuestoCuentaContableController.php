@@ -20,7 +20,7 @@ class ImpuestoCuentaContableController extends Controller
     public function getProcesar(Request $request, ImpuestoCuentaContableRepository $repo)
     {
         try {
-            DB::beginTransaction();
+            DB::beginTransaction(); 
             if (!is_null($request->id_impuesto_cuenta_contable)) {
                 $repo->findByUpdate($request, $request->id_impuesto_cuenta_contable);
                 DB::commit();
