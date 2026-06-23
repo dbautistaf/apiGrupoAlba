@@ -16,6 +16,7 @@ class FormasPagoCuentasContableEntity extends Model
     protected $fillable = [
         'id_forma_pago',
         'id_detalle_plan',
+        'id_razon',
         'cod_usuario_crea',
         'fecha_registra',
         'cod_usuario_modifica',

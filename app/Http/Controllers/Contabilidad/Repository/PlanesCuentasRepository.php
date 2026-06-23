@@ -24,6 +24,7 @@ class PlanesCuentasRepository
     {
         return PlanesCuentaEntity::create([
             'id_tipo_plan_cuenta' => $params->id_tipo_plan_cuenta,
+            'id_razon' => $params->id_razon ?? null,
             'plan_cuenta' => $params->plan_cuenta,
             'cod_usuario_crea' => $this->user->cod_usuario,
             'fecha_registra' => $this->fechaActual,
@@ -205,9 +206,14 @@ class PlanesCuentasRepository
             ->get();
     }
 
-    public function findByDetalleCuentasPlanesCompleto($search = null)
+    public function findByDetalleCuentasPlanesCompleto($search = null, $idRazon = null)
     {
         $query = DetallePlanCuentasEntity::with(['tipo', 'plan']);
+
+        // Solo cuentas del plan de la razón social indicada (evita mezclar datos)
+        if (!empty($idRazon)) {
+            $query->whereHas('plan', fn($q) => $q->where('id_razon', $idRazon));
+        }
 
         if ($search) {
             $query->where(function ($q) use ($search) {

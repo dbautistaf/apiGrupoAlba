@@ -25,7 +25,6 @@ use Illuminate\Support\Facades\Log;
 class TesPagosController extends Controller
 {
     private $periodoContableRepositorio;
-    private $periodoContableActivo;
     private $proveedorPlanesCuentaRepository;
     private $formaPagoCuentaContableRepository;
     private $correlativosOspfRepository;
@@ -40,7 +39,6 @@ class TesPagosController extends Controller
         $this->proveedorPlanesCuentaRepository = $proveedorPlanesCuentaRepository;
         $this->formaPagoCuentaContableRepository = $formaPagoCuentaContableRepository;
         $this->correlativosOspfRepository = $correlativosOspfRepository;
-        $this->periodoContableActivo = $this->periodoContableRepositorio->findByPeriodoContableActivo();
     }
 
 
@@ -202,9 +200,17 @@ class TesPagosController extends Controller
             // CREAR ASIENTO CONTABLE AUTOMÁTICO DE PAGO
             // ============================================================
             if (!is_null($opaFactus)) {
+                if (empty($params->id_razon)) {
+                    DB::rollBack();
+                    return response()->json([
+                        'message' => 'Falta la razón social para registrar el asiento contable del pago. Por favor contacte con el administrador.'
+                    ], 422);
+                }
                 try {
-                    if (is_null($this->periodoContableActivo)) {
-                        throw new \Exception("No se encontró un período contable activo para registrar el asiento contable del pago.");
+                    // Período mensual vigente que contiene la fecha actual (no el anual)
+                    $periodoContableActivo = $this->periodoContableRepositorio->findByPeriodoContableActivoNow($params->id_razon ?? null);
+                    if (is_null($periodoContableActivo)) {
+                        throw new \Exception("No se encontró un período contable mensual activo para la fecha actual para registrar el asiento contable del pago.");
                     }
 
                     // Cargar relaciones de OPA — independiente de cuántas facturas tenga
@@ -215,6 +221,7 @@ class TesPagosController extends Controller
                         'id_pago'            => $pagoDb->id_pago,
                         'id_proveedor'       => $opaFactus->id_proveedor,
                         'id_prestador'       => $opaFactus->id_prestador,
+                        'id_razon'           => $params->id_razon ?? null,
                         'cuit'               => $proveedorPrestador->cuit ?? '',
                         'nombre'             => $proveedorPrestador->razon_social ?? '',
                         'numero_pago'        => 'PAGO-' . $pagoDb->num_pago,
@@ -223,7 +230,7 @@ class TesPagosController extends Controller
                         'monto_total'        => $monto_total,
                     ];
 
-                    $asiento = $asientoContableRepository->crearAsientoPago($datosPago, $this->periodoContableActivo->id_periodo_contable);
+                    $asiento = $asientoContableRepository->crearAsientoPago($datosPago, $periodoContableActivo->id_periodo_contable);
 
                     $historialPagoRepository->guardarHistorial(
                         $pagoDb->id_pago,

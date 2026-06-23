@@ -21,6 +21,7 @@ class AsientosContablesEntity extends Model
         'numero_referencia',
         'asiento_observaciones',
         'id_periodo_contable',
+        'id_razon',
         'cod_usuario_crea',
         'fecha_registra',
         'cod_usuario_modifica',
@@ -49,5 +50,10 @@ class AsientosContablesEntity extends Model
     public function periodoContable()
     {
         return $this->hasOne(PeriodosContablesEntity::class, 'id_periodo_contable', 'id_periodo_contable');
+    }
+
+    public function razonSocial()
+    {
+        return $this->hasOne(\App\Models\configuracion\RazonSocialModelo::class, 'id_razon', 'id_razon');
     }
 }

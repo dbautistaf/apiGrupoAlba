@@ -14,6 +14,7 @@ class PlanesCuentaEntity extends Model
 
     protected $fillable = [
         'id_tipo_plan_cuenta',
+        'id_razon',
         'plan_cuenta',
         'cod_usuario_crea',
         'fecha_registra',
@@ -25,5 +26,10 @@ class PlanesCuentaEntity extends Model
     public function tipo()
     {
         return $this->hasOne(TipoPlanCuentaEntity::class, 'id_tipo_plan_cuenta', 'id_tipo_plan_cuenta');
+    }
+
+    public function razonSocial()
+    {
+        return $this->hasOne(\App\Models\configuracion\RazonSocialModelo::class, 'id_razon', 'id_razon');
     }
 }

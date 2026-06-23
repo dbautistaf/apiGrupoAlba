@@ -228,7 +228,7 @@ class FacturaRepository
                 $query->where('tipo_evento', 'ALTA')
                     ->where('es_contraasiento', false)
                     ->whereHas('asientoContable', fn($q) => $q->where('vigente', 'ACTIVO'))
-                    ->with(['asientoContable.detalle']);
+                    ->with(['asientoContable.detalle.planCuenta']);
             }
         ])
             ->find($id);

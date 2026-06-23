@@ -87,6 +87,11 @@ CREATE TABLE tb_cont_asientos_pago_historial (
 | Campo | Tipo | Descripción |
 |---|---|---|
 | `idImputacionDebe` | int | ID de la imputación contable para la línea DEBE |
+| `id_razon` | int | Razón social. El frontend lo manda como `id_locatorio`; el controller lo mapea: `if (empty($cabecera->id_razon) && !empty($cabecera->id_locatorio)) $cabecera->id_razon = $cabecera->id_locatorio;` **Obligatorio** — sin él se devuelve 422. |
+
+### Período contable (factura)
+
+`findByExistsPeriodoActivo($periodoCorto, $cabecera->id_razon)` — busca el período cuyo `periodo` coincide con el de la factura (ej. `2606`), validando que esté `activo` para esa razón social en `tb_cont_periodo_estado_razon`.
 
 ### Estructura del asiento
 
@@ -111,6 +116,7 @@ numero_referencia = id_factura
 
 | Condición | Mensaje | HTTP |
 |---|---|---|
+| `id_razon` ausente (ni `id_locatorio`) | "Falta la razón social para registrar el asiento contable..." | 422 |
 | `idImputacionDebe` ausente | "Falta la imputación contable (DEBE)... contacte con Contabilidad" | 423 |
 | Imputación sin cuenta asignada | "La imputación contable seleccionada no tiene una cuenta contable asignada... contacte con Contabilidad" | 423 |
 | Sin proveedor ni prestador | "No se pudo determinar si la factura es de prestador o proveedor... contacte con Contabilidad" | 423 |
@@ -154,12 +160,15 @@ numero_referencia = id_factura
 | Campo | Origen |
 |---|---|
 | `id_proveedor` / `id_prestador` | `$opaFactus->id_proveedor` / `$opaFactus->id_prestador` |
+| `id_razon` | `$params->id_razon` (razón social del pago — **obligatorio**) |
 | CUIT / nombre | `$opaFactus->proveedor` o `$opaFactus->prestador` |
 | `id_cuenta_bancaria` | `$params->id_cuenta_bancaria` |
 | `monto_total` | Calculado en el controller (suma de lista_pagos) |
-| Período contable | `$this->periodoContableActivo` (inyectado en constructor) |
+| Período contable | `findByPeriodoContableActivoNow($params->id_razon)` — período **mensual** vigente que contiene la fecha actual, filtrado por razón social. **No** se usa el período anual ni "el primer período activo cualquiera". |
 
 > La OPA puede tener múltiples facturas vinculadas (`tb_tes_opa_factura`). Por eso los datos del asiento se toman **de la OPA directamente**, no de ninguna factura en particular.
+
+> **Determinación proveedor vs prestador:** se decide por la presencia de datos reales del pago — `$esFacturaProveedor = !empty($id_proveedor)`. **No** se usa `id_tipo_factura` (ese campo no se envía en el payload de pago, antes provocaba que todo pago se clasificara como prestador → cuenta DEBE 35 incorrecta).
 
 ### Estructura del asiento
 
@@ -185,8 +194,10 @@ numero_referencia = id_pago
 2. Confirmar pago + actualizar OPA
 3. Retiro de cuenta bancaria + movimiento
 4. Si OPA no es null:
-   a. crearAsientoPago()
-   b. guardarHistorial(ALTA) en tb_cont_asientos_pago_historial
+   a. Validar id_razon (rollback + 422 si falta)
+   b. findByPeriodoContableActivoNow(id_razon) — período mensual vigente (rollback + 423 si null)
+   c. crearAsientoPago() con id_razon en datosPago
+   d. guardarHistorial(ALTA) en tb_cont_asientos_pago_historial
 5. Falla → rollback completo
 ```
 
@@ -202,6 +213,22 @@ numero_referencia = id_pago
 ```
 
 > No hay edición de pago implementada. Si se implementa en el futuro: contraasiento + nuevo asiento, igual que modificación de factura.
+
+---
+
+## Integración multi razón social y endurecimientos
+
+Estos puntos se incorporaron al integrar el módulo con multi razón social (ver `plan-contabilidad-razonsocial.md`):
+
+- **`id_razon` se persiste en todo asiento.** `findByCrearAsiento(..., $id_razon = null)` guarda `id_razon` en `tb_cont_asientos_contables`. Todos los flujos (factura, pago, reintegro, transacción, discapacidad) lo propagan.
+
+- **Los contraasientos heredan la razón social.** En los 4 repos de historial (`AsientosFacturacionHistorialRepository`, `AsientosPagoHistorialRepository`, `AsientosReintegrosHistorialRepository`, `AsientosDiscapacidadHistorialRepository`), `generarContraasiento()` pasa `$asientoOriginal->id_razon` al crear el contraasiento. Si no, el contraasiento quedaba sin razón y no aparecía en vistas filtradas.
+
+- **Timezone Argentina.** `AsientoContableRepository` y los 4 repos de historial usan `Carbon::now('America/Argentina/Buenos_Aires')` (la app está en UTC). `fecha_asiento` se toma de `$this->fechaActual->toDateString()`. Antes, usar UTC corría la fecha del asiento un día.
+
+- **Asiento original tras modificación/anulación.** Al generar el contraasiento, el asiento original pasa a `vigente = 'CONTRAASIENTO'` (`findByAnularAsientoContableId`). El libro diario muestra los tres: original (`CONTRAASIENTO`), contraasiento (`ACTIVO`) y nuevo (`ACTIVO`) — `LibroDiarioRepository` filtra con `whereIn('vigente', ['ACTIVO', 'CONTRAASIENTO'])`.
+
+- **Edición de factura — carga de la imputación DEBE.** El frontend (`buildImputacionDebe`) toma `idImputacionDebe` de `id_imputacion_proveedor/prestador` del detalle (no de `id_detalle_plan`), y `codigoDebe` de `plan_cuenta.codigo_cuenta` (el backend eager-loadea `asientoContable.detalle.planCuenta`). Si no, la modificación fallaba con "imputación sin cuenta asignada".
 
 ---
 

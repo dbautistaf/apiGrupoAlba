@@ -21,6 +21,7 @@ class BancoCuentaContableRepository
         return BancoCuentasContableEntity::create([
             'id_cuenta_bancaria' => $params->id_cuenta_bancaria,
             'id_detalle_plan' => $params->id_detalle_plan,
+            'id_razon' => $params->id_razon ?? null,
             'cod_usuario_crea' => $this->user->cod_usuario,
             'fecha_registra' => $this->fechaActual
         ]);
@@ -38,6 +39,7 @@ class BancoCuentaContableRepository
         $proveedor = BancoCuentasContableEntity::find($id);
         $proveedor->id_cuenta_bancaria = $params->id_cuenta_bancaria;
         $proveedor->id_detalle_plan = $params->id_detalle_plan;
+        $proveedor->id_razon = $params->id_razon ?? null;
         $proveedor->cod_usuario_modifica = $this->user->cod_usuario;
         $proveedor->fecha_modifica = $this->fechaActual;
         return $proveedor->update();
@@ -49,12 +51,12 @@ class BancoCuentaContableRepository
             ->get();
     }
 
-    public function findByBuscarRelacionFormaPago($idFormaPago, $idPeriodo)
+    public function findByBuscarRelacionBanco($idCuentaBancaria, $idRazon = null)
     {
-        return BancoCuentasContableEntity::where('id_forma_pago', $idFormaPago)
-            ->whereHas('detallePlan', function ($query) use ($idPeriodo) {
-                $query->where('id_periodo_contable', $idPeriodo);
-            })
-            ->first();
+        $query = BancoCuentasContableEntity::where('id_cuenta_bancaria', $idCuentaBancaria);
+        if ($idRazon) {
+            $query->where('id_razon', $idRazon);
+        }
+        return $query->first();
     }
 }

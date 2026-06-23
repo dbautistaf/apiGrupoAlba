@@ -18,7 +18,7 @@ class AsientosReintegrosHistorialRepository
     public function __construct(AsientoContableRepository $asientoContableRepository)
     {
         $this->user = Auth::user();
-        $this->fechaActual = Carbon::now();
+        $this->fechaActual = Carbon::now('America/Argentina/Buenos_Aires');
         $this->asientoContableRepository = $asientoContableRepository;
     }
 
@@ -62,7 +62,8 @@ class AsientosReintegrosHistorialRepository
                 $numeroCorrelativo,
                 $asientoOriginal->id_periodo_contable,
                 $asientoOriginal->numero, // Referencia al asiento original
-                'ACTIVO'
+                'ACTIVO',
+                $asientoOriginal->id_razon
             );
 
             // Crear detalles del contraasiento con valores invertidos
