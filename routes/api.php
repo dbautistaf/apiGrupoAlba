@@ -1510,3 +1510,22 @@ Route::group([
 ], function () {
     Route::get('buscar-dashboard', [App\Http\Controllers\PortalPrestadores\dashboard::class, 'getDashboard']);
 });
+
+
+Route::group([
+    'middleware' => ['jwt.verify'],
+    'prefix' => '/v1/portal-prestadores'
+], function () {
+
+    Route::get('facturacion/listar', [App\Http\Controllers\PortalPrestadores\Services\FacturacionPortalController::class, 'listar']);
+    Route::get('facturacion/{id}', [App\Http\Controllers\PortalPrestadores\Services\FacturacionPortalController::class, 'obtener']);
+    Route::get('estado-facturacion', [App\Http\Controllers\PortalPrestadores\Services\FacturacionPortalController::class, 'listarEstados']);
+    Route::get('documentacion-factura', [App\Http\Controllers\PortalPrestadores\Services\FacturacionPortalController::class, 'listarDocumentacion']);
+    Route::get('ver-doc-factura', [App\Http\Controllers\PortalPrestadores\Services\FacturacionPortalController::class, 'getVerAdjunto']);
+
+    Route::post('facturacion/crear', [App\Http\Controllers\PortalPrestadores\Services\FacturacionPortalController::class, 'crear']);
+    Route::post('modificar-estado-factura', [App\Http\Controllers\PortalPrestadores\Services\FacturacionPortalController::class, 'actualizarEstado']);
+    Route::post('documentacion-factura', [App\Http\Controllers\PortalPrestadores\Services\FacturacionPortalController::class, 'cargarDocumentacion']);
+
+    Route::delete('facturacion/{id}', [App\Http\Controllers\PortalPrestadores\Services\FacturacionPortalController::class, 'eliminar']);
+});
