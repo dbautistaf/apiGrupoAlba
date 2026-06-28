@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\DashboardConsumo;
 
 use App\Http\Controllers\Controller;
-use App\Models\BonosMedicos\BonoClinicoEntity;
+use App\Models\BonoClinicoEntity;
 use App\Models\Internaciones\InternacionesEntity;
 use App\Models\PrestacionesMedicas\PrestacionesPracticaLaboratorioEntity;
 use Carbon\Carbon;

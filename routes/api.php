@@ -1506,9 +1506,9 @@ Route::group([
 
 Route::group([
     'middleware' => ['jwt.verify'],
-    'prefix' => '/v1/portal-prestador'
+    'prefix' => '/v1/dashboard-consumo'
 ], function () {
-    Route::get('buscar-dashboard', [App\Http\Controllers\PortalPrestadores\dashboard::class, 'getDashboard']);
+    Route::get('buscar-dashboard', [App\Http\Controllers\DashboardConsumo\Dashboard::class, 'getDashboard']);
 });
 
 

@@ -114,4 +114,13 @@ class ManejadorDeArchivosUtils
         }
         return $nombre_archivo;
     }
+
+    public function crearCarpeta($path, $carpeta)
+    {
+        $directoryPath = storage_path("app/{$path}/{$carpeta}");
+
+        if (!File::exists($directoryPath)) {
+            File::makeDirectory($directoryPath, 0755, true);
+        }
+    }
 }
