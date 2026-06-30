@@ -3,7 +3,7 @@
 namespace App\Models\PortalPrestadores;
 
 use App\Models\facturacion\TipoFacturacionEntity;
-use App\Models\Prestadores\PrestadorEntity;
+use App\Models\prestadores\PrestadorEntity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;

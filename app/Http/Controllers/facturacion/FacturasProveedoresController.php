@@ -122,6 +122,9 @@ class FacturasProveedoresController extends Controller
         foreach ($facturas as $factura) {
             $facturaArray = (array) $factura;
 
+            $detalleOpa = \App\Models\Tesoreria\TesOrdenPagoDetalleEntity::where('id_factura', $factura->id_factura)->first();
+            $facturaArray['factura_unida'] = $detalleOpa ? $detalleOpa->factura_unida : 0;
+
             // Buscar pagos relacionados con esta factura y sus comprobantes
             $pagos = TesPagoEntity::with([
                 'comprobantes' => function ($query) {

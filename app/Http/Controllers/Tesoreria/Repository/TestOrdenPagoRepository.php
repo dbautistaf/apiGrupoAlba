@@ -433,6 +433,13 @@ class TestOrdenPagoRepository
             ];
         }
 
+        if ($detalleOpa->id_orden_pago == $request->idOrdenPago) {
+            return [
+                'success' => false,
+                'message' => 'La factura ya pertenece a esta OPA'
+            ];
+        }
+
         $opa = TesOrdenPagoEntity::where('id_orden_pago', $detalleOpa->id_orden_pago)->first();
         $getOpa = TesOrdenPagoEntity::where('id_orden_pago', $request->idOrdenPago)->first();
 
@@ -456,6 +463,9 @@ class TestOrdenPagoRepository
 
         TesOrdenPagoDetalleEntity::where('id_orden_pago', $detalleOpa->id_orden_pago)->delete();
         TesOrdenPagoEntity::where('id_orden_pago', $detalleOpa->id_orden_pago)->delete();
+
+        // Ensure the existing details in the target OPA are marked as grouped
+        TesOrdenPagoDetalleEntity::where('id_orden_pago', $getOpa->id_orden_pago)->update(['factura_unida' => 1]);
 
         return [
             'success' => true,
@@ -482,20 +492,35 @@ class TestOrdenPagoRepository
             'observaciones' => $opa->observaciones,
             'cod_usuario' => $this->user->cod_usuario,
             'fecha_genera' => $this->fechaActual,
-            'id_factura' => $opa->id_factura,
-            'tipo_factura' => $opa->tipo_factura
+            'id_factura' => $detalleOpa->id_factura,
+            'tipo_factura' => $detalleOpa->tipo_factura
         ]);
 
         TesOrdenPagoDetalleEntity::create([
             'id_orden_pago' => $newopa->id_orden_pago,
             'id_factura' => $detalleOpa->id_factura,
-            'monto_factura' => $newopa->monto_orden_pago,
-            'tipo_factura' => $newopa->tipo_factura,
+            'monto_factura' => $detalleOpa->monto_factura,
+            'tipo_factura' => $detalleOpa->tipo_factura,
             'factura_unida' => 0
         ]);
 
+        // Subtract the amount from the original OPA
+        $opa->monto_orden_pago -= $detalleOpa->monto_factura;
+        $opa->save();
+
+        // Delete the detail from the original OPA
         TesOrdenPagoDetalleEntity::where('id_factura', $request->idFactura)->where('id_orden_pago', $detalleOpa->id_orden_pago)->delete();
-        TesOrdenPagoEntity::where('id_factura', $request->idFactura)->where('id_orden_pago', $detalleOpa->id_orden_pago)->delete();
+        
+        // If the original OPA has no more details, delete it. If it has 1 detail left, mark it as unida=0
+        $remainingDetails = TesOrdenPagoDetalleEntity::where('id_orden_pago', $opa->id_orden_pago)->get();
+        if ($remainingDetails->count() == 0) {
+            $opa->delete();
+        } else if ($remainingDetails->count() == 1) {
+            $firstDetalle = $remainingDetails->first();
+            $firstDetalle->factura_unida = 0;
+            $firstDetalle->save();
+        }
+
         return $newopa;
     }
 }
