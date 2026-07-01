@@ -36,7 +36,8 @@ class PrestadorRepository
             'cod_tipo_impuesto' => $params->cod_tipo_impuesto,
             'cod_tipo_iva' => $params->cod_tipo_iva,
             'cod_usuario' => $this->user->cod_usuario,
-            'vigente' => '1'
+            'vigente' => '1',
+            'hospital_publico'=>$params->hospital_publico
         ]);
     }
 

@@ -37,7 +37,8 @@ class PrestadorEntity extends Model
         'cod_usuario',
         'vigente',
         'id_regimen',
-        'id_tipo_efector'
+        'id_tipo_efector',
+        'hospital_publico'
     ];
 
     public function tipoPrestador()
