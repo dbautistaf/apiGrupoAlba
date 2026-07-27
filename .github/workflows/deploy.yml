@@ -1,0 +1,40 @@
+name: Deploy Back Alba a Producción
+
+# Por ahora SOLO se dispara a mano.
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Create SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts || true
+
+      # DRY RUN primero: solo muestra qué archivos cambiarían.
+      - name: Upload files to Hostinger (DRY RUN)
+        run: |
+          rsync -avzn --delete \
+            -e "ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=accept-new" \
+            --exclude 'storage/' \
+            --exclude 'storage' \
+            --exclude 'public/' \
+            --exclude 'index.php' \
+            --exclude '.htaccess' \
+            --exclude 'favicon.ico' \
+            --exclude 'robots.txt' \
+            --exclude '.env' \
+            --exclude '.git' \
+            --exclude '.github' \
+            ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/u979626107/domains/oridheansoft.com/public_html/apigrupoalbasalud/
+
+      # Cuando confirmemos que el dry-run se ve bien, esto pasa a correr
+      # de verdad, y recién ahí sumamos comandos remotos de limpieza de
+      # cachés (sin composer install ni migraciones, como en Coqsa).
