@@ -21,11 +21,11 @@ jobs:
       # Guarda una copia de lo que hay en el servidor ANTES de tocar nada.
       - name: Backup del código actual en el servidor
         run: |
-          ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=accept-new ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+          ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=15 -o ServerAliveCountMax=10 ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
           cd /home/u979626107/domains/oridheansoft.com/apis/apigrupoalbasalud/
           mkdir -p ../backups_apigrupoalbasalud
           zip -r "../backups_apigrupoalbasalud/backup-$(date +%Y%m%d-%H%M%S).zip" . \
-            -x "*.zip" -x "vendor/*" -x "node_modules/*" > /dev/null
+            -x "*.zip" -x "vendor/*" -x "node_modules/*" -x "storage/*"
           cd ../backups_apigrupoalbasalud && ls -1t backup-*.zip | tail -n +6 | xargs -r rm --
           EOF
 
@@ -36,7 +36,7 @@ jobs:
       - name: Upload files to Hostinger (DRY RUN)
         run: |
           rsync -avzn --delete \
-            -e "ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=accept-new" \
+            -e "ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=15 -o ServerAliveCountMax=10" \
             --exclude 'storage/' \
             --exclude 'public/' \
             --exclude '.env' \
