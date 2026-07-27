@@ -39,6 +39,7 @@ jobs:
             -e "ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=15 -o ServerAliveCountMax=10" \
             --exclude 'storage/' \
             --exclude 'public/' \
+            --exclude 'vendor/' \
             --exclude '.env' \
             --exclude '.git' \
             --exclude '.github' \
