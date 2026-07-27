@@ -1,7 +1,10 @@
 name: Deploy Back Alba a Producción
 
-# Por ahora SOLO se dispara a mano.
+# Se dispara solo al mergear a main. workflow_dispatch queda como opción
+# para forzar un re-deploy a mano sin necesidad de un commit nuevo.
 on:
+  push:
+    branches: ["main"]
   workflow_dispatch:
 
 jobs:
