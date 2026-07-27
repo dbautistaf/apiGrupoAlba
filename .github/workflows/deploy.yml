@@ -1,0 +1,65 @@
+name: Deploy Back Alba a Producción
+
+# Se dispara solo al mergear a main. workflow_dispatch queda como opción
+# para forzar un re-deploy a mano sin necesidad de un commit nuevo.
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Create SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts || true
+
+      # Guarda una copia de lo que hay en el servidor ANTES de tocar nada.
+      - name: Backup del código actual en el servidor
+        run: |
+          ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=15 -o ServerAliveCountMax=10 ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+          cd /home/u979626107/domains/oridheansoft.com/apis/apigrupoalbasalud/
+          mkdir -p ../backups_apigrupoalbasalud
+          zip -r "../backups_apigrupoalbasalud/backup-$(date +%Y%m%d-%H%M%S).zip" . \
+            -x "*.zip" -x "vendor/*" -x "node_modules/*" -x "storage/*"
+          cd ../backups_apigrupoalbasalud && ls -1t backup-*.zip | tail -n +6 | xargs -r rm --
+          EOF
+
+      - name: Upload files to Hostinger
+        run: |
+          rsync -avz --delete \
+            -e "ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=15 -o ServerAliveCountMax=10" \
+            --exclude 'storage/' \
+            --exclude 'public/' \
+            --exclude 'vendor/' \
+            --exclude '.env' \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude 'apiGrupoAlba.zip' \
+            --exclude 'apiGrupoAlba_ultimo.zip' \
+            ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/u979626107/domains/oridheansoft.com/apis/apigrupoalbasalud/
+
+      - name: Run remote Laravel commands
+        run: |
+          ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=15 -o ServerAliveCountMax=10 ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+          cd /home/u979626107/domains/oridheansoft.com/apis/apigrupoalbasalud/
+          echo "== config:clear =="
+          /opt/alt/php82/usr/bin/php artisan config:clear
+          echo "== cache:clear =="
+          /opt/alt/php82/usr/bin/php artisan cache:clear
+          echo "== config:cache =="
+          /opt/alt/php82/usr/bin/php artisan config:cache
+          echo "== route:cache =="
+          /opt/alt/php82/usr/bin/php artisan route:cache
+          echo "== view:cache =="
+          /opt/alt/php82/usr/bin/php artisan view:cache
+          echo "== DONE =="
+          EOF
+          # Sin composer install (vendor/ no se toca) ni migraciones, como en Coqsa.
