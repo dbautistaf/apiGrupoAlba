@@ -116,10 +116,12 @@ class TesPagosController extends Controller
             $monto_total = $params->anticipo == '1' ? $params->monto_anticipado : 0;
             foreach ($params->lista_pagos as $pagos) {
                 $monto_Validar = $pagos->monto_pago;
-                if (!$cuenta->findByVerificarSaldoCuenta($params->id_cuenta_bancaria, $monto_Validar)) {
-                    DB::rollBack();
-                    return response()->json(['message' => 'No hemos podido procesar tu solicitud de pago porque la cuenta bancaria seleccionada no tiene fondos suficientes. Por favor, revisa tu saldo e inténtalo otra vez.'], 409);
-                }
+                // Restricción de fondos previos deshabilitada a pedido (TK R-0306, 2026-07-27):
+                // se permite emitir el pago aunque la cuenta no tenga saldo suficiente.
+                // if (!$cuenta->findByVerificarSaldoCuenta($params->id_cuenta_bancaria, $monto_Validar)) {
+                //     DB::rollBack();
+                //     return response()->json(['message' => 'No hemos podido procesar tu solicitud de pago porque la cuenta bancaria seleccionada no tiene fondos suficientes. Por favor, revisa tu saldo e inténtalo otra vez.'], 409);
+                // }
                 $monto_total = $monto_total + $monto_Validar;
             }
 
