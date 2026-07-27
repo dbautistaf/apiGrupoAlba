@@ -29,13 +29,9 @@ jobs:
           cd ../backups_apigrupoalbasalud && ls -1t backup-*.zip | tail -n +6 | xargs -r rm --
           EOF
 
-      # DRY RUN primero: solo muestra qué archivos cambiarían.
-      # OJO: el destino real es la carpeta apis/, NO public_html/ —
-      # esa última es solo la "puerta de entrada" (index.php + symlink),
-      # el código de verdad vive acá, mismo patrón que ospf.
-      - name: Upload files to Hostinger (DRY RUN)
+      - name: Upload files to Hostinger
         run: |
-          rsync -avzn --delete \
+          rsync -avz --delete \
             -e "ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=15 -o ServerAliveCountMax=10" \
             --exclude 'storage/' \
             --exclude 'public/' \
@@ -47,6 +43,20 @@ jobs:
             --exclude 'apiGrupoAlba_ultimo.zip' \
             ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/u979626107/domains/oridheansoft.com/apis/apigrupoalbasalud/
 
-      # Cuando confirmemos que el dry-run se ve bien, esto pasa a correr
-      # de verdad, y recién ahí sumamos comandos remotos de limpieza de
-      # cachés (sin composer install ni migraciones, como en Coqsa).
+      - name: Run remote Laravel commands
+        run: |
+          ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=15 -o ServerAliveCountMax=10 ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+          cd /home/u979626107/domains/oridheansoft.com/apis/apigrupoalbasalud/
+          echo "== config:clear =="
+          /opt/alt/php82/usr/bin/php artisan config:clear
+          echo "== cache:clear =="
+          /opt/alt/php82/usr/bin/php artisan cache:clear
+          echo "== config:cache =="
+          /opt/alt/php82/usr/bin/php artisan config:cache
+          echo "== route:cache =="
+          /opt/alt/php82/usr/bin/php artisan route:cache
+          echo "== view:cache =="
+          /opt/alt/php82/usr/bin/php artisan view:cache
+          echo "== DONE =="
+          EOF
+          # Sin composer install (vendor/ no se toca) ni migraciones, como en Coqsa.
