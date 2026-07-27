@@ -19,21 +19,21 @@ jobs:
           ssh-keyscan -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts || true
 
       # DRY RUN primero: solo muestra qué archivos cambiarían.
+      # OJO: el destino real es la carpeta apis/, NO public_html/ —
+      # esa última es solo la "puerta de entrada" (index.php + symlink),
+      # el código de verdad vive acá, mismo patrón que ospf.
       - name: Upload files to Hostinger (DRY RUN)
         run: |
           rsync -avzn --delete \
             -e "ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=accept-new" \
             --exclude 'storage/' \
-            --exclude 'storage' \
             --exclude 'public/' \
-            --exclude 'index.php' \
-            --exclude '.htaccess' \
-            --exclude 'favicon.ico' \
-            --exclude 'robots.txt' \
             --exclude '.env' \
             --exclude '.git' \
             --exclude '.github' \
-            ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/u979626107/domains/oridheansoft.com/public_html/apigrupoalbasalud/
+            --exclude 'apiGrupoAlba.zip' \
+            --exclude 'apiGrupoAlba_ultimo.zip' \
+            ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/u979626107/domains/oridheansoft.com/apis/apigrupoalbasalud/
 
       # Cuando confirmemos que el dry-run se ve bien, esto pasa a correr
       # de verdad, y recién ahí sumamos comandos remotos de limpieza de
