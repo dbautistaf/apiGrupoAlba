@@ -1093,6 +1093,7 @@ Route::group([
     Route::get('MedicacionAltoCostoById', [App\Http\Controllers\medicacion_alto_costo\MedicacionAltoCostoControlller::class, 'getMedicacionAltoCostoById']);
     Route::get('ver-adjunto', [App\Http\Controllers\medicacion_alto_costo\MedicacionAltoCostoControlller::class, 'getVerAdjunto']);
     Route::get('medicacion-por-afiliado', [App\Http\Controllers\medicacion_alto_costo\MedicacionAltoCostoControlller::class, 'getAfiliadoMedicamentos']);
+    Route::get('exportar-medicacion', [App\Http\Controllers\medicacion_alto_costo\MedicacionAltoCostoControlller::class, 'exportExcel']);
     Route::post('saveParticipantesLicitacion', [App\Http\Controllers\medicacion_alto_costo\MedicacionAltoCostoPresupuestosController::class, 'postsaveParticipantesLicitacion']);
     Route::get('listaParticipantesLicitacion/{id}', [App\Http\Controllers\medicacion_alto_costo\MedicacionAltoCostoPresupuestosController::class, 'getObtenerListaParticipantes']);
     Route::get('listaParticipantesLicitacionProdutos/{id}', [App\Http\Controllers\medicacion_alto_costo\MedicacionAltoCostoPresupuestosController::class, 'getObtenerListaParticipantesProductos']);
