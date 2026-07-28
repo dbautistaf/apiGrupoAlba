@@ -24,6 +24,7 @@ class TesCuentasBancariasRepository
     public function findByCreate($params)
     {
         return TesCuentasBancariasEntity::create([
+            'id_razon' => $params->id_razon,
             'numero_cuenta' => $params->numero_cuenta,
             'nombre_cuenta' => $params->nombre_cuenta,
             'id_tipo_cuenta' => $params->id_tipo_cuenta,
@@ -42,6 +43,7 @@ class TesCuentasBancariasRepository
     public function findByUpdate($params)
     {
         $cuenta = TesCuentasBancariasEntity::find($params->id_cuenta_bancaria);
+        $cuenta->id_razon = $params->id_razon;
         $cuenta->numero_cuenta = $params->numero_cuenta;
         $cuenta->nombre_cuenta = $params->nombre_cuenta;
         $cuenta->id_tipo_cuenta = $params->id_tipo_cuenta;
