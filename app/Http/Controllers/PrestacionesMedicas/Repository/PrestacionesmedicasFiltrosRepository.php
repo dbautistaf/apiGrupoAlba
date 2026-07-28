@@ -124,8 +124,8 @@ class PrestacionesmedicasFiltrosRepository
             ->when(!empty($request->estado), function ($q) use ($request) {
                 $q->where('cod_tipo_estado', $request->estado);
             })
-            ->when(!empty($request->usuario), function ($q) use ($request) {
-                $q->where('usuario_registra', $request->usuario);
+            ->when(!empty($request->persona), function ($q) use ($request) {
+                $q->where('usuario_registra', $request->persona);
             });
 
         $results = $query
