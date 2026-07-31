@@ -47,6 +47,7 @@ class PlanesCuentasRepository
     public function findByList($params)
     {
         return PlanesCuentaEntity::with(['tipo'])
+            ->where('activo', 1)
             ->get();
     }
 
