@@ -151,7 +151,7 @@ class AltaTemporalController extends RoutingController
                 return $pdf->download('carnet.pdf');
             }
         } else {
-            return response()->json(['error' => 'El usuario esta inactivo. Muchas gracias.'], 404);
+            return response()->json(['error' => 'El usuario esta inactivo.'], 404);
         }
     }
 

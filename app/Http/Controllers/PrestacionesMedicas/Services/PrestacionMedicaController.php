@@ -85,20 +85,20 @@ class PrestacionMedicaController extends Controller
             if ($request->solo_rn == 'true' || $request->solo_rn === true || $request->solo_rn == 1) {
                 $data = $repoFiltro->findByFiltersNewborn($request);
             } else {
-                if (is_numeric($request->search)) {
-                    if (strlen($request->search) == 8) {
-                        $data = $repoFiltro->findByListFechaRegistraBetweenAndDniAfiliado($request->desde, $request->hasta, $request->search, $request->tramite);
-                    } else if (strlen($request->search) == 11) {
-                        $data = $repoFiltro->findByListFechaRegistraBetweenAndCuilAfiliado($request->desde, $request->hasta, $request->search, $request->tramite);
+                if (!empty($request->search)) {
+                    if (is_numeric($request->search)) {
+                        if (strlen($request->search) == 8) {
+                            $data = $repoFiltro->findByListFechaRegistraBetweenAndDniAfiliado($request->desde, $request->hasta, $request->search, $request->tramite);
+                        } else if (strlen($request->search) == 11) {
+                            $data = $repoFiltro->findByListFechaRegistraBetweenAndCuilAfiliado($request->desde, $request->hasta, $request->search, $request->tramite);
+                        } else {
+                            $data = $repoFiltro->findByListFechaRegistraBetweenAndDniAfiliadoLike($request->desde, $request->hasta, $request->search, $request->tramite);
+                        }
                     } else {
-                        $data = $repoFiltro->findByListFechaRegistraBetweenAndDniAfiliadoLike($request->desde, $request->hasta, $request->search, $request->tramite);
+                        $data = $repoFiltro->findByListFechaRegistraBetweenAndNombresAfiliadoLike($request->desde, $request->hasta, $request->search, $request->tramite);
                     }
-                } else if (is_string($request->search)) {
-                    $data = $repoFiltro->findByListFechaRegistraBetweenAndNombresAfiliadoLike($request->desde, $request->hasta, $request->search, $request->tramite);
-                } else if (!empty($request->estado) || !empty($request->persona)) {
-                    $data = $repoFiltro->findByListEstado($request->estado, $request->persona);
                 } else {
-                    $data = $repoFiltro->findByListFechaRegistraBetweenAndLimit($request->desde, $request->hasta, 200, $request->tramite);
+                    $data = $repoFiltro->findByListFechaRegistraBetweenAndLimit(200, $request);
                 }
             }
 

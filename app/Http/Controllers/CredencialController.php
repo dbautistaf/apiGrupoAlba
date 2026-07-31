@@ -80,7 +80,7 @@ class CredencialController extends Controller
         DB::table('tb_usuarios')->insertOrIgnore($data); */
 
         $datos = AfiliadoPadronEntity::with('detalleplan.addplan', 'tipoParentesco', 'origen')->where('dni', $request->dni)->first();
-        if ($datos->estado_imprimir == 0) {
+        if ($datos->credencial == 'Denegado') {
             return response()->json(['error' => 'No tiene permiso para imprimir'], 404);
         }
 
@@ -111,7 +111,7 @@ class CredencialController extends Controller
                 return $pdf->download('carnet.pdf');
             }
         } else {
-            return response()->json(['error' => 'El usuario esta inactivo. Muchas gracias.'], 404);
+            return response()->json(['error' => 'El usuario esta inactivo.'], 404);
         }
     }
 
@@ -156,7 +156,7 @@ class CredencialController extends Controller
                 return $pdf->download('carnet.pdf');
             }
         } else {
-            return response()->json(['error' => 'El usuario esta inactivo. Muchas gracias.'], 404);
+            return response()->json(['error' => 'El usuario esta inactivo.'], 404);
         }
     }
 
@@ -166,7 +166,7 @@ class CredencialController extends Controller
         $user = Auth::user();
         $now = new \DateTime('now', new \DateTimeZone('America/Argentina/Buenos_Aires'));
         $datos = AfiliadoPadronEntity::with('detalleplan.addplan', 'tipoParentesco', 'origen')->where('dni', $user->documento)->first();
-        if ($datos->estado_imprimir == 0) {
+        if ($datos->credencial == 'Denegado') {
             return response()->json(['error' => 'No tiene permiso para imprimir'], 404);
         }
         if ($request->id == '0') {

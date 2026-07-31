@@ -9,6 +9,8 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
+use App\Exports\MedicacionAltoCostoExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class MedicacionAltoCostoControlller extends Controller
 {
@@ -164,6 +166,22 @@ class MedicacionAltoCostoControlller extends Controller
             return response()->json($result, 200);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Ha ocurrido un error en el servidor.', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function exportExcel(Request $request)
+    {
+        try {
+            $mes = $request->mes;
+            $anio = $request->anio;
+            
+            if (!$mes || !$anio) {
+                return response()->json(['error' => 'Debe proveer mes y año.'], 400);
+            }
+
+            return Excel::download(new MedicacionAltoCostoExport($mes, $anio), 'MedicacionAltoCosto_Autorizados.xlsx');
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Error al exportar.', 'message' => $e->getMessage()], 500);
         }
     }
 }
