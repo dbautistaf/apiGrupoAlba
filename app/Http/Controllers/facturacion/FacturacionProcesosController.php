@@ -237,6 +237,9 @@ class FacturacionProcesosController extends Controller
                 $facturacion = $repo->findByUpdateDatosFactura($cabecera, $fechaActual, $nombre_archivo);
 
                 if (count($detalle) > 0) {
+                    // Primero borrar las líneas que ya no vienen (el usuario las quitó de la grilla),
+                    // después crear/actualizar las que sí. Sin esto las eliminaciones no se persistían.
+                    $repo->findByDeleteDetalleFacturaNoEnviados($detalle, $facturacion->id_factura);
                     $repo->findByUpdateDetalleFactura($detalle, $facturacion->id_factura);
                 }
 

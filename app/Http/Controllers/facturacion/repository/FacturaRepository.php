@@ -43,7 +43,7 @@ class FacturaRepository
             'total_iva' => $params->total_iva,
             'total_neto' => $params->total_neto,
             'num_liquidacion' => 0,
-            'cae_cai' => $params->cae_cai,
+            'cae_cai' => $params->cae_cai ?? null,
             'id_tipo_imputacion_sintetizada' => $params->id_tipo_imputacion_sintetizada,
             'archivo' => $nombre_archivo,
             'refacturacion' => $params->refacturacion,
@@ -148,7 +148,7 @@ class FacturaRepository
         $facturacion->fecha_vencimiento = $params->fecha_vencimiento;
         $facturacion->sucursal = $params->sucursal;
         $facturacion->numero = $params->numero;
-        $facturacion->cae_cai = $params->cae_cai;
+        $facturacion->cae_cai = $params->cae_cai ?? null;
         $facturacion->id_tipo_imputacion_sintetizada = $params->id_tipo_imputacion_sintetizada;
         $facturacion->fecha_actualiza = $fechaActual;
         $facturacion->refacturacion = $params->refacturacion;
@@ -188,19 +188,39 @@ class FacturaRepository
                     'observaciones' => $key->observaciones
                 ]);
             } else {
-                $detalle = FacturacionDetalleEntity::find($key->id_detalle);
-                $detalle->id_articulo = $key->id_articulo;
-                $detalle->cantidad = $key->cantidad;
-                $detalle->precio_neto = $key->precio_neto;
-                $detalle->iva = $key->iva;
-                $detalle->subtotal = $key->subtotal;
-                $detalle->monto_iva = $key->monto_iva;
-                $detalle->total_importe = $key->total_importe;
-                $detalle->id_tipo_iva = $key->id_tipo_iva;
-                $detalle->observaciones = $key->observaciones;
-                $detalle->update();
+                // Ojo: no reusar $detalle acá (es el array que se está iterando).
+                $item = FacturacionDetalleEntity::find($key->id_detalle);
+                $item->id_articulo = $key->id_articulo;
+                $item->cantidad = $key->cantidad;
+                $item->precio_neto = $key->precio_neto;
+                $item->iva = $key->iva;
+                $item->subtotal = $key->subtotal;
+                $item->monto_iva = $key->monto_iva;
+                $item->total_importe = $key->total_importe;
+                $item->id_tipo_iva = $key->id_tipo_iva;
+                $item->observaciones = $key->observaciones;
+                $item->update();
             }
         }
+    }
+
+    /**
+     * Elimina las líneas de detalle que el usuario sacó de la grilla al editar la factura.
+     * findByUpdateDetalleFactura solo crea/actualiza, así que sin esto las filas borradas
+     * en la UI quedaban vivas en la base (los totales se actualizaban pero la línea no).
+     */
+    public function findByDeleteDetalleFacturaNoEnviados($detalle, $id_factura)
+    {
+        $idsConservar = [];
+        foreach ($detalle as $key) {
+            if (!empty($key->id_detalle)) {
+                $idsConservar[] = $key->id_detalle;
+            }
+        }
+
+        return FacturacionDetalleEntity::where('id_factura', $id_factura)
+            ->when(!empty($idsConservar), fn($q) => $q->whereNotIn('id_detalle', $idsConservar))
+            ->delete();
     }
 
     public function findByDeleteDetalleImpuestos($id_factura)

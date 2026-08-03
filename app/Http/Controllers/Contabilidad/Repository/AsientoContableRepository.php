@@ -10,6 +10,7 @@ use App\Models\Contabilidad\FamiliaCuentaContableEntity;
 use App\Models\Contabilidad\ImputacionesCuentaContableEntity;
 use App\Models\Contabilidad\ImputacionesProveedoresCuentaContableEntity;
 use App\Models\Contabilidad\ProveedorCuentaContableEntity;
+use App\Models\Contabilidad\RazonCuentaContableEntity;
 use App\Models\Contabilidad\FormasPagoCuentasContableEntity;
 use App\Models\Contabilidad\RetencionCuentasContablesEntity;
 use App\Models\Contabilidad\TipoPrestadorCuentaContableEntity;
@@ -284,6 +285,36 @@ class AsientoContableRepository
             ->first();
     }
 
+    /**
+     * Cuenta contable de contraparte (prestadores/proveedores) según la razón social.
+     *
+     * Es el pasivo que se acredita al facturar y se debita al pagar: ambos lados tienen que
+     * resolver la MISMA cuenta o la deuda nunca se cancela. Antes estaba hardcodeado 35/36,
+     * que solo era válido para Alba; ahora sale de tb_cont_razon_cuenta_contable, que cada
+     * base (Alba / OSV) carga con sus propios id_detalle_plan.
+     */
+    public function obtenerCuentaContraparteByRazon($idRazon, $esProveedor)
+    {
+        $tipo = $esProveedor
+            ? RazonCuentaContableEntity::TIPO_PROVEEDOR
+            : RazonCuentaContableEntity::TIPO_PRESTADOR;
+
+        if (empty($idRazon)) {
+            throw new Exception("Falta la razón social para determinar la cuenta contable de {$tipo}. Por favor contacte con el administrador.");
+        }
+
+        $relacion = RazonCuentaContableEntity::where('id_razon', $idRazon)
+            ->where('tipo_contraparte', $tipo)
+            ->where('vigente', 1)
+            ->first();
+
+        if (!$relacion || empty($relacion->id_detalle_plan)) {
+            throw new Exception("La razón social seleccionada no tiene configurada la cuenta contable de {$tipo}. Por favor contacte con Contabilidad.");
+        }
+
+        return $relacion->id_detalle_plan;
+    }
+
     //Retenciones
 
     public function verificarRetencionTieneCuentaContable($idRetencion)
@@ -393,8 +424,9 @@ class AsientoContableRepository
             throw new Exception("La imputación contable seleccionada no tiene una cuenta contable asignada. Por favor contacte con Contabilidad.");
         }
 
-        $idDetallePlanHaber = $esPrestador ? 35 : 36;
-        $idRazon = $datosFactura['id_razon'] ?? null;
+        // Cuenta de contraparte según razón social (antes hardcodeado: 35 prestador / 36 proveedor).
+        // El asiento de pago debita esta MISMA cuenta para cancelar la deuda (ver crearAsientoPago).
+        $idDetallePlanHaber = $this->obtenerCuentaContraparteByRazon($idRazon, !$esPrestador);
 
         // Leyenda: FACTURA - CUIT - NOMBRE - NUMERO - FECHA
         $leyenda = 'FACTURA - ' . ($datosFactura['cuit'] ?? '') . ' - ' .
@@ -484,8 +516,9 @@ class AsientoContableRepository
             throw new Exception("El monto del pago debe ser mayor a cero para registrar el asiento contable.");
         }
 
-        // DEBE hardcodeado: proveedor = 36 (PROVEEDORES), prestador = 35 (DEUDAS PRESTACIONALES)
-        $idDetallePlanDebe = $esFacturaProveedor ? 36 : 35;
+        // DEBE: misma cuenta de contraparte que acreditó la factura (antes hardcodeado 35/36).
+        // Tiene que resolver igual que crearAsientoFactura o la deuda nunca se cancela.
+        $idDetallePlanDebe = $this->obtenerCuentaContraparteByRazon($idRazon, $esFacturaProveedor);
         $idRazon = $datosPago['id_razon'] ?? null;
 
         // Leyenda: PAGO - CUIT - NOMBRE - NRO_PAGO - FECHA
