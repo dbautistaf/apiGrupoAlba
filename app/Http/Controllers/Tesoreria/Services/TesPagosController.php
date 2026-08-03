@@ -111,6 +111,18 @@ class TesPagosController extends Controller
             $params = json_decode($request->data);
             $opaFactus = null;
 
+            // @VALIDAMOS QUE LA CUENTA DE PAGO SEA DE LA MISMA RAZÓN SOCIAL QUE LA OPA/FACTURA.
+            // Si no, el pago debita una cuenta bancaria y el asiento imputa la deuda en el plan
+            // de cuentas de otra razón social — quedan dos contabilidades descuadradas entre sí.
+            if (!empty($params->id_cuenta_bancaria) && !empty($params->id_razon)) {
+                $cuentaPago = $cuenta->findById($params->id_cuenta_bancaria);
+                if ($cuentaPago && (int) $cuentaPago->id_razon !== (int) $params->id_razon) {
+                    DB::rollBack();
+                    return response()->json([
+                        'message' => 'La cuenta bancaria seleccionada no pertenece a la razón social de la OPA/factura. Elegí una cuenta de la misma razón social para continuar.'
+                    ], 422);
+                }
+            }
 
             // @VERIFICAMOS SI TENEMOS UN FONDOS EN LA CUENTA DE PAGO
             $monto_total = $params->anticipo == '1' ? $params->monto_anticipado : 0;
