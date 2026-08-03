@@ -194,7 +194,10 @@ class FacturacionProcesosController extends Controller
                         "monto_anticipado" => 0.00,
                         "observaciones" => '',
                         "id_factura" => $facturacion->id_factura,
-                        "tipo_factura" => !is_null($facturacion->id_prestador) ? 'PRESTADOR' : 'PROVEEDOR'
+                        // Prioridad a id_proveedor (mismo criterio que crearAsientoPago): si la
+                        // factura arrastra ambos ids cargados, id_prestador solo no alcanza para
+                        // decidir el tipo, y antes esto clasificaba mal facturas de proveedor.
+                        "tipo_factura" => !is_null($facturacion->id_proveedor) ? 'PROVEEDOR' : 'PRESTADOR'
                     ];
                     $opaCreada = $tesoreria->findByCreate($opaData);
 
@@ -213,7 +216,7 @@ class FacturacionProcesosController extends Controller
                             'monto_opa' => $facturacion->total_neto,
                             'recursor' => '0',
                             'fecha_probable_pago' => $fechaActual,
-                            'tipo_factura' => !is_null($facturacion->id_prestador) ? 'PRESTADOR' : 'PROVEEDOR',
+                            'tipo_factura' => !is_null($facturacion->id_proveedor) ? 'PROVEEDOR' : 'PRESTADOR',
                             'pago_emergencia' => '0'
                         ];
 
