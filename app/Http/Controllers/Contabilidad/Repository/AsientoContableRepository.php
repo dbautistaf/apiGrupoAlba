@@ -502,8 +502,10 @@ class AsientoContableRepository
             throw new Exception("No se pudo determinar si el pago es de proveedor o prestador. Por favor contacte con Contabilidad.");
         }
 
-        // Tipo determinado por los datos reales del pago: si tiene proveedor es proveedor, si no prestador
-        $esFacturaProveedor = !empty($idProveedor);
+        // id_tipo_factura == 16 ("BIENES Y SERVICIOS") es la señal real de proveedor. Si no viene
+        // (payloads viejos que no lo mandan), cae al criterio anterior por presencia de id_proveedor.
+        $idTipoFactura = $datosPago['id_tipo_factura'] ?? null;
+        $esFacturaProveedor = !is_null($idTipoFactura) ? ($idTipoFactura == 16) : !empty($idProveedor);
 
         // Validar cuenta bancaria
         $cuentaBancaria = $this->obtenerCuentaContableByCuentaBancaria($datosPago['id_cuenta_bancaria']);

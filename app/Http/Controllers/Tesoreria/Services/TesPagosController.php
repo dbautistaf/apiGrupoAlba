@@ -232,10 +232,16 @@ class TesPagosController extends Controller
                     $opaFactus->loadMissing(['proveedor', 'prestador']);
                     $proveedorPrestador = $opaFactus->proveedor ?? $opaFactus->prestador;
 
+                    // id_tipo_factura == 16 es la señal real de proveedor. id_proveedor/id_prestador
+                    // solos no alcanzan: hay facturas con los dos ids cargados a la vez (dato sucio),
+                    // que crearAsientoPago clasificaba mal según cuál de los dos mirara.
+                    $facturaDelPago = $facturaRepository->findById($opaFactus->id_factura);
+
                     $datosPago = [
                         'id_pago'            => $pagoDb->id_pago,
                         'id_proveedor'       => $opaFactus->id_proveedor,
                         'id_prestador'       => $opaFactus->id_prestador,
+                        'id_tipo_factura'    => $facturaDelPago->id_tipo_factura ?? null,
                         'id_razon'           => $params->id_razon ?? null,
                         'cuit'               => $proveedorPrestador->cuit ?? '',
                         'nombre'             => $proveedorPrestador->razon_social ?? '',

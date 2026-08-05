@@ -194,10 +194,11 @@ class FacturacionProcesosController extends Controller
                         "monto_anticipado" => 0.00,
                         "observaciones" => '',
                         "id_factura" => $facturacion->id_factura,
-                        // Prioridad a id_proveedor (mismo criterio que crearAsientoPago): si la
-                        // factura arrastra ambos ids cargados, id_prestador solo no alcanza para
-                        // decidir el tipo, y antes esto clasificaba mal facturas de proveedor.
-                        "tipo_factura" => !is_null($facturacion->id_proveedor) ? 'PROVEEDOR' : 'PRESTADOR'
+                        // id_tipo_factura == 16 ("BIENES Y SERVICIOS") es la señal real de proveedor.
+                        // Ni id_proveedor ni id_prestador alcanzan solos: hay facturas con los dos ids
+                        // cargados a la vez (dato sucio), y decidir por uno u otro las clasifica mal
+                        // en un sentido o en el otro según cuál mires.
+                        "tipo_factura" => $facturacion->id_tipo_factura == 16 ? 'PROVEEDOR' : 'PRESTADOR'
                     ];
                     $opaCreada = $tesoreria->findByCreate($opaData);
 
@@ -216,7 +217,7 @@ class FacturacionProcesosController extends Controller
                             'monto_opa' => $facturacion->total_neto,
                             'recursor' => '0',
                             'fecha_probable_pago' => $fechaActual,
-                            'tipo_factura' => !is_null($facturacion->id_proveedor) ? 'PROVEEDOR' : 'PRESTADOR',
+                            'tipo_factura' => $facturacion->id_tipo_factura == 16 ? 'PROVEEDOR' : 'PRESTADOR',
                             'pago_emergencia' => '0'
                         ];
 
