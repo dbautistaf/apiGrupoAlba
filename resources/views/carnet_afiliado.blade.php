@@ -50,6 +50,16 @@
             color: #000;
         }
 
+        .osv {
+            position: absolute;
+            margin-top: 5.5cm;
+            float: left;
+            padding-left: 5cm;
+            width: 800px;
+            text-align: left;
+            color: #fff;
+        }
+
         .nombre,
         .filial,
         .cuil,
@@ -89,7 +99,9 @@
         @if ($padron->activo == 1)
         <div class="contenedor">
             <div class="img">
-                @if ($padron->id_locatario == 1)
+                @if (str_contains(env('EMPRESA_RAZON_SOCIAL', ''), 'VAREADORES') || str_contains(env('EMPRESA_RAZON_SOCIAL', ''), 'OSV'))
+                    <img src="{{ storage_path('app/public/images/osvsalud.jpg') }}" width="750" height="500" style="max-width: none; max-height: none;">
+                @elseif ($padron->id_locatario == 1)
                     <img src="{{ storage_path('app/public/images/BONSALUD.png') }}">
                 @elseif ($padron->id_locatario == 2)
                     <img src="{{ storage_path('app/public/images/SEMBRAR.png') }}">
@@ -98,7 +110,12 @@
                 @else
                     <img src="{{ storage_path('app/public/images/credencial_alba.jpeg') }}">
                 @endif
-                <div class="{{ $padron->id_locatario > 3 ? 'alba' : 'datos' }}" >
+                
+                @php
+                    $isOsv = str_contains(env('EMPRESA_RAZON_SOCIAL', ''), 'VAREADORES') || str_contains(env('EMPRESA_RAZON_SOCIAL', ''), 'OSV');
+                    $isAlba = !$isOsv && $padron->id_locatario > 3;
+                @endphp
+                <div class="{{ $isOsv ? 'osv' : ($isAlba ? 'alba' : 'datos') }}" >
                     <p class="nombre">APELLIDOS Y NOMBRES:<b> {{ $padron->apellidos . ' ' . $padron->nombre }} </b></p>
                     <p class="filial">FILIACIÓN:<b class="parentezco">
                             {{ $padron['tipoParentesco']['parentesco'] ?? 'Titular' }} </b></p>
@@ -106,8 +123,10 @@
                     <!-- <p class="plan">TIPO PLAN:<b> {{ $padron->detalleplan[0]->addplan->tipo ?? $tipoPrincipal }} </b>  -->
                     <p class="cuil">DNI:<b> {{ $padron->dni }} </b></p>
                     <p class="plan">TIPO PLAN:<b> PLAN ÚNICO </b>
+                    @if(!$isOsv)
                     <p class="plan">OBRA SOCIAL:<b> {{ $padron->origen->detalle_comercial_origen ?? 'DESCONOCIDO' }} </b>
                     </p>
+                    @endif
 
                     <div class="fecha">
                         <p class="text fecha_inicio">VÁLIDO DESDE <b>{{ date('d/m/y', strtotime($f_inicio)) }}
