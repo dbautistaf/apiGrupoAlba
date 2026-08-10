@@ -42,6 +42,12 @@ class TesOrdenPagoController extends Controller
                     DB::rollBack();
                     return response()->json(['message' => 'La OPA ya se encuentra en un proceso de PAGO y no puede ser modificado.'], 409);
                 } */
+                foreach ((array) $request->fechaprobablepagos as $fechaProbable) {
+                    if (empty($fechaProbable['fecha_probable_pago'])) {
+                        DB::rollBack();
+                        return response()->json(['message' => 'Hay fechas de pago sin completar. Revisá la lista antes de continuar.'], 422);
+                    }
+                }
                 $opa->findByUpdate($request);
                 $pagosRepo->findByUpdatePagoPorOpa($request, $request->id_orden_pago);
                 $menssage = "OPA actualizo con éxito.";
