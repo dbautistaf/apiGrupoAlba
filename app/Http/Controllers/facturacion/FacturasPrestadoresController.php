@@ -8,6 +8,7 @@ use App\Http\Controllers\facturacion\repository\FacturasPrestadoresRepository;
 use App\Http\Controllers\liquidaciones\repository\LiquidacionesDetalleRepository;
 use App\Http\Controllers\liquidaciones\repository\LiquidacionesRepository;
 use App\Http\Controllers\Tesoreria\Repository\TestOrdenPagoRepository;
+use App\Models\Tesoreria\TesEstadoOrdenPagoEntity;
 use App\Models\Tesoreria\TesOrdenPagoEntity;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -66,6 +67,21 @@ class FacturasPrestadoresController extends Controller
         try {
             DB::beginTransaction();
 
+            // @BLOQUEO: una vez generada la OPA, la factura/liquidación no puede cambiar de estado
+            // hasta que la OPA esté pagada. Sin esta guarda, volver a marcar "valorización final"
+            // (estado 3) generaba una SEGUNDA OPA para la misma factura (6 casos en producción).
+            // Una OPA RECHAZADA no bloquea: se considera muerta y se puede generar otra.
+            $opaVigente = $opa->findByOpaVigenteFactura($request->factura);
+            if (!is_null($opaVigente)) {
+                DB::rollBack();
+                $estadoOpa = TesEstadoOrdenPagoEntity::find($opaVigente->id_estado_orden_pago);
+                return response()->json([
+                    'message' => 'No se puede cambiar el estado: la factura ya tiene la orden de pago '
+                        . $opaVigente->num_orden_pago . ' en estado ' . ($estadoOpa->descripcion_estado ?? $opaVigente->id_estado_orden_pago)
+                        . '. Para modificarla, primero debe anularse o rechazarse esa orden de pago.'
+                ], 409);
+            }
+
             $liquidaciones = $repoLiqui->findByLiquidacionFactura($request->factura);
 
             $repo->findByUpdateEstado($request->factura, $request->estado);
@@ -90,10 +106,13 @@ class FacturasPrestadoresController extends Controller
 
                 $facturaDb = $repo->findByFacturaId($request->factura);
 
-                $opaFactura = $opa->findByOpaFactura($request->factura, 1);
+                // Se busca la OPA sin filtrar por estado (antes se filtraba por PENDIENTE=1, y si la
+                // OPA ya había avanzado se creaba una segunda). El bloqueo de arriba ya corta este
+                // caso; esto queda como defensa en profundidad para no volver a duplicar nunca.
+                $opaFactura = $opa->findByOpaVigenteFactura($request->factura);
 
                 if (!is_null($opaFactura)) {
-                    $opa->findByUpdateOpaFactura(TesOrdenPagoEntity::where('id_factura', $request->factura)->first());
+                    $opa->findByUpdateOpaFactura($opaFactura);
                 } else {
                     $opa->findByCreate(new TesOrdenPagoEntity([
                         'id_proveedor' => null,

@@ -13,6 +13,12 @@ use Illuminate\Support\Facades\Log;
 
 class TestOrdenPagoRepository
 {
+    // Estados de tb_tes_estado_orden_pago
+    const ESTADO_OPA_PENDIENTE = 1;
+    const ESTADO_OPA_APROBADO  = 2;
+    const ESTADO_OPA_RECHAZADO = 3;
+    const ESTADO_OPA_EN_PROCESO = 4;
+    const ESTADO_OPA_PAGADO    = 5;
 
     private $user;
     private $fechaActual;
@@ -218,6 +224,22 @@ class TestOrdenPagoRepository
     {
         return TesOrdenPagoEntity::where('id_factura', $idFactura)
             ->where('id_estado_orden_pago', $estado)->first();
+    }
+
+    /**
+     * OPA vigente de una factura: cualquier estado MENOS RECHAZADO (3), que se considera muerta
+     * y por lo tanto habilita generar una nueva.
+     *
+     * Existe porque buscar solo por estado PENDIENTE (1) hacía que, si la OPA ya había avanzado
+     * a EN PROCESO/PAGADO, el sistema creyera que no existía y generara una segunda OPA para la
+     * misma factura (se detectaron 6 casos así en producción). Ver docs/pendientes.md.
+     */
+    public function findByOpaVigenteFactura($idFactura)
+    {
+        return TesOrdenPagoEntity::where('id_factura', $idFactura)
+            ->where('id_estado_orden_pago', '!=', self::ESTADO_OPA_RECHAZADO)
+            ->orderBy('id_orden_pago')
+            ->first();
     }
 
     public function findByExistsOpaFacturaEstado($idFactura, $estado)
