@@ -67,19 +67,31 @@ class FacturasPrestadoresController extends Controller
         try {
             DB::beginTransaction();
 
-            // @BLOQUEO: una vez generada la OPA, la factura/liquidación no puede cambiar de estado
-            // hasta que la OPA esté pagada. Sin esta guarda, volver a marcar "valorización final"
-            // (estado 3) generaba una SEGUNDA OPA para la misma factura (6 casos en producción).
-            // Una OPA RECHAZADA no bloquea: se considera muerta y se puede generar otra.
+            // @BLOQUEO / ANULACIÓN EN CASCADA
+            // Una vez generada la OPA, la factura/liquidación no puede cambiar de estado libremente
+            // (sin esta guarda, volver a marcar "valorización final" generaba una SEGUNDA OPA).
+            // Excepción: ANULAR la factura (estado 4) sí se permite, y en ese caso se anula también
+            // la OPA — que es lo que faltaba y dejó órdenes de pago vivas de facturas anuladas.
+            // Una OPA RECHAZADA no bloquea: se considera muerta.
             $opaVigente = $opa->findByOpaVigenteFactura($request->factura);
             if (!is_null($opaVigente)) {
-                DB::rollBack();
-                $estadoOpa = TesEstadoOrdenPagoEntity::find($opaVigente->id_estado_orden_pago);
-                return response()->json([
-                    'message' => 'No se puede cambiar el estado: la factura ya tiene la orden de pago '
-                        . $opaVigente->num_orden_pago . ' en estado ' . ($estadoOpa->descripcion_estado ?? $opaVigente->id_estado_orden_pago)
-                        . '. Para modificarla, primero debe anularse o rechazarse esa orden de pago.'
-                ], 409);
+                if ($request->estado == '4') {
+                    $motivo = trim('Anulación de la factura. ' . ($request->motivo_anulacion ?? ''));
+                    $resultado = $opa->findByAnularOpaDeFactura($request->factura, $motivo);
+
+                    if (!$resultado['anulada']) {
+                        DB::rollBack();
+                        return response()->json(['message' => $resultado['message']], 409);
+                    }
+                } else {
+                    DB::rollBack();
+                    $estadoOpa = TesEstadoOrdenPagoEntity::find($opaVigente->id_estado_orden_pago);
+                    return response()->json([
+                        'message' => 'No se puede cambiar el estado: la factura ya tiene la orden de pago '
+                            . $opaVigente->num_orden_pago . ' en estado ' . ($estadoOpa->descripcion_estado ?? $opaVigente->id_estado_orden_pago)
+                            . '. Para modificarla, primero debe anularse o rechazarse esa orden de pago.'
+                    ], 409);
+                }
             }
 
             $liquidaciones = $repoLiqui->findByLiquidacionFactura($request->factura);

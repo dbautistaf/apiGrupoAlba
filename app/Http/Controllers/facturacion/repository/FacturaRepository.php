@@ -10,7 +10,6 @@ use App\Models\facturacion\FacturacionDetalleImpuestoEntity;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 class FacturaRepository
 {
@@ -259,21 +258,10 @@ class FacturaRepository
             ->find($id);
     }
 
-    public function findByDeleteId($id)
-    {
-        $factura = FacturacionDatosEntity::find($id);
-
-        $filePath = 'public/facturacion/' . $factura->archivo;
-        if (Storage::exists($filePath)) {
-            Storage::delete($filePath);
-        }
-
-        DB::delete("DELETE FROM tb_facturacion_detalle WHERE id_detalle > 0 AND id_factura = ? ", [$factura->id_factura]);
-        DB::delete("DELETE FROM tb_facturacion_detalle_descuento WHERE id_detalle_descuento > 0 AND id_factura = ? ", [$factura->id_factura]);
-        DB::delete("DELETE FROM tb_facturacion_detalle_impuesto WHERE id_detalle_impuesto > 0 AND id_factura = ? ", [$factura->id_factura]);
-        DB::delete("DELETE FROM tb_facturacion_detalle_comprobantes WHERE id_comprobante > 0 AND id_factura = ? ", [$factura->id_factura]);
-        return $factura->delete();
-    }
+    // findByDeleteId() eliminado (2026-08-12): borraba físicamente la factura con todo su detalle
+    // SIN tocar la orden de pago, dejándola huérfana y pagable. No lo llamaba nadie — las facturas
+    // se anulan (estado 4) vía deleteFacturaDetalle, que sí anula la OPA en cascada.
+    // Ver docs/pendientes.md y docs/reporte-danos-opa.md.
 
     public function findByNumeroFactura($numFactura)
     {

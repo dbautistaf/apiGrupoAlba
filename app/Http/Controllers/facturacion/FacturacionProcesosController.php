@@ -335,6 +335,7 @@ class FacturacionProcesosController extends Controller
 
     public function deleteFacturaDetalle(
         AsientosFacturacionHistorialRepository $historialAsientosRepository,
+        TestOrdenPagoRepository $opaRepository,
         Request $request
     ) {
         DB::beginTransaction();
@@ -345,6 +346,22 @@ class FacturacionProcesosController extends Controller
                 return response()->json([
                     'message' => 'Factura no encontrada'
                 ], 404);
+            }
+
+            // @ANULACIÓN EN CASCADA DE LA OPA
+            // Este endpoint (botón "Eliminar" de los visores) anula la factura poniendo estado = 4.
+            // Sin esto la orden de pago quedaba viva y pagable pese a estar anulada la factura
+            // (7 casos por $27,3M en Alba — ver docs/reporte-danos-opa.md).
+            // Si la OPA ya tiene pagos, no se anula nada y se corta con un mensaje claro.
+            $opaVigente = $opaRepository->findByOpaVigenteFactura($request->id_factura);
+            if (!is_null($opaVigente)) {
+                $motivo = trim('Anulación de la factura. ' . ($request->motivo_anulacion ?? ''));
+                $resultado = $opaRepository->findByAnularOpaDeFactura($request->id_factura, $motivo);
+
+                if (!$resultado['anulada']) {
+                    DB::rollBack();
+                    return response()->json(['message' => $resultado['message']], 409);
+                }
             }
 
             // Verificar si la factura tiene asientos contables
