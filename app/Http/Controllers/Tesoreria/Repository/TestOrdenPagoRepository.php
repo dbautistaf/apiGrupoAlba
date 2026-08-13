@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Tesoreria\Repository;
 
+use App\Models\facturacion\FacturacionDatosEntity;
 use App\Models\Tesoreria\TesEstadoOrdenPagoEntity;
 use App\Models\Tesoreria\TesFechaProbablePagoEntity;
 use App\Models\Tesoreria\TesOrdenPagoDetalleEntity;
@@ -296,6 +297,24 @@ class TestOrdenPagoRepository
         $opa->update();
     }
 
+    /**
+     * Actualiza el monto de UNA factura dentro de una OPA (individual o agrupada) y recalcula
+     * la cabecera desde el detalle. Se usa al re-valorizar una liquidación cuya OPA sigue
+     * PENDIENTE: la factura puede cambiar de monto (se editó el detalle) y la OPA todavía no
+     * avanzó a ningún estado que la comprometa. (2026-08-13)
+     *
+     * Nunca tocar la cabecera directo con el monto nuevo: si la OPA es agrupada, haría que el
+     * total deje de ser la suma real del resto de las facturas agrupadas.
+     */
+    public function findByRevalorizarOpaFactura($idOrdenPago, $idFactura, $montoNuevo)
+    {
+        TesOrdenPagoDetalleEntity::where('id_orden_pago', $idOrdenPago)
+            ->where('id_factura', $idFactura)
+            ->update(['monto_factura' => $montoNuevo]);
+
+        $this->recalcularMontoDesdeDetalle($idOrdenPago);
+    }
+
     public function findByUpdate($param)
     {
         $tes = TesOrdenPagoEntity::find($param->id_orden_pago);
@@ -495,24 +514,53 @@ class TestOrdenPagoRepository
      * Indica si una OPA tiene pagos vivos (no rechazados). Se usa como guarda antes de
      * cualquier borrado físico: borrar una OPA pagada deja el pago sin respaldo. (2026-08-11)
      */
-    private function tienePagosVivos($idOpa): bool
+    public function tienePagosVivos($idOpa): bool
     {
         return TesPagoEntity::where('id_orden_pago', $idOpa)
             ->where('id_estado_orden_pago', '!=', self::ESTADO_OPA_RECHAZADO)
             ->exists();
     }
 
+    /**
+     * Genera una OPA a partir de una o varias facturas seleccionadas.
+     *
+     * Hasta el 2026-08-13 asumía que toda factura seleccionada YA tenía su OPA (creada
+     * automáticamente al valorizar) y solo las fusionaba. Al dejar de generarse sola en
+     * Valorización Final, las facturas de prestador llegan acá SIN OPA: con la versión vieja
+     * `$first` quedaba en null, el método no hacía nada y el controller devolvía éxito igual
+     * (bug silencioso).
+     *
+     * Ahora resuelve cada factura por separado: las que ya tienen OPA VIGENTE se fusionan como
+     * antes (circuito proveedor, que sigue generándola al cargar la factura), y las que no
+     * tienen (incluida una factura cuya única OPA está RECHAZADA) arman su detalle directo desde
+     * tb_facturacion_datos. Crear una sola OPA individual y agrupar varias quedan unificadas en
+     * el mismo camino.
+     *
+     * Una OPA rechazada NO cuenta como "ya tiene OPA": se ignora a propósito, no se fusiona ni
+     * se borra, para no perder el motivo_rechazo. Si no se excluyera, una factura con una OPA
+     * anulada quedaría sin forma de generar una nueva (el front la oculta) o, peor, la
+     * generación borraría el historial de por qué se rechazó la anterior. (2026-08-13)
+     */
     public function findByIdFacturaMultiple($idFacturas)
     {
-        $detalleOpa = TesOrdenPagoDetalleEntity::whereIn('id_factura', $idFacturas)->get();
-        $idOrdenes = $detalleOpa->pluck('id_orden_pago')->unique()->values()->toArray();
+        $idFacturas = collect($idFacturas)->filter()->unique()->values();
 
-        $opa = TesOrdenPagoEntity::whereIn('id_orden_pago', $idOrdenes)->get();
-        $first = $opa->first();
+        if ($idFacturas->isEmpty()) {
+            throw new \Exception('No se recibieron facturas para generar la orden de pago.');
+        }
 
-        // No agrupar OPAs que ya tienen pagos: más abajo se las borra físicamente y el pago
-        // quedaría sin orden de pago que lo respalde. (2026-08-11)
-        foreach ($idOrdenes as $idOrdenExistente) {
+        $detalleExistente = TesOrdenPagoDetalleEntity::whereIn('id_factura', $idFacturas)
+            ->whereIn('id_orden_pago', function ($q) {
+                $q->select('id_orden_pago')
+                    ->from('tb_tes_orden_pago')
+                    ->where('id_estado_orden_pago', '!=', self::ESTADO_OPA_RECHAZADO);
+            })
+            ->get();
+        $idOrdenesExistentes = $detalleExistente->pluck('id_orden_pago')->unique()->values()->toArray();
+
+        // No tocar OPAs con pagos vivos: más abajo se las borra físicamente y el pago quedaría
+        // sin orden de pago que lo respalde. (2026-08-11)
+        foreach ($idOrdenesExistentes as $idOrdenExistente) {
             if ($this->tienePagosVivos($idOrdenExistente)) {
                 throw new \Exception(
                     "No se puede agrupar: la orden de pago {$idOrdenExistente} ya tiene pagos asociados."
@@ -520,39 +568,83 @@ class TestOrdenPagoRepository
             }
         }
 
-        // El total sale del DETALLE, no de sumar cabeceras: si alguna cabecera venía con el
-        // monto desincronizado, sumarlas propagaba el error al agrupado nuevo. (2026-08-11)
-        $totalMonto = (float) $detalleOpa->sum('monto_factura');
-        if ($first != null) {
-            $newOpa = TesOrdenPagoEntity::create([
-                'id_proveedor' => $first->id_proveedor ?? null,
-                'id_prestador' => $first->id_prestador,
-                'monto_orden_pago' => $totalMonto,
-                'id_moneda' => $first->id_moneda,
-                'fecha_emision' => $first->fecha_emision,
-                'fecha_vencimiento' => $first->fecha_vencimiento,
-                'fecha_probable_pago' => $first->fecha_probable_pago,
-                'id_estado_orden_pago' => $first->id_estado_orden_pago,
-                'monto_anticipado' => $first->monto_anticipado,
-                'observaciones' => $first->observaciones,
-                'cod_usuario' => $this->user->cod_usuario,
-                'fecha_genera' => $this->fechaActual
-            ]);
+        // Facturas seleccionadas que todavía no están en ninguna OPA
+        $facturasSinOpa = $idFacturas->diff($detalleExistente->pluck('id_factura'));
+        $facturasDb = FacturacionDatosEntity::whereIn('id_factura', $facturasSinOpa)
+            ->get()
+            ->keyBy('id_factura');
 
-            foreach ($detalleOpa as $det) {
-
-                TesOrdenPagoDetalleEntity::create([
-                    'id_orden_pago' => $newOpa->id_orden_pago,
-                    'id_factura' => $det->id_factura,
-                    'monto_factura' => $det->monto_factura,
-                    'tipo_factura' => $det->tipo_factura,
-                    'factura_unida' => 1
-                ]);
-            }
-            TesOrdenPagoDetalleEntity::whereIn('id_orden_pago', $idOrdenes)->delete();
-            TesOrdenPagoEntity::whereIn('id_orden_pago', $idOrdenes)->delete();
-            return $newOpa;
+        $faltantes = $facturasSinOpa->diff($facturasDb->keys());
+        if ($faltantes->isNotEmpty()) {
+            throw new \Exception('No se encontró la factura ' . $faltantes->implode(', ') . '.');
         }
+
+        // Referencia para prestador/proveedor/moneda/fechas de la cabecera nueva: la OPA
+        // existente si hay alguna, si no la primera factura sin OPA de la selección.
+        $opaExistente = TesOrdenPagoEntity::whereIn('id_orden_pago', $idOrdenesExistentes)->first();
+        $ref = $opaExistente ?? $facturasDb->first();
+
+        if (is_null($ref)) {
+            throw new \Exception('No se encontraron facturas para generar la orden de pago.');
+        }
+
+        $esAgrupada = $idFacturas->count() > 1;
+
+        // El total sale del DETALLE (existente + a crear), nunca de sumar cabeceras: si alguna
+        // venía con el monto desincronizado, sumarlas propagaba el error. (2026-08-11)
+        $totalMonto = (float) $detalleExistente->sum('monto_factura')
+            + (float) $facturasDb->sum('total_neto');
+
+        $newOpa = TesOrdenPagoEntity::create([
+            'id_proveedor' => $ref->id_proveedor ?? null,
+            'id_prestador' => $ref->id_prestador ?? null,
+            'monto_orden_pago' => $totalMonto,
+            'id_moneda' => $ref->id_moneda ?? 1,
+            'fecha_emision' => $ref->fecha_emision ?? $ref->fecha_comprobante ?? $this->fechaActual,
+            'fecha_vencimiento' => $ref->fecha_vencimiento ?? null,
+            'fecha_probable_pago' => $ref->fecha_probable_pago ?? null,
+            'id_estado_orden_pago' => $opaExistente->id_estado_orden_pago ?? self::ESTADO_OPA_PENDIENTE,
+            'monto_anticipado' => $opaExistente->monto_anticipado ?? 0,
+            'observaciones' => $opaExistente->observaciones ?? '',
+            'cod_usuario' => $this->user->cod_usuario,
+            'fecha_genera' => $this->fechaActual,
+            // Una OPA de una sola factura conserva la referencia en la cabecera; la agrupada la
+            // deja en NULL y la relación vive solo en el detalle (ver findByOpaVigenteFactura).
+            'id_factura' => $esAgrupada ? null : $idFacturas->first(),
+        ]);
+
+        // Detalle heredado de las OPAs que se fusionan
+        foreach ($detalleExistente as $det) {
+            TesOrdenPagoDetalleEntity::create([
+                'id_orden_pago' => $newOpa->id_orden_pago,
+                'id_factura' => $det->id_factura,
+                'monto_factura' => $det->monto_factura,
+                'tipo_factura' => $det->tipo_factura,
+                'factura_unida' => $esAgrupada ? 1 : 0,
+            ]);
+        }
+
+        // Detalle de las facturas que no tenían OPA
+        foreach ($facturasDb as $factura) {
+            TesOrdenPagoDetalleEntity::create([
+                'id_orden_pago' => $newOpa->id_orden_pago,
+                'id_factura' => $factura->id_factura,
+                'monto_factura' => $factura->total_neto,
+                // id_tipo_factura == 16 ("BIENES Y SERVICIOS") es la señal real de proveedor.
+                'tipo_factura' => $factura->id_tipo_factura == 16 ? 'PROVEEDOR' : 'PRESTADOR',
+                'factura_unida' => $esAgrupada ? 1 : 0,
+            ]);
+        }
+
+        if (!empty($idOrdenesExistentes)) {
+            TesOrdenPagoDetalleEntity::whereIn('id_orden_pago', $idOrdenesExistentes)->delete();
+            TesOrdenPagoEntity::whereIn('id_orden_pago', $idOrdenesExistentes)->delete();
+        }
+
+        // num_orden_pago lo asigna la base por trigger: sin refresh vuelve null al front.
+        $newOpa->refresh();
+
+        return $newOpa;
     }
 
     public function findAddFacturaMultiple($request)

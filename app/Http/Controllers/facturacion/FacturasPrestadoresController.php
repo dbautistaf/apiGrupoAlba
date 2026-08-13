@@ -9,7 +9,6 @@ use App\Http\Controllers\liquidaciones\repository\LiquidacionesDetalleRepository
 use App\Http\Controllers\liquidaciones\repository\LiquidacionesRepository;
 use App\Http\Controllers\Tesoreria\Repository\TestOrdenPagoRepository;
 use App\Models\Tesoreria\TesEstadoOrdenPagoEntity;
-use App\Models\Tesoreria\TesOrdenPagoEntity;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
@@ -73,9 +72,16 @@ class FacturasPrestadoresController extends Controller
             // Excepción: ANULAR la factura (estado 4) sí se permite, y en ese caso se anula también
             // la OPA — que es lo que faltaba y dejó órdenes de pago vivas de facturas anuladas.
             // Una OPA RECHAZADA no bloquea: se considera muerta.
+            //
+            // Segunda excepción (2026-08-13): si la OPA sigue PENDIENTE y no tiene ningún pago
+            // registrado, todavía no la tocó nadie de Tesorería — no hay nada que proteger. Se
+            // permite el cambio de estado, y si es una re-valorización (estado 3) el monto de
+            // esa factura dentro de la OPA se actualiza al nuevo total (ver más abajo).
             $opaVigente = $opa->findByOpaVigenteFactura($request->factura);
             if (!is_null($opaVigente)) {
                 if ($request->estado == '4') {
+                    // Anular siempre pasa por la cascada, sin importar el estado de la OPA —
+                    // una pendiente-sin-tocar también necesita rechazarse, no puede quedar huérfana.
                     $motivo = trim('Anulación de la factura. ' . ($request->motivo_anulacion ?? ''));
                     $resultado = $opa->findByAnularOpaDeFactura($request->factura, $motivo);
 
@@ -83,14 +89,20 @@ class FacturasPrestadoresController extends Controller
                         DB::rollBack();
                         return response()->json(['message' => $resultado['message']], 409);
                     }
+                    $opaVigente = null;
                 } else {
-                    DB::rollBack();
-                    $estadoOpa = TesEstadoOrdenPagoEntity::find($opaVigente->id_estado_orden_pago);
-                    return response()->json([
-                        'message' => 'No se puede cambiar el estado: la factura ya tiene la orden de pago '
-                            . $opaVigente->num_orden_pago . ' en estado ' . ($estadoOpa->descripcion_estado ?? $opaVigente->id_estado_orden_pago)
-                            . '. Para modificarla, primero debe anularse o rechazarse esa orden de pago.'
-                    ], 409);
+                    $opaPendienteSinTocar = $opaVigente->id_estado_orden_pago == TestOrdenPagoRepository::ESTADO_OPA_PENDIENTE
+                        && !$opa->tienePagosVivos($opaVigente->id_orden_pago);
+
+                    if (!$opaPendienteSinTocar) {
+                        DB::rollBack();
+                        $estadoOpa = TesEstadoOrdenPagoEntity::find($opaVigente->id_estado_orden_pago);
+                        return response()->json([
+                            'message' => 'No se puede cambiar el estado: la factura ya tiene la orden de pago '
+                                . $opaVigente->num_orden_pago . ' en estado ' . ($estadoOpa->descripcion_estado ?? $opaVigente->id_estado_orden_pago)
+                                . '. Para modificarla, primero debe anularse o rechazarse esa orden de pago.'
+                        ], 409);
+                    }
                 }
             }
 
@@ -114,37 +126,19 @@ class FacturasPrestadoresController extends Controller
                     : ($request->estado === '1' ? 'Factura se reabrio correctamente'
                         : ($request->estado === '3' ? 'Se asigno la VALORIZACION FINAL correctamente' : 'Factura en proceso de AUDITORIA')));
 
-            if ($request->estado == '3') {
-
+            // @VALORIZACIÓN FINAL YA NO GENERA LA OPA (2026-08-13)
+            // Antes, al pasar a estado 3 se creaba la OPA automáticamente. Eso impedía que
+            // Liquidaciones pudiera reabrir una factura valorizada por error: el bloqueo de
+            // arriba (findByOpaVigenteFactura) no deja cambiar de estado si hay OPA vigente.
+            // Ahora la factura queda en Valorización Final SIN OPA, y la OPA se genera a demanda
+            // desde el visor (checkbox + botón "Generar OPA" -> findByIdFacturaMultiple).
+            // Mientras nadie la genere, reabrir sigue siendo posible.
+            //
+            // Si $opaVigente sigue seteada acá, es porque pasó el guard de arriba como
+            // "pendiente y sin tocar" — se le refresca el monto a lo que quedó la re-valorización.
+            if ($request->estado == '3' && !is_null($opaVigente)) {
                 $facturaDb = $repo->findByFacturaId($request->factura);
-
-                // Se busca la OPA sin filtrar por estado (antes se filtraba por PENDIENTE=1, y si la
-                // OPA ya había avanzado se creaba una segunda). El bloqueo de arriba ya corta este
-                // caso; esto queda como defensa en profundidad para no volver a duplicar nunca.
-                $opaFactura = $opa->findByOpaVigenteFactura($request->factura);
-
-                if (!is_null($opaFactura)) {
-                    $opa->findByUpdateOpaFactura($opaFactura);
-                } else {
-                    $opa->findByCreate(new TesOrdenPagoEntity([
-                        'id_proveedor' => null,
-                        'id_prestador' => $facturaDb->id_prestador,
-                        'monto_orden_pago' => $facturaDb->total_neto,
-                        'id_moneda' => 1,
-                        'fecha_emision' => $facturaDb->fecha_comprobante,
-                        'fecha_vencimiento' => $facturaDb->fecha_vencimiento,
-                        'fecha_probable_pago' => null,
-                        'id_estado_orden_pago' => '1',
-                        'monto_anticipado' => '0.00',
-                        'observaciones' => '',
-                        'id_factura' => $request->factura,
-                        'tipo_factura' => 'PRESTADOR'
-                    ]));
-                }
-            } else if ($request->estado == '1') {
-                $facturaDb = $repo->findByFacturaId($request->factura);
-
-                $opaFactura = $opa->findByOpaFactura($request->factura, 1);
+                $opa->findByRevalorizarOpaFactura($opaVigente->id_orden_pago, $request->factura, $facturaDb->total_neto);
             }
             DB::commit();
             return response()->json(["message" => $message]);
@@ -190,9 +184,17 @@ class FacturasPrestadoresController extends Controller
     ) {
         try {
             DB::beginTransaction();
-            $opa->findByIdFacturaMultiple($request->facturas);
+            $opaGenerada = $opa->findByIdFacturaMultiple($request->facturas);
             DB::commit();
-            return response()->json(["message" => "Se genero una orden de pago con múltiples facturas"]);
+
+            $cantidad = count((array) $request->facturas);
+            $detalle = $cantidad > 1 ? "con {$cantidad} facturas" : 'para la factura seleccionada';
+
+            return response()->json([
+                "message" => "Se generó la orden de pago {$opaGenerada->num_orden_pago} {$detalle}.",
+                "id_orden_pago" => $opaGenerada->id_orden_pago,
+                "num_orden_pago" => $opaGenerada->num_orden_pago,
+            ]);
         } catch (\Throwable $th) {
             //throw $th;
             DB::rollBack();
