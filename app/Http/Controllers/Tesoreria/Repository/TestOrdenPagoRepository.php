@@ -549,14 +549,41 @@ class TestOrdenPagoRepository
             throw new \Exception('No se recibieron facturas para generar la orden de pago.');
         }
 
+        // Solo se fusionan OPAs PENDIENTES: es el único estado que significa "todavía no la tocó
+        // Tesorería". Una RECHAZADA se ignora (ver arriba). Una APROBADA/EN PROCESO/PAGADA, aunque
+        // no tenga un pago registrado todavía, ya representa una decisión tomada — fusionarla la
+        // borraría en silencio sin que nadie la autorizara. (2026-08-13)
         $detalleExistente = TesOrdenPagoDetalleEntity::whereIn('id_factura', $idFacturas)
             ->whereIn('id_orden_pago', function ($q) {
                 $q->select('id_orden_pago')
                     ->from('tb_tes_orden_pago')
-                    ->where('id_estado_orden_pago', '!=', self::ESTADO_OPA_RECHAZADO);
+                    ->where('id_estado_orden_pago', self::ESTADO_OPA_PENDIENTE);
             })
             ->get();
         $idOrdenesExistentes = $detalleExistente->pluck('id_orden_pago')->unique()->values()->toArray();
+
+        // Facturas cuya única OPA está en un estado distinto de PENDIENTE/RECHAZADO (APROBADA,
+        // EN PROCESO, PAGADA): no se pueden agrupar ni regenerar. Se avisa explícito en vez de
+        // ignorarlas en silencio, para que quede claro por qué no aparecen en el resultado.
+        $opasNoAgrupables = TesOrdenPagoDetalleEntity::whereIn('id_factura', $idFacturas)
+            ->whereIn('id_orden_pago', function ($q) {
+                $q->select('id_orden_pago')
+                    ->from('tb_tes_orden_pago')
+                    ->whereNotIn('id_estado_orden_pago', [self::ESTADO_OPA_PENDIENTE, self::ESTADO_OPA_RECHAZADO]);
+            })
+            ->get();
+        if ($opasNoAgrupables->isNotEmpty()) {
+            $ordenes = TesOrdenPagoEntity::whereIn('id_orden_pago', $opasNoAgrupables->pluck('id_orden_pago')->unique())
+                ->get()->keyBy('id_orden_pago');
+            $detalle = $opasNoAgrupables->map(function ($d) use ($ordenes) {
+                $num = $ordenes[$d->id_orden_pago]->num_orden_pago ?? $d->id_orden_pago;
+                return "factura {$d->id_factura} (orden de pago {$num})";
+            })->implode(', ');
+            throw new \Exception(
+                "No se puede agrupar: " . $detalle . " ya tiene una orden de pago que avanzó de estado. "
+                . "Para modificarla, primero debe anularse o rechazarse."
+            );
+        }
 
         // No tocar OPAs con pagos vivos: más abajo se las borra físicamente y el pago quedaría
         // sin orden de pago que lo respalde. (2026-08-11)
@@ -577,6 +604,39 @@ class TestOrdenPagoRepository
         $faltantes = $facturasSinOpa->diff($facturasDb->keys());
         if ($faltantes->isNotEmpty()) {
             throw new \Exception('No se encontró la factura ' . $faltantes->implode(', ') . '.');
+        }
+
+        // Todas las facturas (las que ya tenían OPA pendiente y las que no) tienen que ser del
+        // mismo beneficiario. El frontend ya lo valida, pero eso no alcanza: quien llame al
+        // endpoint directo se lo saltea. Sin esto, se podía fusionar facturas de dos prestadores
+        // distintos en una sola OPA y quedarle mal asignado el beneficiario a una de ellas.
+        // (2026-08-13)
+        //
+        // OJO: no usar `id_proveedor ?? id_prestador` — hay facturas con los dos campos
+        // cargados a la vez (dato sucio, ver FacturacionProcesosController). Elegir el campo
+        // por el `tipo_factura`/`id_tipo_factura==16`, nunca por cuál no sea null.
+        //
+        // ->all() + collect(): Eloquent\Collection::merge() asume que fusiona modelos (usa
+        // getKey() en cada item) y explota si le pasás strings, aunque map() ya los haya
+        // convertido — hay que salir a una Collection plana antes de mezclar.
+        $opasExistentesTodas = TesOrdenPagoEntity::whereIn('id_orden_pago', $idOrdenesExistentes)->get();
+        $beneficiarios = collect(
+            $opasExistentesTodas->map(function ($o) {
+                $id = $o->tipo_factura === 'PROVEEDOR' ? $o->id_proveedor : $o->id_prestador;
+                return $o->tipo_factura . ':' . $id;
+            })->all()
+        )->merge(
+            $facturasDb->map(function ($f) {
+                $tipo = $f->id_tipo_factura == 16 ? 'PROVEEDOR' : 'PRESTADOR';
+                $id = $tipo === 'PROVEEDOR' ? $f->id_proveedor : $f->id_prestador;
+                return $tipo . ':' . $id;
+            })->all()
+        )->unique();
+
+        if ($beneficiarios->count() > 1) {
+            throw new \Exception(
+                'No se puede generar: las facturas seleccionadas pertenecen a distintos proveedores/prestadores.'
+            );
         }
 
         // Referencia para prestador/proveedor/moneda/fechas de la cabecera nueva: la OPA
