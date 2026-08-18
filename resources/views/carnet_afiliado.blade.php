@@ -99,7 +99,11 @@
         @if ($padron->activo == 1)
         <div class="contenedor">
             <div class="img">
-                @if (str_contains(env('EMPRESA_RAZON_SOCIAL', ''), 'VAREADORES') || str_contains(env('EMPRESA_RAZON_SOCIAL', ''), 'OSV'))
+                @php
+                    $razonSocial = strtoupper(env('EMPRESA_RAZON_SOCIAL', ''));
+                    $isOsv = str_contains($razonSocial, 'VAREADORES') || str_contains($razonSocial, 'OSV');
+                @endphp
+                @if ($isOsv)
                     <img src="{{ storage_path('app/public/images/osvsalud.jpg') }}" width="750" height="500" style="max-width: none; max-height: none;">
                 @elseif ($padron->id_locatario == 1)
                     <img src="{{ storage_path('app/public/images/BONSALUD.png') }}">
@@ -112,7 +116,6 @@
                 @endif
                 
                 @php
-                    $isOsv = str_contains(env('EMPRESA_RAZON_SOCIAL', ''), 'VAREADORES') || str_contains(env('EMPRESA_RAZON_SOCIAL', ''), 'OSV');
                     $isAlba = !$isOsv && $padron->id_locatario > 3;
                 @endphp
                 <div class="{{ $isOsv ? 'osv' : ($isAlba ? 'alba' : 'datos') }}" >
