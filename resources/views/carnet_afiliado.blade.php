@@ -124,7 +124,12 @@
                             {{ $padron['tipoParentesco']['parentesco'] ?? 'Titular' }} </b></p>
                     <p class="cuil">N° DE AFILIADO:<b> {{ $dniTitular . ' /0' . $padron->correlativo }} </b></p>
                     <p class="cuil">DNI:<b> {{ $padron->dni }} </b></p>
-                    <p class="plan">TIPO PLAN:<b> {{ $padron->detalleplan[0]->addplan->tipo ?? $tipoPrincipal }} </b></p>
+                    @php
+                        $tipoPlanMostrar = $isOsv 
+                            ? ($padron->origen->detalle_comercial_origen ?? $padron->detalleplan[0]->addplan->tipo ?? $tipoPrincipal)
+                            : ($padron->detalleplan[0]->addplan->tipo ?? $tipoPrincipal);
+                    @endphp
+                    <p class="plan">TIPO PLAN:<b> {{ $tipoPlanMostrar }} </b></p>
                     @if(!$isOsv)
                     <p class="plan">OBRA SOCIAL:<b> {{ $padron->origen->detalle_comercial_origen ?? 'DESCONOCIDO' }} </b>
                     </p>
