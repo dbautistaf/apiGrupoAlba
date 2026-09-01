@@ -12,7 +12,7 @@ class RazonSocialController extends RoutingController
     //
     public function getListaRazonSocial()
     {
-        return RazonSocialModelo::all();
+        return RazonSocialModelo::where('activo', 1)->get();
     }
 
     public function saveRazonSocial(Request $request)
