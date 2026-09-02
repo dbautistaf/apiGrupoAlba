@@ -447,6 +447,7 @@ Route::group([
     'middleware' => ['jwt.verify'],
     'prefix' => '/v1/prestador'
 ], function () {
+    Route::get('exportar-excel', [App\Http\Controllers\mantenimiento\PrestadoresController::class, 'exportarExcelPrestadores']);
     Route::get('buscar-prestador', [App\Http\Controllers\prestadores\PrestadoresController::class, 'srvFilterDataPadronPrestador']);
     Route::get('listarRegimenGanancia', [App\Http\Controllers\prestadores\TipoEfectorController::class, 'getTipoRegimenGanancia']);
     Route::get('listarPrestadorTipoPago', [App\Http\Controllers\prestadores\TipoEfectorController::class, 'getTipoPrestadorPago']);
