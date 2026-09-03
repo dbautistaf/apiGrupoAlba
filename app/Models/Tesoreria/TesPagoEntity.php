@@ -62,6 +62,11 @@ class TesPagoEntity extends Model
         return $this->hasOne(TesTipoFormasPagoEntity::class, 'id_forma_pago', 'id_forma_pago');
     }
 
+    public function bancoEmisor()
+    {
+        return $this->hasOne(TesEntidadesBancariasEntity::class, 'id_entidad_bancaria', 'id_banco_emisor');
+    }
+
     public function estadoInstrumento()
     {
         return $this->hasOne(TesEstadoInstrumentoEntity::class, 'id_estado_instrumento', 'id_estado_instrumento');

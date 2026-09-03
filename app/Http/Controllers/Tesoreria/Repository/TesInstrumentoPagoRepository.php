@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Tesoreria\Repository;
 
+use App\Models\Tesoreria\TesCuentasBancariasEntity;
 use App\Models\Tesoreria\TesOrdenPagoEntity;
 use App\Models\Tesoreria\TesPagoEntity;
 use Carbon\Carbon;
@@ -86,6 +87,11 @@ class TesInstrumentoPagoRepository
         $creados = [];
 
         foreach ($instrumentos as $i) {
+            $idBanco = $this->resolverBancoEmisor(
+                $i['id_cuenta_bancaria'] ?? null,
+                $i['id_banco_emisor'] ?? null
+            );
+
             $monto = (float) ($i['monto'] ?? 0);
 
             if ($monto <= 0) {
@@ -115,11 +121,45 @@ class TesInstrumentoPagoRepository
                 'id_usuario'            => $this->user->cod_usuario ?? null,
                 'tipo_factura'          => $opa->tipo_factura ?? 'PRESTADOR',
                 'fecha_probable_pago'   => $i['fecha'],
-                'id_banco_emisor'       => $i['id_banco_emisor'] ?? null,
+                'id_banco_emisor'       => $idBanco,
             ]);
         }
 
         return $creados;
+    }
+
+    /**
+     * Resuelve el banco emisor del eCheq.
+     *
+     * Si vino la cuenta bancaria, el banco lo determina la cuenta: es la única fuente que no
+     * puede contradecirse a sí misma. Si además mandaron un banco explícito y NO coincide, se
+     * corta — es un dato inconsistente y elegir uno en silencio dejaría el listado por banco
+     * mal agrupado sin que nadie se entere.
+     *
+     * El banco explícito sin cuenta es válido: el catálogo de cuentas está incompleto (faltan
+     * Galicia, ICBC y Nación), así que hay eCheq emitidos desde bancos todavía sin cuenta.
+     */
+    private function resolverBancoEmisor($idCuenta, $idBancoExplicito): ?int
+    {
+        if (is_null($idCuenta)) {
+            return is_null($idBancoExplicito) ? null : (int) $idBancoExplicito;
+        }
+
+        $cuenta = TesCuentasBancariasEntity::find($idCuenta);
+
+        if (is_null($cuenta)) {
+            throw new \Exception("No se encontró la cuenta bancaria {$idCuenta}.");
+        }
+
+        $idBancoCuenta = (int) $cuenta->id_entidad_bancaria;
+
+        if (!is_null($idBancoExplicito) && (int) $idBancoExplicito !== $idBancoCuenta) {
+            throw new \Exception(
+                "El banco emisor indicado no coincide con el de la cuenta bancaria {$idCuenta}."
+            );
+        }
+
+        return $idBancoCuenta;
     }
 
     /**
@@ -321,9 +361,42 @@ class TesInstrumentoPagoRepository
                 TestOrdenPagoRepository::ESTADO_OPA_PAGO_PARCIAL,
             ])
             ->when(!is_null($idBanco), fn($q) => $q->where('tb_tes_pago.id_banco_emisor', $idBanco))
-            ->with(['opa.proveedor', 'opa.prestador'])
+            ->with(['opa.proveedor', 'opa.prestador', 'bancoEmisor'])
             ->orderBy('tb_tes_pago.id_banco_emisor')
             ->orderBy('tb_tes_orden_pago.num_orden_pago')
             ->get();
+    }
+
+    /**
+     * Nombre del beneficiario de una OP, para los listados y comprobantes.
+     *
+     * El tipo lo decide `tipo_factura` de la OP ('PROVEEDOR' / 'PRESTADOR'), no la presencia de
+     * `id_proveedor`/`id_prestador`: hay filas sucias con **los dos** cargados, y elegir por
+     * coalesce devuelve el beneficiario equivocado.
+     *
+     * Devuelve un texto siempre. Nunca desreferencia una relación sin chequearla: en las OPs
+     * viejas cualquiera de las dos puede venir en null, y un listado no es lugar para reventar.
+     */
+    public static function nombreBeneficiario($opa): string
+    {
+        if (is_null($opa)) {
+            return 'SIN BENEFICIARIO';
+        }
+
+        $ente = strtoupper((string) $opa->tipo_factura) === 'PROVEEDOR'
+            ? $opa->proveedor
+            : $opa->prestador;
+
+        // Si el tipo apunta a una relación vacía, se prueba la otra antes de darse por vencido.
+        $ente = $ente ?? $opa->proveedor ?? $opa->prestador;
+
+        if (is_null($ente)) {
+            return 'SIN BENEFICIARIO';
+        }
+
+        $cuit  = trim((string) ($ente->cuit ?? ''));
+        $razon = trim((string) ($ente->razon_social ?? ''));
+
+        return trim($cuit === '' ? $razon : "{$cuit} - {$razon}") ?: 'SIN BENEFICIARIO';
     }
 }

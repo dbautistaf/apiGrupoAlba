@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers\Tesoreria\Services;
 
+use App\Exports\EcheqPendientesNumeroExport;
 use App\Http\Controllers\Tesoreria\Repository\TesInstrumentoPagoRepository;
 use App\Http\Controllers\Tesoreria\Repository\TestOrdenPagoRepository;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Log;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Maatwebsite\Excel\Facades\Excel;
 
 /**
  * Ciclo de vida del instrumento de pago (eCheq).
@@ -247,6 +250,69 @@ class TesInstrumentoPagoController extends Controller
         } catch (\Exception $e) {
             Log::error('Error listar pendientes de número: ' . $e->getMessage());
             return response()->json(['message' => 'Error al listar los pagos pendientes'], 500);
+        }
+    }
+
+    /**
+     * GET /v1/tesoreria/instrumentos-pago/pendientes-numero/excel?id_banco=
+     */
+    public function exportarExcelPendientes(Request $request)
+    {
+        try {
+            return Excel::download(
+                new EcheqPendientesNumeroExport($this->repository, $request->query('id_banco')),
+                'echeq-pendientes-emision.xlsx'
+            );
+        } catch (\Exception $e) {
+            Log::error('Error exportar Excel de eCheq pendientes: ' . $e->getMessage());
+            return response()->json(['message' => 'Error al generar el Excel'], 500);
+        }
+    }
+
+    /**
+     * GET /v1/tesoreria/instrumentos-pago/pendientes-numero/pdf?id_banco=
+     *
+     * Es el papel que Pagos manda a Tesorería: sale agrupado por banco, con la columna del
+     * número de eCheq en blanco para completar con lo que devuelva el banco.
+     */
+    public function exportarPdfPendientes(Request $request)
+    {
+        try {
+            $pagos = $this->repository->listarPendientesDeNumero($request->query('id_banco'));
+
+            $grupos = $pagos
+                ->map(function ($p) {
+                    return [
+                        'banco'        => $p->bancoEmisor->descripcion_banco ?? 'SIN BANCO ASIGNADO',
+                        'num_opa'      => $p->num_orden_pago,
+                        'beneficiario' => TesInstrumentoPagoRepository::nombreBeneficiario($p->opa),
+                        'numero_echeq' => $p->numero_echeq ?? '',
+                        'monto_raw'    => (float) $p->monto_pago,
+                        'monto'        => number_format((float) $p->monto_pago, 2, ',', '.'),
+                        'fecha_pago'   => $p->fecha_probable_pago,
+                    ];
+                })
+                ->groupBy('banco');
+
+            $subtotales = $grupos->map(
+                fn($g) => number_format($g->sum('monto_raw'), 2, ',', '.')
+            )->all();
+
+            $datos = [
+                'grupos'          => $grupos,
+                'subtotales'      => $subtotales,
+                'total_general'   => number_format($pagos->sum('monto_pago'), 2, ',', '.'),
+                'total_registros' => $pagos->count(),
+                'fecha_emision'   => now('America/Argentina/Buenos_Aires')->format('d/m/Y H:i'),
+            ];
+
+            $pdf = Pdf::loadView('tesoreria.echeq_pendientes_numero', $datos);
+            $pdf->setPaper('A4');
+
+            return $pdf->download('echeq-pendientes-emision.pdf');
+        } catch (\Exception $e) {
+            Log::error('Error exportar PDF de eCheq pendientes: ' . $e->getMessage());
+            return response()->json(['message' => 'Error al generar el PDF'], 500);
         }
     }
 }

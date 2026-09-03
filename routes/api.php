@@ -1240,6 +1240,8 @@ Route::group(
 
         // Endpoints del ciclo de vida del instrumento de pago (eCheq)
         Route::get('instrumentos-pago/pendientes-numero', [App\Http\Controllers\Tesoreria\Services\TesInstrumentoPagoController::class, 'getPendientesDeNumero']);  // OPs con eCheq sin numero, por banco
+        Route::get('instrumentos-pago/pendientes-numero/excel', [App\Http\Controllers\Tesoreria\Services\TesInstrumentoPagoController::class, 'exportarExcelPendientes']);  // Listado a Excel
+        Route::get('instrumentos-pago/pendientes-numero/pdf', [App\Http\Controllers\Tesoreria\Services\TesInstrumentoPagoController::class, 'exportarPdfPendientes']);  // Listado a PDF, por banco
         Route::get('instrumentos-pago/validar-numero', [App\Http\Controllers\Tesoreria\Services\TesInstrumentoPagoController::class, 'getValidarNumero']);  // Validacion en vivo del numero
         Route::post('instrumentos-pago', [App\Http\Controllers\Tesoreria\Services\TesInstrumentoPagoController::class, 'getCrearInstrumentos']);  // Crear los eCheq de una OP (sin numero)
         Route::post('instrumentos-pago/marcar-pendiente-emision', [App\Http\Controllers\Tesoreria\Services\TesInstrumentoPagoController::class, 'getMarcarPendienteEmision']);  // Imprimir la OP y mandarla a Tesoreria
