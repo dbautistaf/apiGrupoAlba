@@ -39,7 +39,12 @@ class TesPagoEntity extends Model
         'fecha_confirma_cobro',
         'cuenta_bancaria',
         'imputacion_contable',
-        'banco'
+        'banco',
+        // Ciclo de vida del instrumento (eCheq). Sin esto, create() las descartaba en silencio.
+        'id_estado_instrumento',
+        'numero_echeq',
+        'fecha_emision_echeq',
+        'id_banco_emisor'
     ];
 
     public function estado()
@@ -55,6 +60,11 @@ class TesPagoEntity extends Model
     public function formaPago()
     {
         return $this->hasOne(TesTipoFormasPagoEntity::class, 'id_forma_pago', 'id_forma_pago');
+    }
+
+    public function estadoInstrumento()
+    {
+        return $this->hasOne(TesEstadoInstrumentoEntity::class, 'id_estado_instrumento', 'id_estado_instrumento');
     }
 
     public function opa()

@@ -1238,6 +1238,16 @@ Route::group(
         Route::put('pago-retencion/{id}', [App\Http\Controllers\Tesoreria\Services\PagoRetencionesController::class, 'update']);  // Actualizar retención
         Route::delete('pago-retencion/{id}', [App\Http\Controllers\Tesoreria\Services\PagoRetencionesController::class, 'destroy']);  // Eliminar retención
 
+        // Endpoints del ciclo de vida del instrumento de pago (eCheq)
+        Route::get('instrumentos-pago/pendientes-numero', [App\Http\Controllers\Tesoreria\Services\TesInstrumentoPagoController::class, 'getPendientesDeNumero']);  // OPs con eCheq sin numero, por banco
+        Route::get('instrumentos-pago/validar-numero', [App\Http\Controllers\Tesoreria\Services\TesInstrumentoPagoController::class, 'getValidarNumero']);  // Validacion en vivo del numero
+        Route::post('instrumentos-pago', [App\Http\Controllers\Tesoreria\Services\TesInstrumentoPagoController::class, 'getCrearInstrumentos']);  // Crear los eCheq de una OP (sin numero)
+        Route::post('instrumentos-pago/marcar-pendiente-emision', [App\Http\Controllers\Tesoreria\Services\TesInstrumentoPagoController::class, 'getMarcarPendienteEmision']);  // Imprimir la OP y mandarla a Tesoreria
+        Route::post('instrumentos-pago/confirmar-emision', [App\Http\Controllers\Tesoreria\Services\TesInstrumentoPagoController::class, 'getConfirmarEmision']);  // Confirmar TODOS los numeros de la OP
+        Route::put('instrumentos-pago/{idPago}/numero', [App\Http\Controllers\Tesoreria\Services\TesInstrumentoPagoController::class, 'getGuardarNumero']);  // Guardar un numero como borrador
+        Route::post('instrumentos-pago/{idPago}/acreditar', [App\Http\Controllers\Tesoreria\Services\TesInstrumentoPagoController::class, 'getAcreditar']);  // Acreditar (desde conciliacion)
+        Route::post('instrumentos-pago/{idPago}/rechazar', [App\Http\Controllers\Tesoreria\Services\TesInstrumentoPagoController::class, 'getRechazar']);  // Rechazar (carga MANUAL del usuario)
+
         // Endpoints de saldos - deudas pendientes
         Route::get('saldos-proveedores-prestadores', [App\Http\Controllers\Tesoreria\Services\SaldosController::class, 'getListarProveedoresPrestadoresConDeudas']);  // Lista proveedores/prestadores con deudas
         Route::get('detalle-facturas-pendientes', [App\Http\Controllers\Tesoreria\Services\SaldosController::class, 'getDetalleFacturasPendientes']);  // Detalle de facturas pendientes específicas
