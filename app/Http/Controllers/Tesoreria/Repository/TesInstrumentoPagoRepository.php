@@ -46,7 +46,10 @@ class TesInstrumentoPagoRepository
     const RECHAZADO         = 5;
     const ANULADO           = 6;
 
-    /** Formas de pago de tb_tes_formas_pago que llevan número de eCheq. */
+    /**
+     * `tb_tes_formas_pago`: 7 = eCheq. Verificado en las DOS bases el 2026-09-03 — los catálogos
+     * de formas de pago y de estado de instrumento coinciden id por id entre Alba y OSV.
+     */
     const FORMA_PAGO_ECHEQ = 7;
 
     private $user;

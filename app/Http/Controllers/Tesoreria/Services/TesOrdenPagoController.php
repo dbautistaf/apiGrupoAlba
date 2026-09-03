@@ -86,6 +86,8 @@ class TesOrdenPagoController extends Controller
             'pagos.cuenta.entidadBancaria',
             'pagos.pagosParciales',
             'pagos.fechaprobablepagos',
+            'pagos.bancoEmisor',
+            'pagos.estadoInstrumento',
         ])->where('id_orden_pago', $id)
             ->first();
 
@@ -97,7 +99,26 @@ class TesOrdenPagoController extends Controller
             }
         }
 
+        // Instrumentos del circuito nuevo (eCheq). Los pagos viejos no tienen estado de
+        // instrumento y siguen saliendo por el bloque de "pagosParciales" de siempre.
+        $instrumentos = ($query?->pagos ?? collect())
+            ->filter(fn($p) => !is_null($p->id_estado_instrumento))
+            ->values();
+
+        // Las dos versiones que pide el circuito salen de la MISMA plantilla: lo unico que
+        // cambia es si los numeros ya se cargaron. La inicial va a Tesoreria para que emita;
+        // la definitiva, al proveedor. (2026-09-03)
+        $faltanNumeros = $instrumentos->contains(fn($p) => empty(trim((string) $p->numero_echeq)));
+
+        $versionComprobante = $instrumentos->isEmpty()
+            ? null
+            : ($faltanNumeros
+                ? 'PENDIENTE DE EMISION - COPIA PARA TESORERIA'
+                : 'COMPROBANTE DEFINITIVO');
+
         $datos = [
+            "instrumentos" => $instrumentos,
+            "version_comprobante" => $versionComprobante,
             "comprobante_nro" => $query?->num_orden_pago,
             "fecha_emision" => $query?->fecha_emision,
             "cuit_proveedor" => $query?->proveedor ? $query?->proveedor?->cuit : $query?->prestador?->cuit,

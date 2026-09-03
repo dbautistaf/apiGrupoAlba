@@ -294,6 +294,12 @@
                 <div class="card" style="border-top: 3px solid #388E3C; margin-bottom: 0;">
                     <div class="card-header" style="background-color: #f8fafc;">
                         Valores Entregados
+                        @if (!empty($version_comprobante))
+                            <span style="float: right; font-size: 8px; font-weight: bold;
+                                         color: #b45309; text-transform: uppercase;">
+                                {{ $version_comprobante }}
+                            </span>
+                        @endif
                     </div>
                     <table class="modern-table">
                         <thead>
@@ -306,6 +312,39 @@
                             @php
                                 $totalFilas2 = 0;
                             @endphp
+
+                            {{-- Instrumentos del circuito nuevo (eCheq). Cuando el numero
+                                 todavia no se cargo, sale una linea en blanco para completar a
+                                 mano: es la version que va a Tesoreria para emitir. --}}
+                            @foreach ($instrumentos ?? [] as $inst)
+                                <tr>
+                                    <td class="font-bold text-dark" style="font-size: 9px;">
+                                        {{ $inst?->formaPago?->tipo_pago ?? 'eCheq' }}:
+                                        @if (trim((string) $inst?->numero_echeq) !== '')
+                                            {{ $inst->numero_echeq }}
+                                        @else
+                                            <span style="display: inline-block; min-width: 90px;
+                                                         border-bottom: 1px solid #94a3b8;">&nbsp;</span>
+                                        @endif
+                                        <br>
+                                        <span style="font-weight: normal; font-size: 8px; color: #64748b;">
+                                            {{ $inst?->bancoEmisor?->descripcion_banco ?? $inst?->cuenta?->nombre_cuenta }}
+                                        </span><br>
+                                        <div style="margin-top: 3px;">
+                                            <span class="font-bold" style="font-size: 8px;">Fecha de Pago:</span>
+                                            <span class="text-blue" style="font-size: 8px;">{{ $inst?->fecha_probable_pago }}</span>
+                                            @if ($inst?->estadoInstrumento)
+                                                <span style="font-size: 8px; color: #64748b;">
+                                                    &middot; {{ $inst->estadoInstrumento->descripcion_estado }}
+                                                </span>
+                                            @endif
+                                        </div>
+                                    </td>
+                                    <td class="text-center font-bold">{{ $loop->iteration }}</td>
+                                    <td class="text-right font-bold text-dark">${{ number_format($inst?->monto_pago ?? 0, 2, ',', '.') }}</td>
+                                </tr>
+                                @php $totalFilas2++; @endphp
+                            @endforeach
 
                             @foreach ($pagos as $item)
                                 @foreach ($item->pagosParciales as $pagosP)
