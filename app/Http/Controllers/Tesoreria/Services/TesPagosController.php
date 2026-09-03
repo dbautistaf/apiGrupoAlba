@@ -59,6 +59,21 @@ class TesPagosController extends Controller
                     return response()->json(['message' => 'La cuenta seleccionada se encuentra <b>BLOQUEADA</b>'], 409);
                 }
 
+                // @UNA OPA NO PUEDE TENER DOS PAGOS GENERADOS (2026-09-03)
+                // Hasta ahora esto estaba protegido POR ACCIDENTE: crear el pago mueve la OPA a
+                // estado 4, y la validación de abajo exige estado 1. Al migrar los estados
+                // legacy (las 1.019 OPAs de OSV en "EN PROCESO" vuelven a "PENDIENTE"), esa
+                // protección implícita desaparece y quedaría la puerta abierta a generar un
+                // segundo pago sobre una orden que ya tiene uno. Se hace explícita.
+                // Un pago RECHAZADO no cuenta: ahí sí corresponde poder generar uno nuevo.
+                if ($opa->tieneAlgunPago($param['id_orden_pago'])) {
+                    DB::rollBack();
+                    return response()->json([
+                        'message' => 'Esta orden de pago ya tiene un pago generado. '
+                            . 'Para generar otro, primero hay que anular el existente.'
+                    ], 409);
+                }
+
                 //@VALIDAMOS QUE LA OPA ESTE EN ESTADO PENDIENTE
                 if (!$opa->findByExistsOpaEstado($param['id_orden_pago'], '1')) {
                     DB::rollBack();
