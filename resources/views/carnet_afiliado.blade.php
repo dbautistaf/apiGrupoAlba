@@ -127,7 +127,7 @@
                     @php
                         $tipoPlanMostrar = $isOsv 
                             ? ($padron->origen->detalle_comercial_origen ?? $padron->detalleplan[0]->addplan->tipo ?? $tipoPrincipal)
-                            : ($padron->detalleplan[0]->addplan->tipo ?? $tipoPrincipal);
+                            : 'PLAN ÚNICO';
                     @endphp
                     <p class="plan">TIPO PLAN:<b> {{ $tipoPlanMostrar }} </b></p>
                     @if(!$isOsv)
