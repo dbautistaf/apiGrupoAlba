@@ -369,15 +369,12 @@ class TestOrdenPagoRepository
     }
 
     /**
-     * ¿La OPA tiene pagos vivos? (pagos no anulados — un pago anulado queda en estado 3)
-     * Es el criterio real para saber si se puede rechazar: no alcanza con mirar el estado de la
-     * OPA. De 982 OPAs EN PROCESO relevadas, 977 tenían pago vivo pero 5 no.
+     * @deprecated Duplicaba la lógica de tienePagosConfirmados() con el criterio viejo (contaba
+     * pagos sin confirmar). Ahora delega, para que el criterio viva en un solo lugar.
      */
     public function findByOpaTienePagosVivos($idOpa)
     {
-        return TesPagoEntity::where('id_orden_pago', $idOpa)
-            ->where('id_estado_orden_pago', '!=', self::ESTADO_OPA_RECHAZADO)
-            ->exists();
+        return $this->tienePagosConfirmados($idOpa);
     }
 
     /**
@@ -404,7 +401,7 @@ class TestOrdenPagoRepository
                 'anulada' => false,
                 'opa' => $opa,
                 'message' => 'No se puede anular: la orden de pago ' . $opa->num_orden_pago
-                    . ' ya tiene pagos asociados. Primero hay que anular esos pagos.'
+                    . ' ya tiene pagos confirmados. Primero hay que anular esos pagos.'
             ];
         }
 
@@ -511,14 +508,57 @@ class TestOrdenPagoRepository
     }
 
     /**
-     * Indica si una OPA tiene pagos vivos (no rechazados). Se usa como guarda antes de
-     * cualquier borrado físico: borrar una OPA pagada deja el pago sin respaldo. (2026-08-11)
+     * Indica si una OPA tiene pagos CONFIRMADOS, o sea: si ya salió plata. Es la guarda previa
+     * a cualquier operación que modifique o borre una OPA — hacerlo con un pago confirmado
+     * dejaría ese pago sin respaldo.
+     *
+     * OJO con el criterio (corregido 2026-09-03): antes contaba cualquier pago no rechazado,
+     * incluidos los CREADOS PERO SIN CONFIRMAR. Un pago sin confirmar es solo "la orden se mandó
+     * a Pagos con una fecha" — todavía no se movió un peso. Con el criterio viejo quedaban
+     * bloqueadas 1.020 OPAs en OSV y 69 en Alba sin motivo: no se podían editar, ni gestionar
+     * sus facturas, ni anular.
+     *
+     * La señal de "se pagó" es el estado PAGADO, que en las dos bases coincide 100% con tener
+     * `fecha_confirma_pago` (249/249 en Alba, 103/103 en OSV). Se contemplan las dos por las
+     * dudas: hay 2 pagos en Alba con fecha de confirmación pero estado PENDIENTE, y ante la duda
+     * conviene bloquear de más, no de menos.
+     *
+     * Un pago RECHAZADO nunca bloquea, aunque tenga fecha de confirmación: se revirtió.
      */
-    public function tienePagosVivos($idOpa): bool
+    public function tienePagosConfirmados($idOpa): bool
+    {
+        return TesPagoEntity::where('id_orden_pago', $idOpa)
+            ->where('id_estado_orden_pago', '!=', self::ESTADO_OPA_RECHAZADO)
+            ->where(function ($q) {
+                $q->where('id_estado_orden_pago', self::ESTADO_OPA_PAGADO)
+                    ->orWhereNotNull('fecha_confirma_pago');
+            })
+            ->exists();
+    }
+
+    /**
+     * ¿La OPA tiene ALGÚN pago registrado, confirmado o no (excluyendo los rechazados)?
+     *
+     * Es una guarda MÁS ESTRICTA que tienePagosConfirmados(), y se usa únicamente antes de un
+     * BORRADO FÍSICO de la OPA. La diferencia importa: para editar o anular alcanza con que no
+     * haya plata movida, porque la OPA sigue existiendo y el pago sin confirmar mantiene su
+     * referencia. Pero si la OPA se borra, cualquier pago que la apunte queda huérfano — que es
+     * exactamente el problema que se limpió en agosto. (2026-09-03)
+     */
+    public function tieneAlgunPago($idOpa): bool
     {
         return TesPagoEntity::where('id_orden_pago', $idOpa)
             ->where('id_estado_orden_pago', '!=', self::ESTADO_OPA_RECHAZADO)
             ->exists();
+    }
+
+    /**
+     * @deprecated Usar tienePagosConfirmados(). Se mantiene el nombre viejo por compatibilidad
+     * con los llamadores existentes, pero el criterio es el nuevo.
+     */
+    public function tienePagosVivos($idOpa): bool
+    {
+        return $this->tienePagosConfirmados($idOpa);
     }
 
     /**
@@ -585,12 +625,13 @@ class TestOrdenPagoRepository
             );
         }
 
-        // No tocar OPAs con pagos vivos: más abajo se las borra físicamente y el pago quedaría
-        // sin orden de pago que lo respalde. (2026-08-11)
+        // Guarda ESTRICTA (tieneAlgunPago, no tienePagosConfirmados): más abajo estas OPAs se
+        // borran físicamente, así que cualquier pago que las apunte quedaría huérfano — incluso
+        // uno sin confirmar. (2026-08-11, criterio precisado 2026-09-03)
         foreach ($idOrdenesExistentes as $idOrdenExistente) {
-            if ($this->tienePagosVivos($idOrdenExistente)) {
+            if ($this->tieneAlgunPago($idOrdenExistente)) {
                 throw new \Exception(
-                    "No se puede agrupar: la orden de pago {$idOrdenExistente} ya tiene pagos asociados."
+                    "No se puede agrupar: la orden de pago {$idOrdenExistente} ya tiene pagos registrados."
                 );
             }
         }
@@ -762,10 +803,12 @@ class TestOrdenPagoRepository
             ];
         }
 
-        if ($this->tienePagosVivos($opa->id_orden_pago)) {
+        // Guarda ESTRICTA: más abajo la OPA origen se borra físicamente si queda vacía, así que
+        // bloquea cualquier pago registrado, confirmado o no. (criterio precisado 2026-09-03)
+        if ($this->tieneAlgunPago($opa->id_orden_pago)) {
             return [
                 'success' => false,
-                'message' => 'No se puede agrupar esta factura: su orden de pago ya tiene pagos asociados.'
+                'message' => 'No se puede agrupar esta factura: su orden de pago ya tiene pagos registrados.'
             ];
         }
 
@@ -865,10 +908,11 @@ class TestOrdenPagoRepository
         // If the original OPA has no more details, delete it. If it has 1 detail left, mark it as unida=0
         $remainingDetails = TesOrdenPagoDetalleEntity::where('id_orden_pago', $opa->id_orden_pago)->get();
         if ($remainingDetails->count() == 0) {
-            // Guarda: no borrar físicamente una OPA con pagos, el pago quedaría sin respaldo. (2026-08-11)
-            if ($this->tienePagosVivos($opa->id_orden_pago)) {
+            // Guarda ESTRICTA: acá se borra físicamente la OPA, así que bloquea cualquier pago
+            // registrado, esté confirmado o no. (2026-08-11, criterio precisado 2026-09-03)
+            if ($this->tieneAlgunPago($opa->id_orden_pago)) {
                 throw new \Exception(
-                    "No se puede desagrupar: la orden de pago {$opa->id_orden_pago} quedaría vacía y tiene pagos asociados."
+                    "No se puede desagrupar: la orden de pago {$opa->id_orden_pago} quedaría vacía y tiene pagos registrados."
                 );
             }
             $opa->delete();
