@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Tesoreria\Repository;
 
 use App\Models\facturacion\FacturacionDatosEntity;
 use App\Models\Tesoreria\TesEstadoOrdenPagoEntity;
+use App\Models\Tesoreria\TesFacturasOpaEntity;
 use App\Models\Tesoreria\TesFechaProbablePagoEntity;
 use App\Models\Tesoreria\TesOrdenPagoDetalleEntity;
 use App\Models\Tesoreria\TesOrdenPagoEntity;
@@ -19,8 +20,10 @@ class TestOrdenPagoRepository
     const ESTADO_OPA_PENDIENTE = 1;
     const ESTADO_OPA_APROBADO  = 2;
     const ESTADO_OPA_RECHAZADO = 3;
-    const ESTADO_OPA_EN_PROCESO = 4;
+    const ESTADO_OPA_EN_PROCESO = 4;   // legacy — el circuito nuevo no lo produce
     const ESTADO_OPA_PAGADO    = 5;
+    const ESTADO_OPA_PAGO_PARCIAL = 6;
+    const ESTADO_OPA_CONSUMIDA = 7;    // anticipos (fase 3)
 
     private $user;
     private $fechaActual;
@@ -287,6 +290,11 @@ class TestOrdenPagoRepository
             'tipo_factura' => $param->tipo_factura,
             'factura_unida' => 0
         ]);
+
+        // La puente se escribe junto con el detalle: si no, toda OPA nueva nacería sin
+        // imputación y su estado derivado daría PENDIENTE aunque estuviera pagada. (2026-09-03)
+        $this->sincronizarPuenteDesdeDetalle($opa->id_orden_pago);
+
         return $opa;
     }
 
@@ -437,6 +445,32 @@ class TestOrdenPagoRepository
         return $tes->load(['proveedor']);
     }
 
+    /**
+     * Registra la fecha de confirmación del pago y DERIVA el estado de la OPA, en vez de
+     * forzarlo a PAGADO. (2026-09-03)
+     *
+     * Reemplaza a findByConfirmarEstado($id, $fecha, '5') en el flujo de confirmación. La
+     * diferencia importa: forzar el 5 es lo que dejó 5 órdenes cerradas como "pagadas" con
+     * menos plata de la imputada (~$15,4M entre las dos bases — ver docs/plan-fase1-pagos.md
+     * §6.bis). Con el estado derivado, un pago que no cubre el total deja la OPA en PAGO
+     * PARCIAL, que es lo que pide el punto 4 del requerimiento.
+     */
+    public function findByConfirmarPagoDerivandoEstado($id_opa, $fechaPago)
+    {
+        $tes = TesOrdenPagoEntity::find($id_opa);
+
+        if (is_null($tes)) {
+            return null;
+        }
+
+        $tes->fecha_confirma_pago = $fechaPago;
+        $tes->update();
+
+        $this->recalcularEstadoOpa($id_opa);
+
+        return $tes->refresh()->load(['proveedor']);
+    }
+
     public function findByConfirmarFechaProbablePago($id_opa, $fechaProbablePago, $cuotas)
     {
         $tes = TesOrdenPagoEntity::find($id_opa);
@@ -504,7 +538,25 @@ class TestOrdenPagoRepository
         TesOrdenPagoEntity::where('id_orden_pago', $idOpa)
             ->update(['monto_orden_pago' => $total]);
 
+        // La puente y el estado derivado se recalculan juntos: si cambió el detalle, cambió lo
+        // imputado, y de ahí sale el estado. Engancharlo acá cubre de una todos los flujos que
+        // tocan el detalle, en vez de repetirlo en cada uno. (2026-09-03)
+        $this->sincronizarPuenteDesdeDetalle($idOpa);
+        $this->recalcularEstadoOpa($idOpa);
+
         return $total;
+    }
+
+    /**
+     * Borra las filas de la tabla puente de una OPA. Hay que llamarlo ANTES de borrar la OPA
+     * físicamente: la FK fk_opaf_orden_pago es RESTRICT y bloquea el DELETE.
+     *
+     * Sin esto, agrupar y desagrupar se rompen apenas la puente tiene datos — verificado contra
+     * la base: el DELETE falla con error 1451. (2026-09-03)
+     */
+    private function limpiarPuenteDeOpa($idOpa): void
+    {
+        TesFacturasOpaEntity::where('id_orden_pago', $idOpa)->delete();
     }
 
     /**
@@ -534,6 +586,114 @@ class TestOrdenPagoRepository
                     ->orWhereNotNull('fecha_confirma_pago');
             })
             ->exists();
+    }
+
+    /**
+     * Deja la tabla puente (tb_tes_opa_factura) alineada con el detalle de una OPA.
+     *
+     * Durante la convivencia, tb_tes_orden_pago_detalle sigue siendo la que escriben los flujos
+     * viejos (crear, agrupar, desagrupar). Sin esta sincronización, la puente quedaría como una
+     * foto del momento de la migración y se iría desfasando con cada operación — y como de ella
+     * salen el monto imputado y el estado derivado, todo lo nuevo empezaría a mentir.
+     *
+     * Se llama DESPUÉS de cualquier operación que toque el detalle. Es idempotente: agrega lo
+     * que falta, actualiza el monto de lo que cambió y borra lo que ya no está.
+     *
+     * `monto_aplicado = monto_factura` es válido mientras no exista imputación parcial (hoy no
+     * existe). Cuando llegue el FIFO (fase 4), esta sincronización se retira y la puente pasa a
+     * escribirse directo. (2026-09-03)
+     */
+    public function sincronizarPuenteDesdeDetalle($idOpa): void
+    {
+        $detalle = TesOrdenPagoDetalleEntity::where('id_orden_pago', $idOpa)->get();
+
+        foreach ($detalle as $d) {
+            TesFacturasOpaEntity::updateOrCreate(
+                ['id_orden_pago' => $idOpa, 'id_factura' => $d->id_factura],
+                [
+                    'monto_aplicado'   => $d->monto_factura,
+                    'fecha_imputacion' => $this->fechaActual,
+                    'cod_usuario'      => $this->user->cod_usuario ?? null,
+                ]
+            );
+        }
+
+        // Las facturas que ya no están en el detalle salen también de la puente.
+        TesFacturasOpaEntity::where('id_orden_pago', $idOpa)
+            ->whereNotIn('id_factura', $detalle->pluck('id_factura')->all() ?: [0])
+            ->delete();
+    }
+
+    /**
+     * Total imputado a las facturas de una OPA (la tabla puente es la fuente de verdad).
+     */
+    public function montoImputadoOpa($idOpa): float
+    {
+        return (float) TesFacturasOpaEntity::where('id_orden_pago', $idOpa)->sum('monto_aplicado');
+    }
+
+    /**
+     * Total efectivamente pagado de una OPA: suma de sus pagos CONFIRMADOS.
+     *
+     * OJO con el monto: `monto_pago` viene NULL en buena parte de los pagos confirmados
+     * (100 de 251 en Alba, 74 de 103 en OSV — relevado 2026-09-03), mientras que `monto_opa`
+     * nunca lo está. Usar solo `monto_pago` daría 0 para la mayoría de los pagos de OSV y el
+     * estado derivado saldría mal.
+     */
+    public function montoPagadoOpa($idOpa): float
+    {
+        return (float) TesPagoEntity::where('id_orden_pago', $idOpa)
+            ->where('id_estado_orden_pago', '!=', self::ESTADO_OPA_RECHAZADO)
+            ->where(function ($q) {
+                $q->where('id_estado_orden_pago', self::ESTADO_OPA_PAGADO)
+                    ->orWhereNotNull('fecha_confirma_pago');
+            })
+            ->sum(DB::raw('COALESCE(monto_pago, monto_opa, 0)'));
+    }
+
+    /**
+     * Deriva y persiste el estado de una OPA comparando lo imputado contra lo pagado.
+     *
+     * El requerimiento pide explícitamente que el estado NO se pueda setear a mano
+     * (punto 4 del Circuito de Pagos): se calcula. Hasta ahora se asignaba imperativamente en
+     * cada lugar donde pasaba algo, que es de donde salían las inconsistencias.
+     *
+     *   pagado == 0            -> PENDIENTE
+     *   0 < pagado < imputado  -> PAGO PARCIAL
+     *   pagado >= imputado     -> PAGADO
+     *
+     * Una OPA RECHAZADA/anulada no se recalcula: es una decisión administrativa, no un estado
+     * derivable de los montos. Devuelve el estado resultante.
+     */
+    public function recalcularEstadoOpa($idOpa): int
+    {
+        $opa = TesOrdenPagoEntity::find($idOpa);
+
+        if (is_null($opa)) {
+            return 0;
+        }
+
+        if ((int) $opa->id_estado_orden_pago === self::ESTADO_OPA_RECHAZADO) {
+            return self::ESTADO_OPA_RECHAZADO;
+        }
+
+        $imputado = $this->montoImputadoOpa($idOpa);
+        $pagado   = $this->montoPagadoOpa($idOpa);
+
+        if ($imputado > 0 && $pagado >= $imputado - 0.01) {
+            $nuevo = self::ESTADO_OPA_PAGADO;
+        } elseif ($pagado > 0.01) {
+            $nuevo = self::ESTADO_OPA_PAGO_PARCIAL;
+        } else {
+            $nuevo = self::ESTADO_OPA_PENDIENTE;
+        }
+
+        if ((int) $opa->id_estado_orden_pago !== $nuevo) {
+            $opa->id_estado_orden_pago = $nuevo;
+            $opa->save();
+        }
+
+        return $nuevo;
     }
 
     /**
@@ -738,9 +898,17 @@ class TestOrdenPagoRepository
         }
 
         if (!empty($idOrdenesExistentes)) {
+            // La puente PRIMERO: su FK es RESTRICT y bloquea el borrado de la OPA.
+            foreach ($idOrdenesExistentes as $idOrdenExistente) {
+                $this->limpiarPuenteDeOpa($idOrdenExistente);
+            }
             TesOrdenPagoDetalleEntity::whereIn('id_orden_pago', $idOrdenesExistentes)->delete();
             TesOrdenPagoEntity::whereIn('id_orden_pago', $idOrdenesExistentes)->delete();
         }
+
+        // La OPA nueva arranca con su puente y su estado ya calculados.
+        $this->sincronizarPuenteDesdeDetalle($newOpa->id_orden_pago);
+        $this->recalcularEstadoOpa($newOpa->id_orden_pago);
 
         // num_orden_pago lo asigna la base por trigger: sin refresh vuelve null al front.
         $newOpa->refresh();
@@ -833,6 +1001,8 @@ class TestOrdenPagoRepository
 
             $quedanEnOrigen = TesOrdenPagoDetalleEntity::where('id_orden_pago', $opa->id_orden_pago)->count();
             if ($quedanEnOrigen === 0) {
+                // La puente primero: su FK es RESTRICT y bloquearía el borrado.
+                $this->limpiarPuenteDeOpa($opa->id_orden_pago);
                 TesOrdenPagoEntity::where('id_orden_pago', $opa->id_orden_pago)->delete();
             } else {
                 $this->recalcularMontoDesdeDetalle($opa->id_orden_pago);
@@ -898,6 +1068,12 @@ class TestOrdenPagoRepository
             'factura_unida' => 0
         ]);
 
+        // La OPA desagrupada también necesita su fila en la puente: sin esto nacía con detalle
+        // pero sin imputación, y su estado derivado hubiera dado PENDIENTE con monto 0.
+        // (2026-09-03)
+        $this->sincronizarPuenteDesdeDetalle($newopa->id_orden_pago);
+        $this->recalcularEstadoOpa($newopa->id_orden_pago);
+
         // El monto de la OPA origen se recalcula desde su detalle más abajo, una vez quitada
         // la fila. Antes se hacía `-=` sobre la cabecera, que se desincronizaba del detalle
         // ante cualquier fallo intermedio. (2026-08-11)
@@ -915,6 +1091,8 @@ class TestOrdenPagoRepository
                     "No se puede desagrupar: la orden de pago {$opa->id_orden_pago} quedaría vacía y tiene pagos registrados."
                 );
             }
+            // La puente primero: su FK es RESTRICT y bloquearía el borrado.
+            $this->limpiarPuenteDeOpa($opa->id_orden_pago);
             $opa->delete();
         } else {
             if ($remainingDetails->count() == 1) {

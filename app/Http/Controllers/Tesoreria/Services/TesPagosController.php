@@ -216,9 +216,22 @@ class TesPagosController extends Controller
                 //@VALIDAMOS SI EL MONTO DE LA OPA Y EL ANTICIPADO AU
             } else {
                 //@PAGO NORMAL
-                $opaFactus = $opa->findByConfirmarEstado($params->id_orden_pago, $pagoDb->fecha_confirma_pago, '5');
-                //@CONFIRMAMOS A ESTADO PAGADO LA FACTURA
-                $facturaRepository->findByUpdateFactusPagoId($opaFactus->id_factura, '1');
+                // El estado de la OPA ya no se fuerza a PAGADO: se DERIVA de comparar lo pagado
+                // contra lo imputado (punto 4 del requerimiento). Si el pago no cubre el total,
+                // la orden queda en PAGO PARCIAL en vez de cerrarse como pagada. Forzar el 5 es
+                // lo que dejó 5 órdenes cerradas con menos plata de la imputada (~$15,4M entre
+                // las dos bases). Ver docs/plan-fase1-pagos.md §6.bis. (2026-09-03)
+                $opaFactus = $opa->findByConfirmarPagoDerivandoEstado(
+                    $params->id_orden_pago,
+                    $pagoDb->fecha_confirma_pago
+                );
+
+                // La factura solo se marca pagada si la OPA quedó efectivamente PAGADA.
+                if (!is_null($opaFactus)
+                    && (int) $opaFactus->id_estado_orden_pago === TestOrdenPagoRepository::ESTADO_OPA_PAGADO
+                    && !is_null($opaFactus->id_factura)) {
+                    $facturaRepository->findByUpdateFactusPagoId($opaFactus->id_factura, '1');
+                }
             }
 
             // @REGISTRAMOS EL RETIRO DE LA CUENTA BANCARIA
@@ -313,9 +326,19 @@ class TesPagosController extends Controller
                 );
             }
 
-            // Anular pago y OPA
+            // Anular el pago y RECALCULAR el estado de la orden.
+            //
+            // CAMBIO DE COMPORTAMIENTO (2026-09-03): antes, anular un pago dejaba la ORDEN en
+            // RECHAZADO. Eso mezcla dos cosas distintas — que se caiga un pago no es lo mismo
+            // que dar de baja la orden, que es una decisión administrativa aparte (punto 7).
+            // El requerimiento lo pide explícito para el eCheq rechazado: "la OP recalcula su
+            // estado (vuelve a parcialmente pagada o pendiente)".
+            //
+            // Con esto, anular el pago devuelve la orden a PENDIENTE (o PAGO PARCIAL si quedaban
+            // otros pagos confirmados) y queda lista para generar un pago nuevo. El pago anulado
+            // queda en estado 3, así que no bloquea la generación del siguiente.
             $pago->findByAnularPago($request->id_pago, $request->motivo_rechazo);
-            $opa->findByUpdateEstado($request->id_orden_pago, '3', $request->motivo_rechazo);
+            $opa->recalcularEstadoOpa($request->id_orden_pago);
 
             DB::commit();
             return response()->json(['message' => 'El Pago ha sido anulado con éxito.']);
