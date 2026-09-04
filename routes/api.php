@@ -1190,6 +1190,9 @@ Route::group(
         Route::post('procesar-cuenta-bancaria', [App\Http\Controllers\Tesoreria\Services\TesCuentasController::class, 'getProcesarCuenta']);
         Route::post('bloquear-cuenta-bancaria', [App\Http\Controllers\Tesoreria\Services\TesCuentasBloqueoController::class, 'getBloquear']);
         Route::post('procesar-opa', [App\Http\Controllers\Tesoreria\Services\TesOrdenPagoController::class, 'getProcesar']);
+        Route::get('anticipos-con-saldo', [App\Http\Controllers\Tesoreria\Services\TesOrdenPagoController::class, 'getAnticiposConSaldo']);  // Saldo a favor de un beneficiario
+        Route::post('anticipos', [App\Http\Controllers\Tesoreria\Services\TesOrdenPagoController::class, 'getCrearAnticipo']);  // Anticipo: OP sin facturas
+        Route::post('anticipos/aplicar', [App\Http\Controllers\Tesoreria\Services\TesOrdenPagoController::class, 'getAplicarAnticipo']);  // Aplica saldo a facturas
         Route::get('imputacion-fifo-opa/{id}', [App\Http\Controllers\Tesoreria\Services\TesOrdenPagoController::class, 'getImputacionFifo']);  // Que facturas cubrio lo pagado
         Route::get('estado-pago-factura/{id}', [App\Http\Controllers\Tesoreria\Services\TesOrdenPagoController::class, 'getEstadoPagoFactura']);  // Estado de pago real de una factura
         Route::post('anular-reemitir-opa', [App\Http\Controllers\Tesoreria\Services\TesOrdenPagoController::class, 'getAnularYReemitir']);  // Anula y reemite dejando trazabilidad

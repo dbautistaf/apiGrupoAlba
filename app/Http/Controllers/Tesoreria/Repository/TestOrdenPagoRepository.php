@@ -665,6 +665,32 @@ class TestOrdenPagoRepository
      * Una OPA RECHAZADA/anulada no se recalcula: es una decisión administrativa, no un estado
      * derivable de los montos. Devuelve el estado resultante.
      */
+    /**
+     * Lo que efectivamente cubre a una OP.
+     *
+     * Para una OP normal es lo pagado por sus instrumentos. Para una de tipo APLICACION es su
+     * propio monto: esa OP no tiene pagos porque la plata salió cuando se pagó el ANTICIPO del
+     * que consume saldo. Sin esta distinción, una aplicación quedaría PENDIENTE para siempre y
+     * el FIFO diría que sus facturas no se pagaron nunca. (2026-09-03)
+     *
+     * `montoPagadoOpa()` se deja como está: sigue significando "plata que entró por un
+     * instrumento", que es la verdad sobre los instrumentos y lo que necesita la tesorería.
+     */
+    public function montoCubiertoOpa($idOpa): float
+    {
+        $opa = TesOrdenPagoEntity::find($idOpa);
+
+        if (is_null($opa)) {
+            return 0.0;
+        }
+
+        if ($opa->tipo_opa === TesAnticipoRepository::TIPO_APLICACION) {
+            return (float) $opa->monto_orden_pago;
+        }
+
+        return $this->montoPagadoOpa($idOpa);
+    }
+
     public function recalcularEstadoOpa($idOpa): int
     {
         $opa = TesOrdenPagoEntity::find($idOpa);
@@ -678,7 +704,7 @@ class TestOrdenPagoRepository
         }
 
         $imputado = $this->montoImputadoOpa($idOpa);
-        $pagado   = $this->montoPagadoOpa($idOpa);
+        $pagado   = $this->montoCubiertoOpa($idOpa);
 
         if ($imputado > 0 && $pagado >= $imputado - 0.01) {
             $nuevo = self::ESTADO_OPA_PAGADO;

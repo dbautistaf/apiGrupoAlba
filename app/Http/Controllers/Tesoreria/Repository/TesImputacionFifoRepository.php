@@ -91,7 +91,7 @@ class TesImputacionFifoRepository
 
         // Lo que realmente se pagó, con el mismo criterio que usa el estado derivado de la OP:
         // sólo pagos confirmados/acreditados, nunca los rechazados.
-        $restante = self::aCentavos($this->opaRepository->montoPagadoOpa($idOpa));
+        $restante = $this->montoCubiertoEnCentavos($idOpa);
 
         $totalImputado = 0;
         $detalle = [];
@@ -127,7 +127,7 @@ class TesImputacionFifoRepository
         return [
             'id_orden_pago'  => $idOpa,
             'total_imputado' => self::aPesos($totalImputado),
-            'total_pagado'   => self::aPesos($this->montoPagadoEnCentavos($idOpa)),
+            'total_pagado'   => self::aPesos($this->montoCubiertoEnCentavos($idOpa)),
             // Si sobra plata después de cubrir todas las facturas, es un pago de más o un
             // anticipo. No se lo come el cálculo: se informa para que se vea.
             'sin_aplicar'    => self::aPesos(max(0, $restante)),
@@ -135,9 +135,13 @@ class TesImputacionFifoRepository
         ];
     }
 
-    private function montoPagadoEnCentavos($idOpa): int
+    /**
+     * Lo que cubre a la OP. En una APLICACION de anticipo no hay instrumentos: la plata salió
+     * al pagar el anticipo, así que lo cubierto es su propio monto.
+     */
+    private function montoCubiertoEnCentavos($idOpa): int
     {
-        return self::aCentavos($this->opaRepository->montoPagadoOpa($idOpa));
+        return self::aCentavos($this->opaRepository->montoCubiertoOpa($idOpa));
     }
 
     /**

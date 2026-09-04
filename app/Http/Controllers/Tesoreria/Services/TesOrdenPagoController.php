@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Tesoreria\Services;
 
 use App\Exports\OrdenesPagoExport;
 use App\Http\Controllers\Tesoreria\Repository\TesPagosRepository;
+use App\Http\Controllers\Tesoreria\Repository\TesAnticipoRepository;
 use App\Http\Controllers\Tesoreria\Repository\TesImputacionFifoRepository;
 use App\Http\Controllers\Tesoreria\Repository\TestOrdenPagoRepository;
 use App\Models\Tesoreria\TesOrdenPagoEntity;
 use Carbon\Carbon;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
@@ -152,6 +154,90 @@ class TesOrdenPagoController extends Controller
         } catch (\Throwable $e) {
             Log::error('Error obtener estado de pago de factura: ' . $e->getMessage());
             return response()->json(['message' => 'Error al obtener el estado de la factura'], 500);
+        }
+    }
+
+    /**
+     * POST /v1/tesoreria/anticipos
+     * Body: { id_beneficiario, tipo_beneficiario: PROVEEDOR|PRESTADOR, monto, observaciones? }
+     */
+    public function getCrearAnticipo(Request $request, TesAnticipoRepository $ant)
+    {
+        try {
+            foreach (['id_beneficiario', 'tipo_beneficiario', 'monto'] as $campo) {
+                if (is_null($request->input($campo)) || $request->input($campo) === '') {
+                    return response()->json(['message' => "{$campo} es requerido"], 422);
+                }
+            }
+
+            $a = $ant->crearAnticipo(
+                $request->input('id_beneficiario'),
+                $request->input('tipo_beneficiario'),
+                $request->input('monto'),
+                $request->input('observaciones')
+            );
+
+            return response()->json(['message' => "Anticipo {$a->num_orden_pago} creado", 'data' => $a], 201);
+        } catch (QueryException $e) {
+            Log::error('Error crear anticipo: ' . $e->getMessage());
+            return response()->json(['message' => 'Error al crear el anticipo'], 500);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 409);
+        }
+    }
+
+    /**
+     * POST /v1/tesoreria/anticipos/aplicar
+     * Body: { id_anticipo, lineas: [{ id_factura, monto }], observaciones? }
+     */
+    public function getAplicarAnticipo(Request $request, TesAnticipoRepository $ant)
+    {
+        try {
+            $idAnticipo = $request->input('id_anticipo');
+            $lineas     = $request->input('lineas', []);
+
+            if (!$idAnticipo) {
+                return response()->json(['message' => 'id_anticipo es requerido'], 422);
+            }
+
+            if (!is_array($lineas) || empty($lineas)) {
+                return response()->json(['message' => 'Hay que enviar al menos una factura'], 422);
+            }
+
+            $ap = $ant->aplicarAFacturas($idAnticipo, $lineas, $request->input('observaciones'));
+
+            return response()->json([
+                'message' => "Anticipo aplicado en {$ap->num_orden_pago}",
+                'data'    => $ap,
+            ], 201);
+        } catch (QueryException $e) {
+            Log::error('Error aplicar anticipo: ' . $e->getMessage());
+            return response()->json(['message' => 'Error al aplicar el anticipo'], 500);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 409);
+        }
+    }
+
+    /**
+     * GET /v1/tesoreria/anticipos-con-saldo?id_beneficiario=&tipo_beneficiario=
+     */
+    public function getAnticiposConSaldo(Request $request, TesAnticipoRepository $ant)
+    {
+        try {
+            $id   = $request->query('id_beneficiario');
+            $tipo = $request->query('tipo_beneficiario');
+
+            if (!$id || !$tipo) {
+                return response()->json(['message' => 'id_beneficiario y tipo_beneficiario son requeridos'], 422);
+            }
+
+            return response()->json([
+                'saldo_a_favor' => $ant->saldoAFavor($id, $tipo),
+                'anticipos'     => $ant->anticiposConSaldo($id, $tipo),
+            ], 200);
+        } catch (\Throwable $e) {
+            Log::error('Error listar anticipos con saldo: ' . $e->getMessage());
+            return response()->json(['message' => 'Error al listar los anticipos'], 500);
         }
     }
 

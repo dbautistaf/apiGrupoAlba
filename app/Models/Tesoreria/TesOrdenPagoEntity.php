@@ -41,8 +41,21 @@ class TesOrdenPagoEntity extends Model
         // Trazabilidad anulacion -> reemision. Sin esto, create() las descartaba en silencio
         // y la orden nueva nacia sin vinculo con la que reemplaza. (2026-09-03)
         'tipo_opa',
-        'id_opa_reemplazada'
+        'id_opa_reemplazada',
+        'id_opa_anticipo'
     ];
+
+    /** El ANTICIPO del que esta APLICACION consume saldo. */
+    public function opaAnticipo()
+    {
+        return $this->hasOne(TesOrdenPagoEntity::class, 'id_orden_pago', 'id_opa_anticipo');
+    }
+
+    /** Las APLICACIONes que consumieron saldo de este ANTICIPO. */
+    public function aplicaciones()
+    {
+        return $this->hasMany(TesOrdenPagoEntity::class, 'id_opa_anticipo', 'id_orden_pago');
+    }
 
     /** La OP que esta reemplaza, cuando nacio de una anulacion. */
     public function opaReemplazada()
