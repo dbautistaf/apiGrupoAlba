@@ -104,6 +104,10 @@ class LiquidacionesFacturaRepository
             $wherePadron .= " AND detalle_plan.id_tipo_plan = " . (int)$params->id_tipo_plan;
         }
 
+        if (!empty($params->tipo_hospital)) {
+            $wherePadron .= " AND fd.tipo_hospital = '" . $params->tipo_hospital . "'";
+        }
+
         $facturas = $query->pluck('id_factura')->toArray();
 
         if (count($facturas) == 0) {
@@ -159,6 +163,7 @@ class LiquidacionesFacturaRepository
                     plan.tipo as tipo_plan,
                     origen.detalle_comercial_origen,
                     caja.detalle_comercial_caja,
+                    fd.tipo_hospital,
                     COALESCE(l.diagnostico, lm.diagnostico) as diagnostico,
                     COALESCE(l.observaciones, lm.observaciones) as observaciones,
                     COALESCE(l.fecha_registra, lm.fecha_registra) as fecha_registro_liq,
@@ -190,6 +195,7 @@ class LiquidacionesFacturaRepository
                 LEFT JOIN tb_tipo_plan plan on detalle_plan.id_tipo_plan = plan.id_tipo_plan
                 LEFT JOIN tb_comercial_caja caja on caja.id_comercial_caja=padron.id_comercial_caja
                 LEFT JOIN tb_comercial_origen origen on origen.id_comercial_origen = padron.id_comercial_origen
+                LEFT JOIN tb_facturacion_datos fd ON fa.id_factura = fd.id_factura
                 WHERE fa.id_factura IN ($facturasStr)
                 $wherePadron
                 ORDER BY fa.fecha_registra_factura DESC, fa.prestador_fantasia ASC
