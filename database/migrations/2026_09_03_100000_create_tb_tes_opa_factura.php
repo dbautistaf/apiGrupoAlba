@@ -12,7 +12,7 @@ return new class extends Migration
      * Hoy la relación vive en tb_tes_orden_pago_detalle, que guarda `monto_factura` (el total
      * de la factura), no cuánto de esa factura cubre la orden. Sin ese dato no se pueden
      * derivar los estados de la OP ni imputar pagos parciales — las dos cosas que pide el
-     * Circuito de Pagos a Prestadores (ver docs/plan-fase1-pagos.md).
+     * Circuito de Pagos a Prestadores (ver docs/circuito-pagos/plan-fase1-pagos.md).
      *
      * El UNIQUE (id_orden_pago, id_factura) es la garantía estructural contra la fila de
      * detalle duplicada: ese bug dejó la OPA de la factura 5239 (OSV) por el doble de su valor.

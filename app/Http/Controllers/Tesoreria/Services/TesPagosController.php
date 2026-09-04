@@ -220,7 +220,7 @@ class TesPagosController extends Controller
                 // contra lo imputado (punto 4 del requerimiento). Si el pago no cubre el total,
                 // la orden queda en PAGO PARCIAL en vez de cerrarse como pagada. Forzar el 5 es
                 // lo que dejó 5 órdenes cerradas con menos plata de la imputada (~$15,4M entre
-                // las dos bases). Ver docs/plan-fase1-pagos.md §6.bis. (2026-09-03)
+                // las dos bases). Ver docs/circuito-pagos/plan-fase1-pagos.md §6.bis. (2026-09-03)
                 $opaFactus = $opa->findByConfirmarPagoDerivandoEstado(
                     $params->id_orden_pago,
                     $pagoDb->fecha_confirma_pago

@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Schema;
  * Solo prepara el mecanismo. El asiento de emisión no se puede generar hasta que Contabilidad
  * cargue el mapeo `cuenta bancaria → cuenta contable de eCheq diferido`, y para eso hacen falta
  * cuentas que **hoy no existen en dos de los tres planes** (ALBA y Tripalium tienen solo
- * "cheques diferidos A COBRAR", que es la contrapartida del activo). Ver docs/plan-fase1-pagos.md §8.
+ * "cheques diferidos A COBRAR", que es la contrapartida del activo). Ver docs/circuito-pagos/plan-fase1-pagos.md §8.
  *
  * ═══ El bug latente que esto destapa ═══
  *

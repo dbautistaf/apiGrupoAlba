@@ -451,7 +451,7 @@ class TestOrdenPagoRepository
      *
      * Reemplaza a findByConfirmarEstado($id, $fecha, '5') en el flujo de confirmación. La
      * diferencia importa: forzar el 5 es lo que dejó 5 órdenes cerradas como "pagadas" con
-     * menos plata de la imputada (~$15,4M entre las dos bases — ver docs/plan-fase1-pagos.md
+     * menos plata de la imputada (~$15,4M entre las dos bases — ver docs/circuito-pagos/plan-fase1-pagos.md
      * §6.bis). Con el estado derivado, un pago que no cubre el total deja la OPA en PAGO
      * PARCIAL, que es lo que pide el punto 4 del requerimiento.
      */

@@ -261,7 +261,7 @@ class FacturaRepository
     // findByDeleteId() eliminado (2026-08-12): borraba físicamente la factura con todo su detalle
     // SIN tocar la orden de pago, dejándola huérfana y pagable. No lo llamaba nadie — las facturas
     // se anulan (estado 4) vía deleteFacturaDetalle, que sí anula la OPA en cascada.
-    // Ver docs/pendientes.md y docs/reporte-danos-opa.md.
+    // Ver docs/pendientes.md y docs/circuito-pagos/reporte-danos-opa.md.
 
     public function findByNumeroFactura($numFactura)
     {

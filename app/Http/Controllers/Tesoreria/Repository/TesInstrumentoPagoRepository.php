@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\DB;
  * `fecha_emision_echeq` e `id_banco_emisor`. Se extendió esa tabla en vez de crear una nueva
  * porque la contabilidad vincula cada asiento con su pago por `id_pago`.
  *
- * MÁQUINA DE ESTADOS (docs/plan-fase1-pagos.md §2.3):
+ * MÁQUINA DE ESTADOS (docs/circuito-pagos/plan-fase1-pagos.md §2.3):
  *
  *   BORRADOR (1)          Pagos definió el instrumento (monto y fecha). La OP todavía no se
  *                         imprimió ni se mandó a Tesorería.

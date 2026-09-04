@@ -351,7 +351,7 @@ class FacturacionProcesosController extends Controller
             // @ANULACIÓN EN CASCADA DE LA OPA
             // Este endpoint (botón "Eliminar" de los visores) anula la factura poniendo estado = 4.
             // Sin esto la orden de pago quedaba viva y pagable pese a estar anulada la factura
-            // (7 casos por $27,3M en Alba — ver docs/reporte-danos-opa.md).
+            // (7 casos por $27,3M en Alba — ver docs/circuito-pagos/reporte-danos-opa.md).
             // Si la OPA ya tiene pagos, no se anula nada y se corta con un mensaje claro.
             $opaVigente = $opaRepository->findByOpaVigenteFactura($request->id_factura);
             if (!is_null($opaVigente)) {

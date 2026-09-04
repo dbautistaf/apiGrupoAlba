@@ -12,7 +12,7 @@ return new class extends Migration
      *
      * tb_tes_orden_pago y tb_tes_orden_pago_detalle no tenían NINGUNA foreign key: nada impedía
      * borrar una factura dejando su orden de pago viva y pagable. Así se generaron las OPAs
-     * huérfanas relevadas en Alba producción (13 OPAs, $39,2M — ver docs/reporte-danos-opa.md).
+     * huérfanas relevadas en Alba producción (13 OPAs, $39,2M — ver docs/circuito-pagos/reporte-danos-opa.md).
      *
      * Ningún endpoint de la app borra facturas físicamente (el botón "Eliminar" en realidad anula),
      * así que el borrado vino de fuera de la aplicación. Por eso la protección tiene que estar en
@@ -48,7 +48,7 @@ return new class extends Migration
         if ($huerfanasOpa > 0 || $huerfanasDetalle > 0) {
             throw new \Exception(
                 "No se puede crear la FK: hay OPAs huérfanas (cabecera: {$huerfanasOpa}, "
-                . "detalle: {$huerfanasDetalle}). Limpiarlas primero — ver docs/reporte-danos-opa.md."
+                . "detalle: {$huerfanasDetalle}). Limpiarlas primero — ver docs/circuito-pagos/reporte-danos-opa.md."
             );
         }
 
