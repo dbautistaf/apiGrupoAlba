@@ -267,6 +267,54 @@ class TesOrdenPagoController extends Controller
         }
     }
 
+    /**
+     * GET /v1/tesoreria/cuenta-corriente-beneficiarios?tipo_beneficiario=&texto=
+     *
+     * Buscador de prestadores/proveedores que tengan movimientos de cuenta corriente.
+     */
+    public function getBeneficiariosCuentaCorriente(Request $request, TesCuentaCorrienteRepository $cc)
+    {
+        try {
+            $tipo = $request->query('tipo_beneficiario');
+
+            if (!$tipo) {
+                return response()->json(['message' => 'tipo_beneficiario es requerido'], 422);
+            }
+
+            // `solo_con_movimientos=0` para el alta de anticipos: ahi hay que poder elegir a
+            // cualquiera, tenga facturas o no.
+            $soloConMovimientos = $request->query('solo_con_movimientos', '1') !== '0';
+
+            return response()->json(
+                $cc->buscarBeneficiarios($tipo, $request->query('texto'), 25, $soloConMovimientos),
+                200
+            );
+        } catch (\Throwable $e) {
+            Log::error('Error buscar beneficiarios de cuenta corriente: ' . $e->getMessage());
+            return response()->json(['message' => 'Error al buscar beneficiarios'], 500);
+        }
+    }
+
+    /**
+     * GET /v1/tesoreria/anticipos-facturas-aplicables?id_beneficiario=&tipo_beneficiario=
+     */
+    public function getFacturasAplicables(Request $request, TesAnticipoRepository $ant)
+    {
+        try {
+            $id   = $request->query('id_beneficiario');
+            $tipo = $request->query('tipo_beneficiario');
+
+            if (!$id || !$tipo) {
+                return response()->json(['message' => 'id_beneficiario y tipo_beneficiario son requeridos'], 422);
+            }
+
+            return response()->json($ant->facturasAplicables($id, $tipo), 200);
+        } catch (\Throwable $e) {
+            Log::error('Error listar facturas aplicables: ' . $e->getMessage());
+            return response()->json(['message' => 'Error al listar las facturas'], 500);
+        }
+    }
+
     public function printOrderPay($id)
     {
         $query = TesOrdenPagoEntity::with([
@@ -386,12 +434,4 @@ class TesOrdenPagoController extends Controller
                 ? number_format((float) $query?->monto_orden_pago, 2, '.', '')
                 : '0.00',
             "razon_social" => $query?->factura->razonSocial,
-            "observaciones" => 'PRESTACIÓN ' . strtoupper($fecha->translatedFormat('F')) . ' ' . $fecha->year,
-            "pagosParciales" => $query->pagos->pluck('pagosParciales')->flatten()
-        ];
-
-        $pdf = PDF::loadView('pago_multiple.multiple_pago', $datos);
-        $pdf->setPaper('A4');
-        return $pdf->download('recibo-pago-' . $query->id_orden_pago . '.pdf');
-    }
-}
+            "observaciones" => 'PRESTACIÓN ' . strtoupper($fecha->translatedFormat('F')) . '

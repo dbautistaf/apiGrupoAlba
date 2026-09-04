@@ -233,9 +233,31 @@ class AsientoContableRepository
             ->where('vigente', '1')
             ->exists();
     }
+    /**
+     * Cuenta contable de BANCO/CAJA de una cuenta bancaria.
+     *
+     * El filtro por `tipo` es imprescindible: desde 2026-09-04 una misma cuenta bancaria puede
+     * tener dos mapeos — el de banco y el de eCheq diferido. Sin filtrar, `->first()` devolvía
+     * uno u otro según el orden de inserción, que es un bug silencioso y difícil de rastrear.
+     */
     public function obtenerCuentaContableByCuentaBancaria($idCuentaBancaria)
     {
         return BancoCuentasContableEntity::where('id_cuenta_bancaria', $idCuentaBancaria)
+            ->where('tipo', BancoCuentasContableEntity::TIPO_BANCO)
+            ->where('vigente', '1')
+            ->first();
+    }
+
+    /**
+     * Cuenta puente de pasivo para los eCheq emitidos y todavía no debitados.
+     *
+     * Devuelve null si Contabilidad no cargó el mapeo para esa cuenta bancaria — el llamador
+     * decide si eso es un error o si simplemente todavía no se opera con eCheq en esa cuenta.
+     */
+    public function obtenerCuentaContableEcheqDiferido($idCuentaBancaria)
+    {
+        return BancoCuentasContableEntity::where('id_cuenta_bancaria', $idCuentaBancaria)
+            ->where('tipo', BancoCuentasContableEntity::TIPO_ECHEQ_DIFERIDO)
             ->where('vigente', '1')
             ->first();
     }

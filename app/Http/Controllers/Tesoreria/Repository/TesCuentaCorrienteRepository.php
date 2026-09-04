@@ -183,13 +183,64 @@ class TesCuentaCorrienteRepository
         return $movimientos;
     }
 
-    /** Cuenta corriente completa: resumen, movimientos y anticipos con saldo. */
-    public function cuentaCorriente($idBeneficiario, string $tipo, ?string $desde = null, ?string $hasta = null): array
-    {
-        return [
-            'resumen'     => $this->resumen($idBeneficiario, $tipo, $desde, $hasta),
-            'movimientos' => $this->movimientos($idBeneficiario, $tipo, $desde, $hasta),
-            'anticipos'   => $this->anticipos->anticiposConSaldo($idBeneficiario, $tipo),
-        ];
-    }
-}
+    /**
+     * Busca beneficiarios que tengan movimientos de cuenta corriente.
+     *
+     * Usa EXACTAMENTE el mismo criterio de deuda que el detalle, para que el buscador y la
+     * pantalla no se contradigan: si acá aparece, al abrirlo tiene que haber algo.
+     *
+     * No devuelve el saldo de cada uno: calcularlo exige recorrer el FIFO de todas sus facturas,
+     * y hacerlo para una lista de búsqueda sería carísimo. El saldo se ve al abrir el detalle.
+     */
+    public function buscarBeneficiarios(
+        string $tipo,
+        ?string $texto = null,
+        int $limite = 25,
+        bool $soloConMovimientos = true
+    ): array {
+        $tipo  = strtoupper(trim($tipo));
+        $esProv = $tipo === 'PROVEEDOR';
+
+        $tabla = $esProv ? 'tb_proveedor' : 'tb_prestador';
+        $pk    = $esProv ? 'cod_proveedor' : 'cod_prestador';
+        $campo = $esProv ? 'id_proveedor' : 'id_prestador';
+
+        $texto = trim((string) $texto);
+
+        // Para dar un ANTICIPO no hace falta que el beneficiario tenga facturas: se le puede
+        // adelantar plata a alguien con quien recién se empieza a trabajar. Por eso el filtro
+        // de deuda es opcional, y en ese caso el join va por izquierda.
+        return DB::table("{$tabla} as b")
+            ->when(
+                $soloConMovimientos,
+                fn($q) => $q->join('tb_facturacion_datos as f', "f.{$campo}", '=', "b.{$pk}"),
+                fn($q) => $q->leftJoin('tb_facturacion_datos as f', "f.{$campo}", '=', "b.{$pk}")
+            )
+            ->when($soloConMovimientos, fn($q) => $q->where('f.estado', '!=', self::ESTADO_FACTURA_ANULADA))
+            ->when($soloConMovimientos, function ($q) {
+                $q->where('f.estado', self::ESTADO_FACTURA_VALORIZACION_FINAL)
+                    ->orWhereExists(function ($sub) {
+                        $sub->select(DB::raw(1))
+                            ->from('tb_tes_opa_factura as pf')
+                            ->join('tb_tes_orden_pago as o', 'o.id_orden_pago', '=', 'pf.id_orden_pago')
+                            ->whereColumn('pf.id_factura', 'f.id_factura')
+                            ->where('o.id_estado_orden_pago', '!=', TestOrdenPagoRepository::ESTADO_OPA_RECHAZADO);
+                    });
+            })
+            ->when($texto !== '', function ($q) use ($texto) {
+                $q->where(function ($w) use ($texto) {
+                    $w->where('b.razon_social', 'like', "%{$texto}%")
+                        ->orWhere('b.cuit', 'like', "%{$texto}%");
+                });
+            })
+            ->groupBy("b.{$pk}", 'b.cuit', 'b.razon_social')
+            ->orderBy('b.razon_social')
+            ->limit($limite)
+            ->select([
+                DB::raw("b.{$pk} as id_beneficiario"),
+                'b.cuit',
+                'b.razon_social',
+                DB::raw('COUNT(DISTINCT f.id_factura) as cantidad_facturas'),
+            ])
+            ->get()
+            ->map(fn($b) => (array) $b + ['tipo_beneficiario' => 

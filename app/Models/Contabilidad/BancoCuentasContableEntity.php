@@ -13,9 +13,19 @@ class BancoCuentasContableEntity extends Model
     protected $primaryKey = 'id_banco_cuenta_contable';
     public $timestamps = false;
 
+    /**
+     * Discriminador de `tipo`: una misma cuenta bancaria tiene su cuenta de banco y, si emite
+     * eCheq, su cuenta puente de pasivo. Siempre filtrar por tipo al resolver.
+     */
+    const TIPO_BANCO          = 'BANCO';
+    const TIPO_ECHEQ_DIFERIDO = 'ECHEQ_DIFERIDO';
+
     protected $fillable = [
         'id_cuenta_bancaria',
         'id_detalle_plan',
+        // Sin esto en el fillable, create() lo descartaba en silencio y todo mapeo nuevo
+        // nacia como BANCO. (2026-09-04)
+        'tipo',
         'id_razon',
         'cod_usuario_crea',
         'fecha_registra',

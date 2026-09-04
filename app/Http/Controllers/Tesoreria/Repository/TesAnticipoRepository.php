@@ -315,6 +315,58 @@ class TesAnticipoRepository
         return $salida;
     }
 
+    /**
+     * Facturas a las que se les puede aplicar saldo de anticipo.
+     *
+     * Son las del beneficiario que NO están en ninguna OP viva: si ya están en una orden, esa
+     * orden se va a pagar por su propio camino y aplicarles el anticipo las pagaría dos veces.
+     * Es la misma condición que valida `aplicarAFacturas()`, para que la pantalla no ofrezca
+     * algo que el backend después rechaza.
+     *
+     * Devuelve el saldo de cada una para poder proponer el monto a aplicar.
+     */
+    public function facturasAplicables($idBeneficiario, string $tipoBeneficiario): array
+    {
+        $tipoBeneficiario = strtoupper(trim($tipoBeneficiario));
+        $campo = $tipoBeneficiario === 'PROVEEDOR' ? 'id_proveedor' : 'id_prestador';
+
+        $facturas = DB::table('tb_facturacion_datos as f')
+            ->where("f.{$campo}", $idBeneficiario)
+            ->where('f.estado', '!=', 4)
+            ->where('f.total_neto', '>', 0)
+            ->whereNotExists(function ($sub) {
+                $sub->select(DB::raw(1))
+                    ->from('tb_tes_orden_pago_detalle as d')
+                    ->join('tb_tes_orden_pago as o', 'o.id_orden_pago', '=', 'd.id_orden_pago')
+                    ->whereColumn('d.id_factura', 'f.id_factura')
+                    ->where('o.id_estado_orden_pago', '!=', TestOrdenPagoRepository::ESTADO_OPA_RECHAZADO);
+            })
+            ->select([
+                'f.id_factura', 'f.numero', 'f.periodo', 'f.fecha_comprobante', 'f.estado',
+                'f.total_neto', 'f.total_debitado_liquidacion',
+            ])
+            ->orderBy('f.fecha_comprobante')
+            ->orderBy('f.id_factura')
+            ->limit(200)
+            ->get();
+
+        return $facturas->map(function ($f) {
+            $saldo = self::aPesos(
+                self::aCentavos($f->total_neto) - self::aCentavos($f->total_debitado_liquidacion ?? 0)
+            );
+
+            return [
+                'id_factura'        => $f->id_factura,
+                'numero'            => $f->numero,
+                'periodo'           => $f->periodo,
+                'fecha_comprobante' => $f->fecha_comprobante,
+                'estado'            => $f->estado,
+                'total_neto'        => (float) $f->total_neto,
+                'saldo'             => $saldo,
+            ];
+        })->filter(fn($f) => $f['saldo'] > 0)->values()->all();
+    }
+
     /** Saldo a favor total de un beneficiario, sumando todos sus anticipos vivos. */
     public function saldoAFavor($idBeneficiario, string $tipoBeneficiario): float
     {
