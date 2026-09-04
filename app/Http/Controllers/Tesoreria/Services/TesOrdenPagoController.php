@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Tesoreria\Services;
 
 use App\Exports\OrdenesPagoExport;
 use App\Http\Controllers\Tesoreria\Repository\TesPagosRepository;
+use App\Http\Controllers\Tesoreria\Repository\TesImputacionFifoRepository;
 use App\Http\Controllers\Tesoreria\Repository\TestOrdenPagoRepository;
 use App\Models\Tesoreria\TesOrdenPagoEntity;
 use Carbon\Carbon;
@@ -119,6 +120,38 @@ class TesOrdenPagoController extends Controller
         } catch (\Throwable $e) {
             Log::error('Error obtener cadena de reemplazos: ' . $e->getMessage());
             return response()->json(['message' => 'Error al obtener la cadena de reemplazos'], 500);
+        }
+    }
+
+    /**
+     * GET /v1/tesoreria/imputacion-fifo-opa/{id}
+     *
+     * Que facturas de la OP quedaron cubiertas por lo efectivamente pagado, de la mas vieja a
+     * la mas nueva. Se calcula al vuelo: no hay un dato guardado que pueda quedar desfasado.
+     */
+    public function getImputacionFifo($id, TesImputacionFifoRepository $fifo)
+    {
+        try {
+            return response()->json($fifo->distribuir($id), 200);
+        } catch (\Throwable $e) {
+            Log::error('Error calcular imputacion FIFO: ' . $e->getMessage());
+            return response()->json(['message' => 'Error al calcular la imputacion'], 500);
+        }
+    }
+
+    /**
+     * GET /v1/tesoreria/estado-pago-factura/{id}
+     *
+     * Estado de pago de una factura segun lo efectivamente cobrado, sumando todas las OPs vivas
+     * que la imputan.
+     */
+    public function getEstadoPagoFactura($id, TesImputacionFifoRepository $fifo)
+    {
+        try {
+            return response()->json($fifo->estadoDeFactura($id), 200);
+        } catch (\Throwable $e) {
+            Log::error('Error obtener estado de pago de factura: ' . $e->getMessage());
+            return response()->json(['message' => 'Error al obtener el estado de la factura'], 500);
         }
     }
 
