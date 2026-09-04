@@ -6,6 +6,7 @@ use App\Exports\OrdenesPagoExport;
 use App\Http\Controllers\Tesoreria\Repository\TesPagosRepository;
 use App\Http\Controllers\Tesoreria\Repository\TesAnticipoRepository;
 use App\Http\Controllers\Tesoreria\Repository\TesImputacionFifoRepository;
+use App\Http\Controllers\Tesoreria\Repository\TesCuentaCorrienteRepository;
 use App\Http\Controllers\Tesoreria\Repository\TestOrdenPagoRepository;
 use App\Models\Tesoreria\TesOrdenPagoEntity;
 use Carbon\Carbon;
@@ -238,6 +239,31 @@ class TesOrdenPagoController extends Controller
         } catch (\Throwable $e) {
             Log::error('Error listar anticipos con saldo: ' . $e->getMessage());
             return response()->json(['message' => 'Error al listar los anticipos'], 500);
+        }
+    }
+
+    /**
+     * GET /v1/tesoreria/cuenta-corriente?id_beneficiario=&tipo_beneficiario=&desde=&hasta=
+     *
+     * Cuenta corriente del prestador o proveedor: resumen, movimientos y anticipos con saldo.
+     */
+    public function getCuentaCorriente(Request $request, TesCuentaCorrienteRepository $cc)
+    {
+        try {
+            $id   = $request->query('id_beneficiario');
+            $tipo = $request->query('tipo_beneficiario');
+
+            if (!$id || !$tipo) {
+                return response()->json(['message' => 'id_beneficiario y tipo_beneficiario son requeridos'], 422);
+            }
+
+            return response()->json(
+                $cc->cuentaCorriente($id, $tipo, $request->query('desde'), $request->query('hasta')),
+                200
+            );
+        } catch (\Throwable $e) {
+            Log::error('Error obtener cuenta corriente: ' . $e->getMessage());
+            return response()->json(['message' => 'Error al obtener la cuenta corriente'], 500);
         }
     }
 
