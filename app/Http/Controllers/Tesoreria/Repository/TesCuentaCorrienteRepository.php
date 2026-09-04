@@ -243,4 +243,17 @@ class TesCuentaCorrienteRepository
                 DB::raw('COUNT(DISTINCT f.id_factura) as cantidad_facturas'),
             ])
             ->get()
-            ->map(fn($b) => (array) $b + ['tipo_beneficiario' => 
+            ->map(fn($b) => (array) $b + ['tipo_beneficiario' => $esProv ? 'PROVEEDOR' : 'PRESTADOR'])
+            ->all();
+    }
+
+    /** Cuenta corriente completa: resumen, movimientos y anticipos con saldo. */
+    public function cuentaCorriente($idBeneficiario, string $tipo, ?string $desde = null, ?string $hasta = null): array
+    {
+        return [
+            'resumen'     => $this->resumen($idBeneficiario, $tipo, $desde, $hasta),
+            'movimientos' => $this->movimientos($idBeneficiario, $tipo, $desde, $hasta),
+            'anticipos'   => $this->anticipos->anticiposConSaldo($idBeneficiario, $tipo),
+        ];
+    }
+}

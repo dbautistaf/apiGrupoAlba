@@ -434,4 +434,12 @@ class TesOrdenPagoController extends Controller
                 ? number_format((float) $query?->monto_orden_pago, 2, '.', '')
                 : '0.00',
             "razon_social" => $query?->factura->razonSocial,
-            "observaciones" => 'PRESTACIÓN ' . strtoupper($fecha->translatedFormat('F')) . '
+            "observaciones" => 'PRESTACIÓN ' . strtoupper($fecha->translatedFormat('F')) . ' ' . $fecha->year,
+            "pagosParciales" => $query->pagos->pluck('pagosParciales')->flatten()
+        ];
+
+        $pdf = PDF::loadView('pago_multiple.multiple_pago', $datos);
+        $pdf->setPaper('A4');
+        return $pdf->download('recibo-pago-' . $query->id_orden_pago . '.pdf');
+    }
+}
