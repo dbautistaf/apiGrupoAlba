@@ -36,8 +36,25 @@ class TesOrdenPagoEntity extends Model
         'fecha_rechazo',
         'fecha_probable_pago',
         'pago_emergencia',
-        'cuotas'
+        'cuotas',
+        'cod_usuario_rechaza',
+        // Trazabilidad anulacion -> reemision. Sin esto, create() las descartaba en silencio
+        // y la orden nueva nacia sin vinculo con la que reemplaza. (2026-09-03)
+        'tipo_opa',
+        'id_opa_reemplazada'
     ];
+
+    /** La OP que esta reemplaza, cuando nacio de una anulacion. */
+    public function opaReemplazada()
+    {
+        return $this->hasOne(TesOrdenPagoEntity::class, 'id_orden_pago', 'id_opa_reemplazada');
+    }
+
+    /** La OP que reemplazo a esta, si fue anulada y reemitida. */
+    public function opaReemplazante()
+    {
+        return $this->hasOne(TesOrdenPagoEntity::class, 'id_opa_reemplazada', 'id_orden_pago');
+    }
 
     public function estado()
     {

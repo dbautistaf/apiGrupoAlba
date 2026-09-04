@@ -1190,6 +1190,8 @@ Route::group(
         Route::post('procesar-cuenta-bancaria', [App\Http\Controllers\Tesoreria\Services\TesCuentasController::class, 'getProcesarCuenta']);
         Route::post('bloquear-cuenta-bancaria', [App\Http\Controllers\Tesoreria\Services\TesCuentasBloqueoController::class, 'getBloquear']);
         Route::post('procesar-opa', [App\Http\Controllers\Tesoreria\Services\TesOrdenPagoController::class, 'getProcesar']);
+        Route::post('anular-reemitir-opa', [App\Http\Controllers\Tesoreria\Services\TesOrdenPagoController::class, 'getAnularYReemitir']);  // Anula y reemite dejando trazabilidad
+        Route::get('cadena-reemplazos-opa/{id}', [App\Http\Controllers\Tesoreria\Services\TesOrdenPagoController::class, 'getCadenaReemplazos']);  // Cadena de reemplazos de una OP
         Route::post('modificar-estado-opa', [App\Http\Controllers\Tesoreria\Services\TesOrdenPagoController::class, 'getModificarEstado']);
         Route::post('generar-pago', [App\Http\Controllers\Tesoreria\Services\TesPagosController::class, 'getCrearPago']);
         Route::post('confirmar-pago', [App\Http\Controllers\Tesoreria\Services\TesPagosController::class, 'getConfirmarPago']);

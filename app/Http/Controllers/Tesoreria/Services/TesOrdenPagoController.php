@@ -70,6 +70,58 @@ class TesOrdenPagoController extends Controller
         return response()->json(['message' => "OPA {$tes->estado->descripcion_estado} con éxito"]);
     }
 
+    /**
+     * POST /v1/tesoreria/anular-reemitir-opa
+     * Body: { id_orden_pago, motivo }
+     *
+     * Anula la OP y emite otra por las mismas facturas, dejando el vinculo entre las dos.
+     * 409 cuando choca contra una guarda (pagos confirmados, eCheq ya emitidos): el mensaje
+     * viene redactado para el usuario.
+     */
+    public function getAnularYReemitir(Request $request, TestOrdenPagoRepository $opa)
+    {
+        try {
+            $idOpa  = $request->input('id_orden_pago');
+            $motivo = $request->input('motivo');
+
+            if (!$idOpa) {
+                return response()->json(['message' => 'id_orden_pago es requerido'], 422);
+            }
+
+            if (is_null($motivo) || trim((string) $motivo) === '') {
+                return response()->json(['message' => 'El motivo de la anulacion es requerido'], 422);
+            }
+
+            $res = $opa->anularYReemitir($idOpa, $motivo);
+
+            if (!$res['ok']) {
+                return response()->json(['message' => $res['message']], 409);
+            }
+
+            return response()->json([
+                'message' => $res['message'],
+                'data'    => ['anulada' => $res['anulada'], 'nueva' => $res['nueva']],
+            ], 200);
+        } catch (\Throwable $e) {
+            Log::error('Error anular y reemitir OPA: ' . $e->getMessage());
+            return response()->json(['message' => 'Error al anular y reemitir la orden de pago'], 500);
+        }
+    }
+
+    /**
+     * GET /v1/tesoreria/cadena-reemplazos-opa/{id}
+     * Cadena completa de reemplazos, de la mas vieja a la mas nueva.
+     */
+    public function getCadenaReemplazos($id, TestOrdenPagoRepository $opa)
+    {
+        try {
+            return response()->json($opa->cadenaDeReemplazos($id), 200);
+        } catch (\Throwable $e) {
+            Log::error('Error obtener cadena de reemplazos: ' . $e->getMessage());
+            return response()->json(['message' => 'Error al obtener la cadena de reemplazos'], 500);
+        }
+    }
+
     public function printOrderPay($id)
     {
         $query = TesOrdenPagoEntity::with([

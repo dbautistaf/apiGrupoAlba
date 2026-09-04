@@ -1105,4 +1105,185 @@ class TestOrdenPagoRepository
 
         return $newopa;
     }
+
+    const TIPO_OPA_NORMAL    = 'NORMAL';
+    const TIPO_OPA_REEMPLAZO = 'REEMPLAZO';
+
+    /**
+     * Anula una OP y emite otra por las mismas facturas, dejando el vínculo entre las dos.
+     *
+     * Es el punto 7 del circuito. Hasta ahora anular y volver a generar eran dos actos sueltos:
+     * la orden vieja quedaba rechazada y la nueva nacía sin ninguna relación con ella, así que
+     * no había forma de reconstruir por qué se rehízo ni cuál reemplazó a cuál.
+     *
+     * La orden nueva queda con `id_opa_reemplazada` apuntando a la vieja y `tipo_opa` en
+     * REEMPLAZO. La vieja conserva su motivo de rechazo. Ninguna de las dos se borra.
+     *
+     * @return array{ok: bool, message: string, anulada: ?TesOrdenPagoEntity, nueva: ?TesOrdenPagoEntity}
+     */
+    public function anularYReemitir($idOpa, ?string $motivo = null): array
+    {
+        return DB::transaction(function () use ($idOpa, $motivo) {
+            $original = TesOrdenPagoEntity::find($idOpa);
+
+            if (is_null($original)) {
+                return ['ok' => false, 'message' => "No se encontró la orden de pago {$idOpa}.",
+                        'anulada' => null, 'nueva' => null];
+            }
+
+            if ((int) $original->id_estado_orden_pago === self::ESTADO_OPA_RECHAZADO) {
+                return ['ok' => false, 'message' => 'Esta orden de pago ya está anulada.',
+                        'anulada' => null, 'nueva' => null];
+            }
+
+            if (empty(trim((string) $motivo))) {
+                return ['ok' => false, 'message' => 'Hay que indicar el motivo de la anulación.',
+                        'anulada' => null, 'nueva' => null];
+            }
+
+            // Guarda 1: plata efectivamente pagada.
+            if ($this->tienePagosConfirmados($idOpa)) {
+                return ['ok' => false,
+                        'message' => 'No se puede anular: la orden tiene pagos confirmados.',
+                        'anulada' => null, 'nueva' => null];
+            }
+
+            // Guarda 2: un eCheq ya emitido está circulando aunque todavía no se haya acreditado.
+            // Hay que rechazarlo o anularlo primero; anular la OP por debajo dejaría el papel
+            // suelto sin nada que lo respalde.
+            $emitidos = TesPagoEntity::where('id_orden_pago', $idOpa)
+                ->whereIn('id_estado_instrumento', [
+                    TesInstrumentoPagoRepository::EMITIDO,
+                    TesInstrumentoPagoRepository::ACREDITADO,
+                ])->count();
+
+            if ($emitidos > 0) {
+                return ['ok' => false,
+                        'message' => "No se puede anular: hay {$emitidos} eCheq ya emitido(s). "
+                            . 'Primero hay que rechazarlos o anularlos.',
+                        'anulada' => null, 'nueva' => null];
+            }
+
+            $detalle = TesOrdenPagoDetalleEntity::where('id_orden_pago', $idOpa)->get();
+
+            if ($detalle->isEmpty()) {
+                return ['ok' => false,
+                        'message' => 'La orden de pago no tiene facturas: no hay nada que reemitir.',
+                        'anulada' => null, 'nueva' => null];
+            }
+
+            // 1) Los instrumentos que todavía no salieron se dan de baja junto con la orden.
+            TesPagoEntity::where('id_orden_pago', $idOpa)
+                ->whereIn('id_estado_instrumento', [
+                    TesInstrumentoPagoRepository::BORRADOR,
+                    TesInstrumentoPagoRepository::PENDIENTE_EMISION,
+                ])->update([
+                    'id_estado_instrumento' => TesInstrumentoPagoRepository::ANULADO,
+                    'id_estado_orden_pago'  => self::ESTADO_OPA_RECHAZADO,
+                ]);
+
+            // 2) Anular la original. Se conserva su puente: la imputación ocurrió y es historia.
+            $original->id_estado_orden_pago = self::ESTADO_OPA_RECHAZADO;
+            $original->motivo_rechazo       = $motivo;
+            $original->fecha_rechazo        = $this->fechaActual;
+            $original->cod_usuario_rechaza  = $this->user->cod_usuario ?? null;
+            $original->save();
+
+            // 3) Emitir la nueva por las mismas facturas.
+            $nueva = TesOrdenPagoEntity::create([
+                'id_proveedor'         => $original->id_proveedor,
+                'id_prestador'         => $original->id_prestador,
+                'monto_orden_pago'     => $original->monto_orden_pago,
+                'id_moneda'            => $original->id_moneda,
+                'fecha_emision'        => $this->fechaActual->toDateString(),
+                'fecha_vencimiento'    => $original->fecha_vencimiento,
+                'fecha_probable_pago'  => $original->fecha_probable_pago,
+                'id_estado_orden_pago' => self::ESTADO_OPA_PENDIENTE,
+                'monto_anticipado'     => $original->monto_anticipado,
+                'observaciones'        => $original->observaciones,
+                'cod_usuario'          => $this->user->cod_usuario ?? null,
+                'fecha_genera'         => $this->fechaActual,
+                'id_factura'           => $original->id_factura,
+                'tipo_factura'         => $original->tipo_factura,
+                'tipo_opa'             => self::TIPO_OPA_REEMPLAZO,
+                'id_opa_reemplazada'   => $original->id_orden_pago,
+            ]);
+
+            foreach ($detalle as $d) {
+                TesOrdenPagoDetalleEntity::create([
+                    'id_orden_pago' => $nueva->id_orden_pago,
+                    'id_factura'    => $d->id_factura,
+                    'monto_factura' => $d->monto_factura,
+                    'tipo_factura'  => $d->tipo_factura,
+                    'factura_unida' => $d->factura_unida,
+                ]);
+            }
+
+            $this->sincronizarPuenteDesdeDetalle($nueva->id_orden_pago);
+            $this->recalcularMontoDesdeDetalle($nueva->id_orden_pago);
+
+            // El num_orden_pago lo pone el trigger: sin refresh vuelve en null.
+            $nueva->refresh();
+
+            return [
+                'ok'      => true,
+                'message' => "Orden {$original->num_orden_pago} anulada y reemplazada por "
+                    . "{$nueva->num_orden_pago}.",
+                'anulada' => $original->refresh(),
+                'nueva'   => $nueva,
+            ];
+        });
+    }
+
+    /**
+     * Cadena completa de reemplazos de una OP, de la más vieja a la más nueva.
+     *
+     * Sirve para contestar "¿por qué existe esta orden?" sin ir saltando de a una.
+     * Corta a las 50 vueltas: si algún día un dato malo arma un ciclo, es preferible devolver
+     * una cadena incompleta que colgar el request.
+     */
+    public function cadenaDeReemplazos($idOpa): array
+    {
+        $actual = TesOrdenPagoEntity::find($idOpa);
+
+        if (is_null($actual)) {
+            return [];
+        }
+
+        // Hacia atrás, hasta el origen.
+        $cadena = [$actual];
+        $vistos = [(int) $actual->id_orden_pago => true];
+        $cursor = $actual;
+
+        while (!is_null($cursor->id_opa_reemplazada) && count($cadena) < 50) {
+            $previa = TesOrdenPagoEntity::find($cursor->id_opa_reemplazada);
+
+            if (is_null($previa) || isset($vistos[(int) $previa->id_orden_pago])) {
+                break;
+            }
+
+            array_unshift($cadena, $previa);
+            $vistos[(int) $previa->id_orden_pago] = true;
+            $cursor = $previa;
+        }
+
+        // Hacia adelante, por si esta orden ya fue reemplazada a su vez.
+        $cursor = $actual;
+
+        while (count($cadena) < 50) {
+            $siguiente = TesOrdenPagoEntity::where('id_opa_reemplazada', $cursor->id_orden_pago)
+                ->orderBy('id_orden_pago')->first();
+
+            if (is_null($siguiente) || isset($vistos[(int) $siguiente->id_orden_pago])) {
+                break;
+            }
+
+            $cadena[] = $siguiente;
+            $vistos[(int) $siguiente->id_orden_pago] = true;
+            $cursor = $siguiente;
+        }
+
+        return $cadena;
+    }
+
 }
