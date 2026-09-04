@@ -31,6 +31,28 @@ class TesCuentasBancariasEntity extends Model
         'limite_sobregiro'
     ];
 
+    /**
+     * Cuenta contable de BANCO/CAJA. Si viene null, esta cuenta bancaria NO se puede usar para
+     * pagar: el asiento no tiene contra que imputar y la confirmacion del pago falla.
+     */
+    public function cuentaContableBanco()
+    {
+        return $this->hasOne(\App\Models\Contabilidad\BancoCuentasContableEntity::class, 'id_cuenta_bancaria', 'id_cuenta_bancaria')
+            ->where('tipo', \App\Models\Contabilidad\BancoCuentasContableEntity::TIPO_BANCO)
+            ->where('vigente', 1);
+    }
+
+    /**
+     * Cuenta puente para los eCheq emitidos y todavia no debitados. Si viene null, esta cuenta
+     * no esta habilitada para emitir eCheq.
+     */
+    public function cuentaContableEcheq()
+    {
+        return $this->hasOne(\App\Models\Contabilidad\BancoCuentasContableEntity::class, 'id_cuenta_bancaria', 'id_cuenta_bancaria')
+            ->where('tipo', \App\Models\Contabilidad\BancoCuentasContableEntity::TIPO_ECHEQ_DIFERIDO)
+            ->where('vigente', 1);
+    }
+
     public function razonSocial()
     {
         return $this->hasOne(RazonSocialModelo::class, 'id_razon', 'id_razon');

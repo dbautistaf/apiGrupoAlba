@@ -217,6 +217,14 @@ class TestOrdenPagoRepository
             });
         }
 
+        // Busqueda por numero de orden. Se hace con LIKE porque el usuario tipea indistinto
+        // "OPA-1435", "1435" o incluso "opa 1435" — pedirle el formato exacto de un numero que
+        // arma un trigger seria trasladarle un detalle interno. (2026-09-04)
+        if (!empty($params->num_orden_pago)) {
+            $texto = trim(str_ireplace(['opa-', 'opa '], '', trim($params->num_orden_pago)));
+            $query->where('num_orden_pago', 'LIKE', "%{$texto}%");
+        }
+
         return $query
             //->leftJoin('tb_prestador as p', 'p.cod_prestador', '=', 'tb_tes_orden_pago.id_prestador')
             //->leftJoin('tb_proveedor as prov', 'prov.cod_proveedor', '=', 'tb_tes_orden_pago.id_proveedor')
@@ -877,6 +885,11 @@ class TestOrdenPagoRepository
 
         $esAgrupada = $idFacturas->count() > 1;
 
+        // Mismo criterio que la validación de beneficiario de más arriba: el tipo lo decide
+        // `id_tipo_factura == 16`, nunca "cuál de los dos campos no es null".
+        $tipoBeneficiario = $opaExistente->tipo_factura
+            ?? (($facturasDb->first()->id_tipo_factura ?? null) == 16 ? 'PROVEEDOR' : 'PRESTADOR');
+
         // El total sale del DETALLE (existente + a crear), nunca de sumar cabeceras: si alguna
         // venía con el monto desincronizado, sumarlas propagaba el error. (2026-08-11)
         $totalMonto = (float) $detalleExistente->sum('monto_factura')
@@ -895,6 +908,12 @@ class TestOrdenPagoRepository
             'observaciones' => $opaExistente->observaciones ?? '',
             'cod_usuario' => $this->user->cod_usuario,
             'fecha_genera' => $this->fechaActual,
+            // Sin esto la columna tomaba su DEFAULT, que es 'PROVEEDOR': toda OPA generada desde
+            // liquidaciones nacía etiquetada como proveedor aunque la factura fuera de prestador.
+            // Rompía el agrupado ("pertenecen a distintos prestadores", porque la clave del
+            // beneficiario se arma con este campo) y hacía que el beneficiario saliera vacío en
+            // los listados y comprobantes. 129 OPAs quedaron así. (2026-09-04)
+            'tipo_factura' => $tipoBeneficiario,
             // Una OPA de una sola factura conserva la referencia en la cabecera; la agrupada la
             // deja en NULL y la relación vive solo en el detalle (ver findByOpaVigenteFactura).
             'id_factura' => $esAgrupada ? null : $idFacturas->first(),

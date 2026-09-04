@@ -15,21 +15,19 @@ use Illuminate\Support\Facades\DB;
  *
  * ═══ Qué cuenta como deuda ═══
  *
- * NO toda factura cargada es deuda exigible. El criterio es:
+ * **Todas las facturas del beneficiario, salvo las ANULADAS (estado 4).**
  *
- *   - facturas en VALORIZACIÓN FINAL (estado 3), que es el punto donde Liquidaciones las da por
- *     buenas y quedan listas para generar la orden de pago; MÁS
- *   - cualquier factura ya imputada en una OP viva, sin importar su estado — si alguien la puso
- *     en una orden, ya la trató como pagable.
+ * Definido por Contaduría el 2026-09-04: las facturas todavía no valorizadas también son deuda
+ * — la obligación con el prestador nace cuando presenta la factura, no cuando Liquidaciones
+ * termina de valorizarla.
  *
- * Quedan afuera las ANULADAS (estado 4) siempre.
- *
- * Sin este filtro la deuda se inflaría con las facturas en estado 0 (abiertas), que en estas
- * bases suman más de $543M y todavía no están aprobadas por nadie.
+ * Impacto medido al adoptarlo, sobre Alba: la deuda pasó de $3.144.956.901,99 (4.288 facturas)
+ * a $3.871.904.778,71 (4.878), sumando 590 facturas por $726.947.876,72 — en su mayoría las 509
+ * en estado ABIERTA. Es el número correcto según el criterio del área, pero conviene tenerlo
+ * presente al comparar contra reportes viejos.
  */
 class TesCuentaCorrienteRepository
 {
-    const ESTADO_FACTURA_VALORIZACION_FINAL = 3;
     const ESTADO_FACTURA_ANULADA            = 4;
 
     private $fifo;
@@ -64,16 +62,6 @@ class TesCuentaCorrienteRepository
         return DB::table('tb_facturacion_datos as f')
             ->where("f.{$campo}", $idBeneficiario)
             ->where('f.estado', '!=', self::ESTADO_FACTURA_ANULADA)
-            ->where(function ($q) {
-                $q->where('f.estado', self::ESTADO_FACTURA_VALORIZACION_FINAL)
-                    ->orWhereExists(function ($sub) {
-                        $sub->select(DB::raw(1))
-                            ->from('tb_tes_opa_factura as pf')
-                            ->join('tb_tes_orden_pago as o', 'o.id_orden_pago', '=', 'pf.id_orden_pago')
-                            ->whereColumn('pf.id_factura', 'f.id_factura')
-                            ->where('o.id_estado_orden_pago', '!=', TestOrdenPagoRepository::ESTADO_OPA_RECHAZADO);
-                    });
-            })
             ->when($desde, fn($q) => $q->whereDate('f.fecha_comprobante', '>=', $desde))
             ->when($hasta, fn($q) => $q->whereDate('f.fecha_comprobante', '<=', $hasta))
             ->select([
@@ -217,16 +205,6 @@ class TesCuentaCorrienteRepository
                 fn($q) => $q->leftJoin('tb_facturacion_datos as f', "f.{$campo}", '=', "b.{$pk}")
             )
             ->when($soloConMovimientos, fn($q) => $q->where('f.estado', '!=', self::ESTADO_FACTURA_ANULADA))
-            ->when($soloConMovimientos, function ($q) {
-                $q->where('f.estado', self::ESTADO_FACTURA_VALORIZACION_FINAL)
-                    ->orWhereExists(function ($sub) {
-                        $sub->select(DB::raw(1))
-                            ->from('tb_tes_opa_factura as pf')
-                            ->join('tb_tes_orden_pago as o', 'o.id_orden_pago', '=', 'pf.id_orden_pago')
-                            ->whereColumn('pf.id_factura', 'f.id_factura')
-                            ->where('o.id_estado_orden_pago', '!=', TestOrdenPagoRepository::ESTADO_OPA_RECHAZADO);
-                    });
-            })
             ->when($texto !== '', function ($q) use ($texto) {
                 $q->where(function ($w) use ($texto) {
                     $w->where('b.razon_social', 'like', "%{$texto}%")

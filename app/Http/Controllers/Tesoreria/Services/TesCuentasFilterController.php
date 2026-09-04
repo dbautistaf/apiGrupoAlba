@@ -12,15 +12,16 @@ class TesCuentasFilterController extends Controller
 
     public function getFiltrar(Request  $request, TesCuentasFiltrosRepository $repo)
     {
-        $data = [];
-
-        if (!is_null($request->banco)) {
-            $data = $repo->findByListBanco($request->banco);
-        } else {
-            $data = $repo->findByListAlls($request->id_razon);
-        }
-
-        return response()->json($data);
+        // OJO: antes esto usaba `!is_null($request->banco)`, y el front manda `banco=''` cuando
+        // no hay filtro. Como '' no es null, SIEMPRE entraba por la rama del banco y filtraba
+        // por un id vacio: la pantalla salia sin ninguna cuenta hasta elegir un banco. Ademas
+        // la razon social quedaba ignorada cada vez que se elegia uno. (2026-09-04)
+        return response()->json(
+            $repo->findByListFiltrado(
+                $request->filled('id_razon') ? $request->id_razon : null,
+                $request->filled('banco') ? $request->banco : null
+            )
+        );
     }
 
     public function getListarEntidadesBancarias(TesCuentaCatalogoRepository $repo)
