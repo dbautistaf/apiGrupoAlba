@@ -1249,13 +1249,15 @@ Route::group(
         Route::delete('pago-retencion/{id}', [App\Http\Controllers\Tesoreria\Services\PagoRetencionesController::class, 'destroy']);  // Eliminar retención
 
         // Endpoints del ciclo de vida del instrumento de pago (eCheq)
+        Route::get('instrumentos-pago/emitidos', [App\Http\Controllers\Tesoreria\Services\TesInstrumentoPagoController::class, 'getEmitidos']);  // eCheq emitidos: acreditar o rechazar
         Route::get('instrumentos-pago/pendientes-numero', [App\Http\Controllers\Tesoreria\Services\TesInstrumentoPagoController::class, 'getPendientesDeNumero']);  // OPs con eCheq sin numero, por banco
         Route::get('instrumentos-pago/pendientes-numero/excel', [App\Http\Controllers\Tesoreria\Services\TesInstrumentoPagoController::class, 'exportarExcelPendientes']);  // Listado a Excel
         Route::get('instrumentos-pago/pendientes-numero/pdf', [App\Http\Controllers\Tesoreria\Services\TesInstrumentoPagoController::class, 'exportarPdfPendientes']);  // Listado a PDF, por banco
         Route::get('instrumentos-pago/validar-numero', [App\Http\Controllers\Tesoreria\Services\TesInstrumentoPagoController::class, 'getValidarNumero']);  // Validacion en vivo del numero
-        Route::post('instrumentos-pago', [App\Http\Controllers\Tesoreria\Services\TesInstrumentoPagoController::class, 'getCrearInstrumentos']);  // Crear los eCheq de una OP (sin numero)
-        Route::post('instrumentos-pago/marcar-pendiente-emision', [App\Http\Controllers\Tesoreria\Services\TesInstrumentoPagoController::class, 'getMarcarPendienteEmision']);  // Imprimir la OP y mandarla a Tesoreria
+        Route::get('instrumentos-pago/pendientes-opa/{idOpa}', [App\Http\Controllers\Tesoreria\Services\TesInstrumentoPagoController::class, 'getPendientesDeOpa']);  // Fechas del plan sin pago emitido
+        Route::post('instrumentos-pago/emitir', [App\Http\Controllers\Tesoreria\Services\TesInstrumentoPagoController::class, 'getEmitirPago']);  // Emite un pago: monto + forma
         Route::post('instrumentos-pago/confirmar-emision', [App\Http\Controllers\Tesoreria\Services\TesInstrumentoPagoController::class, 'getConfirmarEmision']);  // Confirmar TODOS los numeros de la OP
+        Route::put('instrumentos-pago/{idPago}/forma-pago', [App\Http\Controllers\Tesoreria\Services\TesInstrumentoPagoController::class, 'getCambiarFormaPago']);  // Forma de pago por instrumento
         Route::put('instrumentos-pago/{idPago}/numero', [App\Http\Controllers\Tesoreria\Services\TesInstrumentoPagoController::class, 'getGuardarNumero']);  // Guardar un numero como borrador
         Route::post('instrumentos-pago/{idPago}/acreditar', [App\Http\Controllers\Tesoreria\Services\TesInstrumentoPagoController::class, 'getAcreditar']);  // Acreditar (desde conciliacion)
         Route::post('instrumentos-pago/{idPago}/rechazar', [App\Http\Controllers\Tesoreria\Services\TesInstrumentoPagoController::class, 'getRechazar']);  // Rechazar (carga MANUAL del usuario)

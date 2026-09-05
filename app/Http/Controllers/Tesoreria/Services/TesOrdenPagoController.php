@@ -331,8 +331,8 @@ class TesOrdenPagoController extends Controller
             'pagos.cuenta.entidadBancaria',
             'pagos.pagosParciales',
             'pagos.fechaprobablepagos',
-            'pagos.bancoEmisor',
-            'pagos.estadoInstrumento',
+            'pagos.pagosParciales.bancoEmisor',
+            'pagos.pagosParciales.estadoInstrumento',
         ])->where('id_orden_pago', $id)
             ->first();
 
@@ -346,8 +346,21 @@ class TesOrdenPagoController extends Controller
 
         // Instrumentos del circuito nuevo (eCheq). Los pagos viejos no tienen estado de
         // instrumento y siguen saliendo por el bloque de "pagosParciales" de siempre.
+        // Cada eCheq es un ABONO de la boleta, no la boleta misma (ver 2026_09_04_100900).
         $instrumentos = ($query?->pagos ?? collect())
-            ->filter(fn($p) => !is_null($p->id_estado_instrumento))
+            ->flatMap(fn($p) => $p->pagosParciales ?? collect())
+            ->filter(fn($a) => !is_null($a->id_estado_instrumento))
+            ->values();
+
+        // Desde el 2026-09-05, Confirmar OPA solo deja el cronograma (fecha + cuota): el
+        // instrumento (monto y forma de pago) nace despues, al emitir cada fecha. Estas son
+        // las fechas que ya se planificaron pero todavia no tienen su pago emitido -> sin
+        // esto, imprimir la orden recien confirmada salia sin sello y sin ningun dato.
+        $idsFechaConInstrumento = $instrumentos->pluck('id_fecha_probable')->filter()->values();
+        $fechasPendientes = ($query?->pagos ?? collect())
+            ->flatMap(fn($p) => $p->fechaprobablepagos ?? collect())
+            ->reject(fn($f) => $idsFechaConInstrumento->contains($f->id_fecha_probable))
+            ->sortBy('orden_cuotas')
             ->values();
 
         // Las dos versiones que pide el circuito salen de la MISMA plantilla: lo unico que
@@ -355,14 +368,15 @@ class TesOrdenPagoController extends Controller
         // la definitiva, al proveedor. (2026-09-03)
         $faltanNumeros = $instrumentos->contains(fn($p) => empty(trim((string) $p->numero_echeq)));
 
-        $versionComprobante = $instrumentos->isEmpty()
+        $versionComprobante = ($instrumentos->isEmpty() && $fechasPendientes->isEmpty())
             ? null
-            : ($faltanNumeros
+            : (($faltanNumeros || $fechasPendientes->isNotEmpty())
                 ? 'PENDIENTE DE EMISION - COPIA PARA TESORERIA'
                 : 'COMPROBANTE DEFINITIVO');
 
         $datos = [
             "instrumentos" => $instrumentos,
+            "fechas_pendientes" => $fechasPendientes,
             "version_comprobante" => $versionComprobante,
             "comprobante_nro" => $query?->num_orden_pago,
             "fecha_emision" => $query?->fecha_emision,

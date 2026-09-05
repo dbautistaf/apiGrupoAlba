@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Tesoreria\Repository;
 
 use App\Models\Tesoreria\TesFechaProbablePagoEntity;
+use App\Http\Controllers\Tesoreria\Repository\TesInstrumentoPagoRepository;
 use App\Models\Tesoreria\TestChequesEntity;
 use App\Models\Tesoreria\TesPagoEntity;
 use App\Models\Tesoreria\TesPagosParciales;
@@ -50,6 +51,9 @@ class TesPagosRepository
             'pago_emergencia'       => $params['pago_emergencia'],
         ]);
 
+        // Confirmar la orden define SOLO el cronograma: en que fechas se va a pagar y en
+        // cuantas cuotas. El monto y la forma de pago se deciden al emitir cada pago, que es
+        // cuando Tesoreria sabe con que lo va a pagar. Ver 2026_09_04_101000. (2026-09-04)
         foreach ($params['cuotas'] as $cuotas) {
             TesFechaProbablePagoEntity::create([
                 'fecha_registra' => $this->fechaActual,
@@ -58,7 +62,19 @@ class TesPagosRepository
                 'id_pago' => $pago->id_pago,
             ]);
         }
+
         return $pago;
+    }
+
+    /** Banco emisor a partir de la cuenta bancaria del pago. Null si no se informó cuenta. */
+    private function bancoDeCuenta($idCuenta): ?int
+    {
+        if (empty($idCuenta)) {
+            return null;
+        }
+
+        return \App\Models\Tesoreria\TesCuentasBancariasEntity::where('id_cuenta_bancaria', $idCuenta)
+            ->value('id_entidad_bancaria');
     }
 
     public function findByAsignarCodigoVerificacion($id, $codigo)
@@ -102,7 +118,7 @@ class TesPagosRepository
 
         $jquery->where('tipo_factura', $tipoFactura);
 
-        if (!is_null($params->beneficiario)) {
+        if (!empty($params->beneficiario)) {
             $jquery->whereHas("opa.$tipoRelacion", function ($query) use ($params) {
                 $query->where(function ($q) use ($params) {
                     $q->where('razon_social', 'like', '%' . $params->beneficiario . '%')
@@ -121,13 +137,31 @@ class TesPagosRepository
             $jquery->whereBetween('monto_pago', [$params->monto_desde, $params->monto_hasta]);
         } */
 
-        if (!is_null($params->numero_opa)) {
-            $jquery->whereHas('opa', function ($query) use ($params) {
-                $query->where('num_orden_pago', $params->numero);
-            });
+        // Dos bugs juntos, arreglados el 2026-09-04:
+        //  1. filtraba con `$params->numero` (el N° de FACTURA) sobre la columna del N° de OPA,
+        //     asi que buscar por orden nunca encontraba nada;
+        //  2. `!is_null('')` es true, y el front manda '' cuando el campo esta vacio -> la
+        //     pantalla quedaba en CERO pagos salvo que se tipeara algo.
+        // Se usa LIKE y se limpia el prefijo porque el usuario tipea indistinto "OPA-1435",
+        // "1435" o "opa 1435".
+        if (!empty($params->numero_opa)) {
+            $numero = preg_replace('/\D/', '', (string) $params->numero_opa);
+
+            if ($numero !== '') {
+                $jquery->whereHas('opa', function ($query) use ($numero) {
+                    // Comparacion NUMERICA del correlativo, no textual: los numeros viejos vienen
+                    // con ceros a la izquierda ('OPA-0999') y los nuevos no ('OPA-14358'), asi que
+                    // un LIKE devolvia de mas (buscar 1435 traia OPA-14358) y un igual textual
+                    // fallaba con los rellenados. Asi "999", "0999" y "OPA-0999" encuentran lo mismo.
+                    $query->whereRaw(
+                        "CAST(REPLACE(num_orden_pago, 'OPA-', '') AS UNSIGNED) = ?",
+                        [(int) $numero]
+                    );
+                });
+            }
         }
 
-        if (!is_null($params->estado)) {
+        if (!empty($params->estado)) {
             $jquery->where('id_estado_orden_pago', $params->estado);
         }
 
@@ -135,19 +169,20 @@ class TesPagosRepository
             $jquery->where('pago_emergencia', $params->pago_urgente);
         }
 
-        if (!is_null($params->id_locatario)) {
+        if (!empty($params->id_locatario)) {
             $jquery->whereHas('detalleopa.detallefc', function ($query) use ($params) {
                 $query->where('id_locatorio', $params->id_locatario);
             });
         }
 
-        if (!is_null($params->id_tipo_imputacion)) {
+        if (!empty($params->id_tipo_imputacion)) {
             $jquery->whereHas('detalleopa.detallefc', function ($query) use ($params) {
                 $query->where('id_tipo_imputacion_sintetizada', $params->id_tipo_imputacion);
             });
         }
 
-        if (!is_null($params->numero)) {
+        // Mismo caso: con '' filtraba por numero de factura vacio y dejaba la lista en cero.
+        if (!empty($params->numero)) {
             $jquery->whereHas('detalleopa.detallefc', function ($query) use ($params) {
                 $query->where('numero', $params->numero);
             });

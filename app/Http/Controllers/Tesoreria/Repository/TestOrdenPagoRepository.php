@@ -221,8 +221,17 @@ class TestOrdenPagoRepository
         // "OPA-1435", "1435" o incluso "opa 1435" — pedirle el formato exacto de un numero que
         // arma un trigger seria trasladarle un detalle interno. (2026-09-04)
         if (!empty($params->num_orden_pago)) {
-            $texto = trim(str_ireplace(['opa-', 'opa '], '', trim($params->num_orden_pago)));
-            $query->where('num_orden_pago', 'LIKE', "%{$texto}%");
+            $numero = preg_replace('/\D/', '', (string) $params->num_orden_pago);
+
+            if ($numero !== '') {
+                // Comparacion NUMERICA: los numeros viejos traen ceros a la izquierda
+                // ('OPA-0999') y los nuevos no ('OPA-14358'). Con LIKE, buscar 1435 devolvia
+                // tambien OPA-14358; con igual textual, "999" no encontraba "OPA-0999".
+                $query->whereRaw(
+                    "CAST(REPLACE(num_orden_pago, 'OPA-', '') AS UNSIGNED) = ?",
+                    [(int) $numero]
+                );
+            }
         }
 
         return $query
@@ -650,13 +659,44 @@ class TestOrdenPagoRepository
      */
     public function montoPagadoOpa($idOpa): float
     {
-        return (float) TesPagoEntity::where('id_orden_pago', $idOpa)
+        $boletas = TesPagoEntity::where('id_orden_pago', $idOpa)
             ->where('id_estado_orden_pago', '!=', self::ESTADO_OPA_RECHAZADO)
-            ->where(function ($q) {
-                $q->where('id_estado_orden_pago', self::ESTADO_OPA_PAGADO)
-                    ->orWhereNotNull('fecha_confirma_pago');
-            })
-            ->sum(DB::raw('COALESCE(monto_pago, monto_opa, 0)'));
+            ->get();
+
+        if ($boletas->isEmpty()) {
+            return 0.0;
+        }
+
+        $total = 0.0;
+
+        foreach ($boletas as $boleta) {
+            // Si la boleta tiene ABONOS, ellos son la verdad: cada uno es un cheque/eCheq con su
+            // propio monto y su propia fecha de confirmación. La cabecera puede venir con
+            // `monto_pago` vacío (100 de 251 boletas con abonos lo tienen así), y caer al
+            // `monto_opa` de respaldo reportaría el total de la orden como si estuviera cobrado.
+            // (2026-09-04)
+            $abonos = \App\Models\Tesoreria\TesPagosParciales::where('id_pago', $boleta->id_pago)->get();
+
+            if ($abonos->isNotEmpty()) {
+                $total += (float) $abonos
+                    ->filter(fn($a) => !is_null($a->fecha_confirma_pago))
+                    ->sum('monto_pago');
+
+                continue;
+            }
+
+            // Sin abonos, vale la cabecera. El respaldo a `monto_opa` se mantiene porque en OSV
+            // la mayoría de los pagos viejos tiene `monto_pago` en null y sin él el estado
+            // derivado saldría mal.
+            $confirmada = (int) $boleta->id_estado_orden_pago === self::ESTADO_OPA_PAGADO
+                || !is_null($boleta->fecha_confirma_pago);
+
+            if ($confirmada) {
+                $total += (float) ($boleta->monto_pago ?? $boleta->monto_opa ?? 0);
+            }
+        }
+
+        return $total;
     }
 
     /**
@@ -1196,11 +1236,14 @@ class TestOrdenPagoRepository
             // Guarda 2: un eCheq ya emitido está circulando aunque todavía no se haya acreditado.
             // Hay que rechazarlo o anularlo primero; anular la OP por debajo dejaría el papel
             // suelto sin nada que lo respalde.
-            $emitidos = TesPagoEntity::where('id_orden_pago', $idOpa)
-                ->whereIn('id_estado_instrumento', [
-                    TesInstrumentoPagoRepository::EMITIDO,
-                    TesInstrumentoPagoRepository::ACREDITADO,
-                ])->count();
+            // Los eCheq son ABONOS de la boleta, no la boleta misma (ver 2026_09_04_100900).
+            $emitidos = \App\Models\Tesoreria\TesPagosParciales::whereIn(
+                'id_pago',
+                TesPagoEntity::where('id_orden_pago', $idOpa)->pluck('id_pago')
+            )->whereIn('id_estado_instrumento', [
+                TesInstrumentoPagoRepository::EMITIDO,
+                TesInstrumentoPagoRepository::ACREDITADO,
+            ])->count();
 
             if ($emitidos > 0) {
                 return ['ok' => false,
@@ -1218,14 +1261,13 @@ class TestOrdenPagoRepository
             }
 
             // 1) Los instrumentos que todavía no salieron se dan de baja junto con la orden.
-            TesPagoEntity::where('id_orden_pago', $idOpa)
-                ->whereIn('id_estado_instrumento', [
-                    TesInstrumentoPagoRepository::BORRADOR,
-                    TesInstrumentoPagoRepository::PENDIENTE_EMISION,
-                ])->update([
-                    'id_estado_instrumento' => TesInstrumentoPagoRepository::ANULADO,
-                    'id_estado_orden_pago'  => self::ESTADO_OPA_RECHAZADO,
-                ]);
+            \App\Models\Tesoreria\TesPagosParciales::whereIn(
+                'id_pago',
+                TesPagoEntity::where('id_orden_pago', $idOpa)->pluck('id_pago')
+            )->whereIn('id_estado_instrumento', [
+                TesInstrumentoPagoRepository::BORRADOR,
+                TesInstrumentoPagoRepository::PENDIENTE_EMISION,
+            ])->update(['id_estado_instrumento' => TesInstrumentoPagoRepository::ANULADO]);
 
             // 2) Anular la original. Se conserva su puente: la imputación ocurrió y es historia.
             $original->id_estado_orden_pago = self::ESTADO_OPA_RECHAZADO;

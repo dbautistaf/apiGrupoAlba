@@ -5,37 +5,44 @@ namespace App\Http\Controllers\Tesoreria\Repository;
 use App\Models\Tesoreria\TesCuentasBancariasEntity;
 use App\Models\Tesoreria\TesOrdenPagoEntity;
 use App\Models\Tesoreria\TesPagoEntity;
+use App\Models\Tesoreria\TesPagosParciales;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Ciclo de vida del INSTRUMENTO de pago (eCheq / transferencia).
+ * Ciclo de vida del instrumento de pago (eCheq).
  *
- * El instrumento vive en tb_tes_pago, extendida con `id_estado_instrumento`, `numero_echeq`,
- * `fecha_emision_echeq` e `id_banco_emisor`. Se extendió esa tabla en vez de crear una nueva
- * porque la contabilidad vincula cada asiento con su pago por `id_pago`.
+ * ═══ Dónde vive el instrumento ═══
  *
- * MÁQUINA DE ESTADOS (docs/circuito-pagos/plan-fase1-pagos.md §2.3):
+ *     Orden de pago (tb_tes_orden_pago)
+ *      └── 1 boleta de pago (tb_tes_pago)
+ *           ├── N fechas probables (tb_tes_fecha_probable_pago)  — el cronograma
+ *           └── N abonos          (tb_tes_pago_parcial)          — CADA eCHEQ ES UNO DE ESTOS
  *
- *   BORRADOR (1)          Pagos definió el instrumento (monto y fecha). La OP todavía no se
- *                         imprimió ni se mandó a Tesorería.
+ * **Cada eCheq es un ABONO**, no una boleta. Verificado contra los datos el 2026-09-04: ninguna
+ * de las 4.187 OPAs tiene más de una boleta, 23 boletas tienen más de un abono, y 81 números de
+ * cheque viven en `tb_tes_pago_parcial` contra 9 en `tb_tes_pago`.
+ *
+ * La primera versión de este repositorio operaba sobre la boleta. Estaba un nivel demasiado
+ * arriba: dos eCheq de una misma orden habrían exigido dos boletas, algo que no ocurre en ningún
+ * caso real y que la guarda de `getCrearPago` impide. Corregido en 2026_09_04_100900.
+ *
+ * ═══ MÁQUINA DE ESTADOS ═══
+ *
+ *   BORRADOR (1)          Pagos definió el abono (monto y fecha). La OP todavía no se imprimió.
  *        |
  *        v  marcarPendienteEmision()  — se imprime la OP inicial, SIN números
- *   PENDIENTE_EMISION (2) Esperando que el banco emita y asigne el número. Acá el número se
- *                         puede ir cargando de a uno (borrador de número): se guarda y se
- *                         valida al instante, pero el estado no avanza hasta confirmar.
+ *   PENDIENTE_EMISION (2) Esperando que el banco emita. El número se carga acá como borrador.
  *        |
  *        v  confirmarEmisionDeOpa()   — se confirman TODOS los números de la OP juntos
- *   EMITIDO (3)           Números cargados y confirmados. Acá se recalcula el estado de la OP.
- *        |
+ *   EMITIDO (3)
  *        +--> ACREDITADO (4)  la conciliación bancaria confirmó el débito
- *        +--> RECHAZADO (5)   el eCheq volvió — LO CARGA EL USUARIO A MANO (confirmado por
- *                             negocio 2026-09-03), no sale de la conciliación
+ *        +--> RECHAZADO (5)   volvió — LO CARGA EL USUARIO A MANO (negocio, 2026-09-03)
  *        +--> ANULADO (6)
  *
- * Un eCheq cubre UNA sola OP: el número es único en toda la tabla, garantizado por el índice
- * uq_numero_echeq además de la validación aplicativa.
+ * El número de eCheq es único en toda la tabla: un eCheq cubre un solo abono. Lo garantiza el
+ * índice `uq_pp_numero_echeq`; la validación aplicativa solo da el aviso temprano.
  */
 class TesInstrumentoPagoRepository
 {
@@ -61,74 +68,24 @@ class TesInstrumentoPagoRepository
         $this->fechaActual = Carbon::now('America/Argentina/Buenos_Aires');
     }
 
-    /**
-     * Crea los instrumentos de pago de una OP. Nacen SIN número: el banco lo asigna recién al
-     * emitirlos. Lo único que carga Pagos acá es el monto y la fecha de cada uno.
-     *
-     * @param array $instrumentos  [['monto' => float, 'fecha' => 'Y-m-d',
-     *                               'id_forma_pago' => int, 'id_cuenta_bancaria' => ?int,
-     *                               'id_banco_emisor' => ?int], ...]
-     */
-    public function crearInstrumentos($idOpa, array $instrumentos): array
+    private static function aCentavos($monto): int
     {
-        $opa = TesOrdenPagoEntity::find($idOpa);
+        return (int) round(((float) $monto) * 100);
+    }
 
-        if (is_null($opa)) {
-            throw new \Exception("No se encontró la orden de pago {$idOpa}.");
-        }
+    /** Las boletas de pago vivas de una OP. Los abonos cuelgan de ellas. */
+    private function boletasDeOpa($idOpa): array
+    {
+        return TesPagoEntity::where('id_orden_pago', $idOpa)
+            ->where('id_estado_orden_pago', '!=', TestOrdenPagoRepository::ESTADO_OPA_RECHAZADO)
+            ->pluck('id_pago')
+            ->all();
+    }
 
-        if ((int) $opa->id_estado_orden_pago === TestOrdenPagoRepository::ESTADO_OPA_RECHAZADO) {
-            throw new \Exception(
-                "La orden de pago {$opa->num_orden_pago} está anulada: no se le pueden agregar pagos."
-            );
-        }
-
-        if (empty($instrumentos)) {
-            throw new \Exception('No se recibió ningún instrumento de pago.');
-        }
-
-        $creados = [];
-
-        foreach ($instrumentos as $i) {
-            $idBanco = $this->resolverBancoEmisor(
-                $i['id_cuenta_bancaria'] ?? null,
-                $i['id_banco_emisor'] ?? null
-            );
-
-            $monto = (float) ($i['monto'] ?? 0);
-
-            if ($monto <= 0) {
-                throw new \Exception('El monto de cada pago tiene que ser mayor a cero.');
-            }
-
-            if (empty($i['fecha'])) {
-                throw new \Exception('Cada pago necesita su fecha.');
-            }
-
-            $creados[] = TesPagoEntity::create([
-                'id_orden_pago'         => $idOpa,
-                'id_cuenta_bancaria'    => $i['id_cuenta_bancaria'] ?? null,
-                'fecha_registra'        => $this->fechaActual,
-                'fecha_confirma_pago'   => null,
-                'monto_pago'            => $monto,
-                'monto_opa'             => $monto,
-                'anticipo'              => 0,
-                'monto_anticipado'      => 0,
-                'recursor'              => 0,
-                'pago_emergencia'       => 0,
-                'id_forma_pago'         => $i['id_forma_pago'] ?? self::FORMA_PAGO_ECHEQ,
-                'id_estado_instrumento' => self::BORRADOR,
-                // El catálogo viejo de la OPA sigue poblándose para no romper el histórico
-                // ni las pantallas que todavía lo leen.
-                'id_estado_orden_pago'  => TestOrdenPagoRepository::ESTADO_OPA_PENDIENTE,
-                'id_usuario'            => $this->user->cod_usuario ?? null,
-                'tipo_factura'          => $opa->tipo_factura ?? 'PRESTADOR',
-                'fecha_probable_pago'   => $i['fecha'],
-                'id_banco_emisor'       => $idBanco,
-            ]);
-        }
-
-        return $creados;
+    /** Abonos de una OP, en cualquier estado. */
+    public function abonosDeOpa($idOpa)
+    {
+        return TesPagosParciales::whereIn('id_pago', $this->boletasDeOpa($idOpa))->get();
     }
 
     /**
@@ -136,11 +93,11 @@ class TesInstrumentoPagoRepository
      *
      * Si vino la cuenta bancaria, el banco lo determina la cuenta: es la única fuente que no
      * puede contradecirse a sí misma. Si además mandaron un banco explícito y NO coincide, se
-     * corta — es un dato inconsistente y elegir uno en silencio dejaría el listado por banco
-     * mal agrupado sin que nadie se entere.
+     * corta — elegir uno en silencio dejaría el listado por banco mal agrupado sin que nadie
+     * se entere.
      *
-     * El banco explícito sin cuenta es válido: el catálogo de cuentas está incompleto (faltan
-     * Galicia, ICBC y Nación), así que hay eCheq emitidos desde bancos todavía sin cuenta.
+     * El banco explícito sin cuenta es válido: el catálogo de cuentas está incompleto, así que
+     * hay eCheq emitidos desde bancos todavía sin cuenta cargada.
      */
     private function resolverBancoEmisor($idCuenta, $idBancoExplicito): ?int
     {
@@ -166,25 +123,95 @@ class TesInstrumentoPagoRepository
     }
 
     /**
-     * Marca los instrumentos de una OP como pendientes de emisión: es el momento en que se
-     * imprime la OP inicial (sin números) y se manda a Tesorería.
+     * Fechas planificadas de una OP que todavía NO tienen su pago emitido.
+     *
+     * Confirmar la orden deja el cronograma; esto devuelve lo que falta emitir de ese plan.
      */
-    public function marcarPendienteEmision($idOpa): int
+    public function fechasPendientesDeEmitir($idOpa)
     {
-        return TesPagoEntity::where('id_orden_pago', $idOpa)
-            ->where('id_estado_instrumento', self::BORRADOR)
-            ->update(['id_estado_instrumento' => self::PENDIENTE_EMISION]);
+        return DB::table('tb_tes_fecha_probable_pago as fp')
+            ->whereIn('fp.id_pago', $this->boletasDeOpa($idOpa))
+            ->whereNotExists(function ($q) {
+                $q->select(DB::raw(1))
+                    ->from('tb_tes_pago_parcial as pp')
+                    ->whereColumn('pp.id_fecha_probable', 'fp.id_fecha_probable');
+            })
+            ->orderBy('fp.orden_cuotas')
+            ->get();
     }
 
     /**
-     * ¿El número de eCheq está libre? La unicidad es GLOBAL: un eCheq cubre una única OP.
+     * Emite UN pago sobre una fecha planificada: acá se definen el monto y la forma de pago.
      *
-     * Se usa para la validación en vivo mientras el usuario tipea. El índice uq_numero_echeq
-     * es la garantía real; esto es para poder avisar antes de que reviente.
+     * Es el momento en que el plan se vuelve un instrumento concreto. Antes de esto solo existe
+     * la fecha; el abono no puede existir sin monto ni forma (las dos columnas son NOT NULL, y
+     * rellenarlas con ceros sería inventar datos).
      *
-     * `$idPagoExcluir` permite revalidar el propio número al editarlo sin chocar consigo mismo.
+     * @param array $datos ['monto' => float, 'id_forma_pago' => int,
+     *                      'id_cuenta_bancaria' => ?int, 'id_banco_emisor' => ?int]
      */
-    public function numeroEcheqDisponible(?string $numero, $idPagoExcluir = null): bool
+    public function emitirPagoDeFecha($idFechaProbable, array $datos): TesPagosParciales
+    {
+        return DB::transaction(function () use ($idFechaProbable, $datos) {
+            $fecha = DB::table('tb_tes_fecha_probable_pago')->where('id_fecha_probable', $idFechaProbable)->first();
+
+            if (is_null($fecha)) {
+                throw new \Exception("No se encontró la fecha de pago {$idFechaProbable}.");
+            }
+
+            if (TesPagosParciales::where('id_fecha_probable', $idFechaProbable)->exists()) {
+                throw new \Exception('Esa fecha de pago ya tiene su pago emitido.');
+            }
+
+            $monto = (float) ($datos['monto'] ?? 0);
+
+            if (self::aCentavos($monto) <= 0) {
+                throw new \Exception('Hay que indicar el monto del pago.');
+            }
+
+            if (empty($datos['id_forma_pago'])) {
+                throw new \Exception('Hay que indicar la forma de pago.');
+            }
+
+            $boleta = TesPagoEntity::find($fecha->id_pago);
+            $opa = TesOrdenPagoEntity::find($boleta->id_orden_pago);
+
+            // Lo ya emitido sobre esta orden, para saber cuánto queda.
+            $yaEmitido = (float) TesPagosParciales::whereIn(
+                'id_pago',
+                TesPagoEntity::where('id_orden_pago', $opa->id_orden_pago)->pluck('id_pago')
+            )->sum('monto_pago');
+
+            $esEcheq = (int) $datos['id_forma_pago'] === self::FORMA_PAGO_ECHEQ;
+
+            return TesPagosParciales::create([
+                'id_pago'               => $fecha->id_pago,
+                'id_fecha_probable'     => $idFechaProbable,
+                'fecha_registra'        => $this->fechaActual->toDateString(),
+                // No nace confirmado: se confirma cuando el banco acredita.
+                'fecha_confirma_pago'   => null,
+                'id_forma_pago'         => $datos['id_forma_pago'],
+                'monto_pago'            => $monto,
+                'monto_opa'             => $opa->monto_orden_pago,
+                'monto_restante'        => max(0, (float) $opa->monto_orden_pago - ($yaEmitido + $monto)),
+                'id_usuario'            => $this->user->cod_usuario ?? null,
+                // El eCheq espera que el banco le asigne número; una transferencia no.
+                'id_estado_instrumento' => $esEcheq ? self::PENDIENTE_EMISION : self::EMITIDO,
+                'fecha_emision_echeq'   => $fecha->fecha_probable_pago,
+                'id_banco_emisor'       => $this->resolverBancoEmisor(
+                    $datos['id_cuenta_bancaria'] ?? $boleta->id_cuenta_bancaria ?? null,
+                    $datos['id_banco_emisor'] ?? null
+                ),
+            ]);
+        });
+    }
+
+    /**
+     * ¿El número de eCheq está libre? La unicidad es GLOBAL: un eCheq cubre un solo abono.
+     *
+     * `$idAbonoExcluir` permite revalidar el propio número al editarlo sin chocar consigo mismo.
+     */
+    public function numeroEcheqDisponible(?string $numero, $idAbonoExcluir = null): bool
     {
         $numero = trim((string) $numero);
 
@@ -192,27 +219,27 @@ class TesInstrumentoPagoRepository
             return false;
         }
 
-        return !TesPagoEntity::where('numero_echeq', $numero)
-            ->when(!is_null($idPagoExcluir), fn($q) => $q->where('id_pago', '!=', $idPagoExcluir))
+        return !TesPagosParciales::where('numero_echeq', $numero)
+            ->when(!is_null($idAbonoExcluir), fn($q) => $q->where('id_pago_parcial', '!=', $idAbonoExcluir))
             ->exists();
     }
 
     /**
-     * Guarda el número de un eCheq como BORRADOR: queda persistido pero el instrumento no
-     * avanza de estado hasta que se confirme la OP completa.
+     * Guarda el número de un eCheq como BORRADOR: queda persistido pero el abono no avanza de
+     * estado hasta que se confirme la OP completa.
      *
-     * El número se guarda con trim: en la columna vieja `num_cheque` hay valores con espacios
-     * al borde, y no queremos arrastrar eso a la nueva.
+     * Se guarda con trim: en la columna vieja `num_cheque` hay valores con espacios al borde y
+     * no queremos arrastrar eso.
      */
-    public function guardarBorradorNumero($idPago, ?string $numero): TesPagoEntity
+    public function guardarBorradorNumero($idAbono, ?string $numero): TesPagosParciales
     {
-        $pago = TesPagoEntity::find($idPago);
+        $abono = TesPagosParciales::find($idAbono);
 
-        if (is_null($pago)) {
-            throw new \Exception("No se encontró el pago {$idPago}.");
+        if (is_null($abono)) {
+            throw new \Exception("No se encontró el abono {$idAbono}.");
         }
 
-        if (!in_array((int) $pago->id_estado_instrumento, [self::BORRADOR, self::PENDIENTE_EMISION], true)) {
+        if (!in_array((int) $abono->id_estado_instrumento, [self::BORRADOR, self::PENDIENTE_EMISION], true)) {
             throw new \Exception(
                 'Solo se puede cargar el número de un pago que todavía no fue emitido.'
             );
@@ -220,26 +247,62 @@ class TesInstrumentoPagoRepository
 
         $numero = trim((string) $numero);
 
-        if ($numero !== '' && !$this->numeroEcheqDisponible($numero, $idPago)) {
+        if ($numero !== '' && !$this->numeroEcheqDisponible($numero, $idAbono)) {
             throw new \Exception("El número de eCheq {$numero} ya está usado en otro pago.");
         }
 
-        $pago->numero_echeq = $numero === '' ? null : $numero;
-        $pago->save();
+        $abono->numero_echeq = $numero === '' ? null : $numero;
+        // `num_cheque` se mantiene en sincronía: es la columna que leen las pantallas viejas
+        // y el comprobante de pago que ya existe.
+        $abono->num_cheque = $abono->numero_echeq;
+        $abono->save();
 
-        return $pago;
+        return $abono;
+    }
+
+    /**
+     * Cambia la forma de pago de UN instrumento.
+     *
+     * Se elige por instrumento y no al confirmar la orden porque una misma OP puede pagarse con
+     * un eCheq y una transferencia a la vez (requerimiento, punto 2).
+     *
+     * Al pasar de eCheq a otra forma se borra el número: un pago que no es eCheq no lo tiene, y
+     * dejarlo cargado bloquearía ese número para otro eCheq que sí lo necesite.
+     */
+    public function cambiarFormaPago($idAbono, $idFormaPago): TesPagosParciales
+    {
+        $abono = TesPagosParciales::find($idAbono);
+
+        if (is_null($abono)) {
+            throw new \Exception("No se encontró el abono {$idAbono}.");
+        }
+
+        if (!in_array((int) $abono->id_estado_instrumento, [self::BORRADOR, self::PENDIENTE_EMISION], true)) {
+            throw new \Exception('Solo se puede cambiar la forma de pago de un pago que todavía no fue emitido.');
+        }
+
+        $abono->id_forma_pago = $idFormaPago;
+
+        if ((int) $idFormaPago !== self::FORMA_PAGO_ECHEQ) {
+            $abono->numero_echeq = null;
+            $abono->num_cheque = null;
+        }
+
+        $abono->save();
+
+        return $abono;
     }
 
     /**
      * Confirma la emisión de TODOS los eCheq de una OP, en un solo acto.
      *
      * Exige que ninguno haya quedado sin número: el requerimiento pide que se carguen todos
-     * juntos y se confirmen de una. Devuelve la cantidad de instrumentos que pasaron a EMITIDO.
+     * juntos y se confirmen de una.
      */
     public function confirmarEmisionDeOpa($idOpa, TestOrdenPagoRepository $opaRepo): int
     {
         return DB::transaction(function () use ($idOpa, $opaRepo) {
-            $pendientes = TesPagoEntity::where('id_orden_pago', $idOpa)
+            $pendientes = TesPagosParciales::whereIn('id_pago', $this->boletasDeOpa($idOpa))
                 ->whereIn('id_estado_instrumento', [self::BORRADOR, self::PENDIENTE_EMISION])
                 ->get();
 
@@ -247,7 +310,11 @@ class TesInstrumentoPagoRepository
                 throw new \Exception('Esta orden de pago no tiene eCheq pendientes de emisión.');
             }
 
-            $sinNumero = $pendientes->filter(fn($p) => empty(trim((string) $p->numero_echeq)));
+            // Solo el eCheq necesita numero: una transferencia se emite y listo. Por eso la
+            // exigencia se aplica unicamente a los eCheq de la orden.
+            $sinNumero = $pendientes
+                ->filter(fn($p) => (int) $p->id_forma_pago === self::FORMA_PAGO_ECHEQ)
+                ->filter(fn($p) => empty(trim((string) $p->numero_echeq)));
 
             if ($sinNumero->isNotEmpty()) {
                 throw new \Exception(
@@ -258,12 +325,11 @@ class TesInstrumentoPagoRepository
 
             foreach ($pendientes as $p) {
                 $p->id_estado_instrumento = self::EMITIDO;
-                $p->fecha_emision_echeq   = $this->fechaActual->toDateString();
                 $p->save();
             }
 
-            // El estado de la OP se deriva de lo pagado; emitir todavía no acredita, así que
-            // esto normalmente la deja igual. Se recalcula igual para no depender de supuestos.
+            // Emitir todavía no acredita, así que esto normalmente deja la OP igual. Se recalcula
+            // para no depender de supuestos.
             $opaRepo->recalcularEstadoOpa($idOpa);
 
             return $pendientes->count();
@@ -272,30 +338,28 @@ class TesInstrumentoPagoRepository
 
     /**
      * Marca un eCheq como ACREDITADO. Es el único evento del ciclo que llega desde la
-     * conciliación bancaria; dispara el asiento que salda la cuenta puente (fase 2).
+     * conciliación bancaria.
      */
-    public function marcarAcreditado($idPago, $fechaAcreditacion, TestOrdenPagoRepository $opaRepo): TesPagoEntity
+    public function marcarAcreditado($idAbono, $fechaAcreditacion, TestOrdenPagoRepository $opaRepo): TesPagosParciales
     {
-        return DB::transaction(function () use ($idPago, $fechaAcreditacion, $opaRepo) {
-            $pago = TesPagoEntity::find($idPago);
+        return DB::transaction(function () use ($idAbono, $fechaAcreditacion, $opaRepo) {
+            $abono = TesPagosParciales::find($idAbono);
 
-            if (is_null($pago)) {
-                throw new \Exception("No se encontró el pago {$idPago}.");
+            if (is_null($abono)) {
+                throw new \Exception("No se encontró el abono {$idAbono}.");
             }
 
-            if ((int) $pago->id_estado_instrumento !== self::EMITIDO) {
+            if ((int) $abono->id_estado_instrumento !== self::EMITIDO) {
                 throw new \Exception('Solo se puede acreditar un eCheq que esté emitido.');
             }
 
-            $pago->id_estado_instrumento = self::ACREDITADO;
-            $pago->fecha_confirma_pago   = $fechaAcreditacion;
-            // El catálogo viejo se mantiene en sincronía para las pantallas que aún lo leen.
-            $pago->id_estado_orden_pago  = TestOrdenPagoRepository::ESTADO_OPA_PAGADO;
-            $pago->save();
+            $abono->id_estado_instrumento = self::ACREDITADO;
+            $abono->fecha_confirma_pago   = $fechaAcreditacion;
+            $abono->save();
 
-            $opaRepo->recalcularEstadoOpa($pago->id_orden_pago);
+            $opaRepo->recalcularEstadoOpa($this->opaDeAbono($abono));
 
-            return $pago;
+            return $abono;
         });
     }
 
@@ -303,82 +367,156 @@ class TesInstrumentoPagoRepository
      * Marca un eCheq como RECHAZADO. **Carga manual del usuario** — confirmado por negocio el
      * 2026-09-03: el rechazo no llega desde la conciliación bancaria.
      *
-     * Deja el instrumento fuera del cómputo de lo pagado, así que al recalcular, la OP vuelve
-     * a PENDIENTE o PAGO PARCIAL según lo que quede. De este mismo evento sale el asiento de
-     * reversión del punto 9 (fase 2).
+     * Al perder la fecha de confirmación deja de contar como cobrado, así que la OP vuelve sola
+     * al estado que le corresponde.
      */
-    public function marcarRechazado($idPago, ?string $motivo, TestOrdenPagoRepository $opaRepo): TesPagoEntity
+    public function marcarRechazado($idAbono, ?string $motivo, TestOrdenPagoRepository $opaRepo): TesPagosParciales
     {
-        return DB::transaction(function () use ($idPago, $motivo, $opaRepo) {
-            $pago = TesPagoEntity::find($idPago);
+        return DB::transaction(function () use ($idAbono, $motivo, $opaRepo) {
+            $abono = TesPagosParciales::find($idAbono);
 
-            if (is_null($pago)) {
-                throw new \Exception("No se encontró el pago {$idPago}.");
+            if (is_null($abono)) {
+                throw new \Exception("No se encontró el abono {$idAbono}.");
             }
 
-            if (!in_array((int) $pago->id_estado_instrumento, [self::EMITIDO, self::ACREDITADO], true)) {
+            if (!in_array((int) $abono->id_estado_instrumento, [self::EMITIDO, self::ACREDITADO], true)) {
                 throw new \Exception('Solo se puede rechazar un eCheq que haya sido emitido.');
             }
 
-            $pago->id_estado_instrumento = self::RECHAZADO;
-            $pago->motivo_rechazo        = $motivo;
-            $pago->fecha_rechazo         = $this->fechaActual;
-            // El catálogo viejo usa 3 para "rechazado", y es lo que mira la guarda de pagos.
-            $pago->id_estado_orden_pago  = TestOrdenPagoRepository::ESTADO_OPA_RECHAZADO;
-            $pago->fecha_confirma_pago   = null;
-            $pago->save();
+            $abono->id_estado_instrumento = self::RECHAZADO;
+            $abono->motivo_rechazo        = $motivo;
+            $abono->fecha_rechazo         = $this->fechaActual;
+            $abono->fecha_confirma_pago   = null;
+            $abono->save();
 
-            $opaRepo->recalcularEstadoOpa($pago->id_orden_pago);
+            $opaRepo->recalcularEstadoOpa($this->opaDeAbono($abono));
 
-            return $pago;
+            return $abono;
         });
     }
 
+    private function opaDeAbono(TesPagosParciales $abono)
+    {
+        return TesPagoEntity::where('id_pago', $abono->id_pago)->value('id_orden_pago');
+    }
+
     /**
-     * OPs con eCheq pendientes de número, agrupadas por banco emisor.
+     * Pagos planificados que todavía no se emitieron, más los eCheq emitidos que esperan número.
      *
-     * Es el listado exportable que pide el requerimiento (Excel y PDF): N.º de OP, proveedor,
-     * banco, N.º de eCheq, monto y fecha de pago.
+     * Son las dos cosas que Tesorería tiene pendientes de resolver sobre una orden ya confirmada:
+     * definir monto y forma de los que faltan, y poner el número a los eCheq que el banco emitió.
+     *
+     * Las filas sin `id_pago_parcial` son plan puro: todavía no existe el instrumento.
      */
     public function listarPendientesDeNumero($idBanco = null)
     {
-        return TesPagoEntity::query()
+        // 1) Fechas del plan sin pago emitido.
+        $planificados = DB::table('tb_tes_fecha_probable_pago as fp')
+            ->join('tb_tes_pago as p', 'p.id_pago', '=', 'fp.id_pago')
+            ->join('tb_tes_orden_pago as o', 'o.id_orden_pago', '=', 'p.id_orden_pago')
+            ->whereNotExists(function ($q) {
+                $q->select(DB::raw(1))
+                    ->from('tb_tes_pago_parcial as pp')
+                    ->whereColumn('pp.id_fecha_probable', 'fp.id_fecha_probable');
+            })
+            ->where('p.id_estado_orden_pago', '!=', TestOrdenPagoRepository::ESTADO_OPA_RECHAZADO)
+            ->whereIn('o.id_estado_orden_pago', $this->estadosOpaViva())
             ->select([
-                'tb_tes_pago.id_pago',
-                'tb_tes_pago.id_orden_pago',
-                'tb_tes_pago.numero_echeq',
-                'tb_tes_pago.monto_pago',
-                'tb_tes_pago.fecha_probable_pago',
-                'tb_tes_pago.id_banco_emisor',
-                'tb_tes_pago.id_estado_instrumento',
+                'fp.id_fecha_probable',
+                'fp.fecha_probable_pago',
+                'fp.orden_cuotas',
+                'p.id_pago',
+                'o.id_orden_pago',
+                'o.num_orden_pago',
+                'o.monto_orden_pago',
+                'o.tipo_factura',
+                'o.id_proveedor',
+                'o.id_prestador',
+            ])
+            ->orderBy('o.num_orden_pago')
+            ->orderBy('fp.orden_cuotas')
+            ->get();
+
+        // 2) eCheq ya definidos, esperando el número del banco.
+        $sinNumero = TesPagosParciales::query()
+            ->join('tb_tes_pago as p', 'p.id_pago', '=', 'tb_tes_pago_parcial.id_pago')
+            ->join('tb_tes_orden_pago as o', 'o.id_orden_pago', '=', 'p.id_orden_pago')
+            ->where('tb_tes_pago_parcial.id_estado_instrumento', self::PENDIENTE_EMISION)
+            ->when(!is_null($idBanco), fn($q) => $q->where('tb_tes_pago_parcial.id_banco_emisor', $idBanco))
+            ->whereIn('o.id_estado_orden_pago', $this->estadosOpaViva())
+            ->select([
+                'tb_tes_pago_parcial.*',
+                'o.id_orden_pago',
+                'o.num_orden_pago',
+                'o.monto_orden_pago',
+                'o.tipo_factura',
+                'o.id_proveedor',
+                'o.id_prestador',
+            ])
+            ->with(['bancoEmisor', 'formaPago', 'pago.opa.proveedor', 'pago.opa.prestador'])
+            ->get();
+
+        return ['planificados' => $planificados, 'sin_numero' => $sinNumero];
+    }
+
+    /** Estados en los que una OP sigue viva y sus pagos pueden trabajarse. */
+    private function estadosOpaViva(): array
+    {
+        return [
+            TestOrdenPagoRepository::ESTADO_OPA_PENDIENTE,
+            TestOrdenPagoRepository::ESTADO_OPA_APROBADO,
+            TestOrdenPagoRepository::ESTADO_OPA_EN_PROCESO,
+            TestOrdenPagoRepository::ESTADO_OPA_PAGO_PARCIAL,
+        ];
+    }
+
+    /**
+     * eCheq ya EMITIDOS, esperando que el banco los debite.
+     *
+     * Es la contracara del listado de pendientes de número: acá están los que ya salieron y sobre
+     * los que corresponde acreditar (cuando el banco confirma) o rechazar (carga manual).
+     *
+     * Se incluyen los ACREDITADOS de los últimos días para que quede a la vista lo recién
+     * confirmado y se pueda rechazar si el eCheq vuelve después.
+     */
+    public function listarEmitidos($idBanco = null)
+    {
+        return TesPagosParciales::query()
+            ->select([
+                'tb_tes_pago_parcial.id_pago_parcial',
+                'tb_tes_pago_parcial.id_pago',
+                'tb_tes_pago_parcial.numero_echeq',
+                'tb_tes_pago_parcial.monto_pago',
+                'tb_tes_pago_parcial.fecha_emision_echeq',
+                'tb_tes_pago_parcial.fecha_confirma_pago',
+                'tb_tes_pago_parcial.id_banco_emisor',
+                'tb_tes_pago_parcial.id_estado_instrumento',
+                'tb_tes_pago_parcial.motivo_rechazo',
+                'tb_tes_orden_pago.id_orden_pago',
                 'tb_tes_orden_pago.num_orden_pago',
-                'tb_tes_orden_pago.id_estado_orden_pago',
+                'tb_tes_orden_pago.tipo_factura',
                 'tb_tes_orden_pago.id_proveedor',
                 'tb_tes_orden_pago.id_prestador',
             ])
+            ->join('tb_tes_pago', 'tb_tes_pago.id_pago', '=', 'tb_tes_pago_parcial.id_pago')
             ->join('tb_tes_orden_pago', 'tb_tes_orden_pago.id_orden_pago', '=', 'tb_tes_pago.id_orden_pago')
-            ->whereIn('tb_tes_pago.id_estado_instrumento', [self::BORRADOR, self::PENDIENTE_EMISION])
-            // Solo OPs vivas: pendientes o parcialmente pagadas, como pide el requerimiento.
-            ->whereIn('tb_tes_orden_pago.id_estado_orden_pago', [
-                TestOrdenPagoRepository::ESTADO_OPA_PENDIENTE,
-                TestOrdenPagoRepository::ESTADO_OPA_PAGO_PARCIAL,
-            ])
-            ->when(!is_null($idBanco), fn($q) => $q->where('tb_tes_pago.id_banco_emisor', $idBanco))
-            ->with(['opa.proveedor', 'opa.prestador', 'bancoEmisor'])
-            ->orderBy('tb_tes_pago.id_banco_emisor')
-            ->orderBy('tb_tes_orden_pago.num_orden_pago')
+            ->whereIn('tb_tes_pago_parcial.id_estado_instrumento', [self::EMITIDO, self::ACREDITADO])
+            ->when(!is_null($idBanco), fn($q) => $q->where('tb_tes_pago_parcial.id_banco_emisor', $idBanco))
+            ->with(['bancoEmisor', 'estadoInstrumento', 'pago.opa.proveedor', 'pago.opa.prestador'])
+            // Los que todavía esperan acreditación van primero: son los que requieren acción.
+            ->orderBy('tb_tes_pago_parcial.id_estado_instrumento')
+            ->orderBy('tb_tes_pago_parcial.fecha_emision_echeq')
             ->get();
     }
 
     /**
      * Nombre del beneficiario de una OP, para los listados y comprobantes.
      *
-     * El tipo lo decide `tipo_factura` de la OP ('PROVEEDOR' / 'PRESTADOR'), no la presencia de
-     * `id_proveedor`/`id_prestador`: hay filas sucias con **los dos** cargados, y elegir por
-     * coalesce devuelve el beneficiario equivocado.
+     * El tipo lo decide `tipo_factura` de la OP, no la presencia de `id_proveedor`/`id_prestador`:
+     * hay filas sucias con **los dos** cargados, y elegir por coalesce devuelve el equivocado.
      *
-     * Devuelve un texto siempre. Nunca desreferencia una relación sin chequearla: en las OPs
-     * viejas cualquiera de las dos puede venir en null, y un listado no es lugar para reventar.
+     * Devuelve un texto siempre: en las OPs viejas cualquiera de las dos relaciones puede venir
+     * en null, y un listado no es lugar para reventar.
      */
     public static function nombreBeneficiario($opa): string
     {
@@ -390,7 +528,6 @@ class TesInstrumentoPagoRepository
             ? $opa->proveedor
             : $opa->prestador;
 
-        // Si el tipo apunta a una relación vacía, se prueba la otra antes de darse por vencido.
         $ente = $ente ?? $opa->proveedor ?? $opa->prestador;
 
         if (is_null($ente)) {

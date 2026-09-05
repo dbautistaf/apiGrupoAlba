@@ -36,62 +36,55 @@ class TesInstrumentoPagoController extends Controller
     }
 
     /**
-     * POST /v1/tesoreria/instrumentos-pago
-     * Body: { id_orden_pago, instrumentos: [{ monto, fecha, id_forma_pago?,
-     *                                         id_cuenta_bancaria?, id_banco_emisor? }] }
+     * GET /v1/tesoreria/instrumentos-pago/pendientes-opa/{idOpa}
+     *
+     * Fechas del cronograma que todavia no tienen su pago emitido.
      */
-    public function getCrearInstrumentos(Request $request)
+    public function getPendientesDeOpa($idOpa)
     {
         try {
-            $idOpa        = $request->input('id_orden_pago');
-            $instrumentos = $request->input('instrumentos', []);
-
-            if (!$idOpa) {
-                return response()->json(['message' => 'id_orden_pago es requerido'], 422);
-            }
-
-            if (!is_array($instrumentos) || empty($instrumentos)) {
-                return response()->json(['message' => 'Hay que enviar al menos un instrumento de pago'], 422);
-            }
-
-            $creados = $this->repository->crearInstrumentos($idOpa, $instrumentos);
-
-            return response()->json([
-                'message' => 'Se crearon ' . count($creados) . ' pago(s) pendientes de emisión',
-                'data'    => $creados,
-            ], 201);
-        } catch (QueryException $e) {
-            Log::error('Error crear instrumentos de pago: ' . $e->getMessage());
-            return response()->json(['message' => 'Error al crear los pagos'], 500);
-        } catch (\Exception $e) {
-            return response()->json(['message' => $e->getMessage()], 409);
+            return response()->json($this->repository->fechasPendientesDeEmitir($idOpa), 200);
+        } catch (\Throwable $e) {
+            Log::error('Error listar fechas pendientes de emitir: ' . $e->getMessage());
+            return response()->json(['message' => 'Error al listar las fechas pendientes'], 500);
         }
     }
 
     /**
-     * POST /v1/tesoreria/instrumentos-pago/marcar-pendiente-emision
-     * Body: { id_orden_pago }
+     * POST /v1/tesoreria/instrumentos-pago/emitir
+     * Body: { id_fecha_probable, monto, id_forma_pago, id_cuenta_bancaria?, id_banco_emisor? }
      *
-     * Es el acto de imprimir la OP inicial y mandarla a Tesorería.
+     * Emite UN pago sobre una fecha planificada. Aca se definen el monto y la forma de pago:
+     * confirmar la orden solo dejo el cronograma.
      */
-    public function getMarcarPendienteEmision(Request $request)
+    public function getEmitirPago(Request $request)
     {
         try {
-            $idOpa = $request->input('id_orden_pago');
+            $idFecha = $request->input('id_fecha_probable');
 
-            if (!$idOpa) {
-                return response()->json(['message' => 'id_orden_pago es requerido'], 422);
+            if (!$idFecha) {
+                return response()->json(['message' => 'id_fecha_probable es requerido'], 422);
             }
 
-            $n = $this->repository->marcarPendienteEmision($idOpa);
+            if (!$request->filled('monto')) {
+                return response()->json(['message' => 'El monto es requerido'], 422);
+            }
 
-            return response()->json([
-                'message' => "Se marcaron {$n} pago(s) como pendientes de emisión",
-                'data'    => ['actualizados' => $n],
-            ], 200);
+            if (!$request->filled('id_forma_pago')) {
+                return response()->json(['message' => 'La forma de pago es requerida'], 422);
+            }
+
+            $abono = $this->repository->emitirPagoDeFecha($idFecha, [
+                'monto'              => $request->input('monto'),
+                'id_forma_pago'      => $request->input('id_forma_pago'),
+                'id_cuenta_bancaria' => $request->input('id_cuenta_bancaria'),
+                'id_banco_emisor'    => $request->input('id_banco_emisor'),
+            ]);
+
+            return response()->json(['message' => 'Pago emitido', 'data' => $abono], 201);
         } catch (QueryException $e) {
-            Log::error('Error marcar pendiente de emisión: ' . $e->getMessage());
-            return response()->json(['message' => 'Error al actualizar los pagos'], 500);
+            Log::error('Error emitir pago: ' . $e->getMessage());
+            return response()->json(['message' => 'Error al emitir el pago'], 500);
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 409);
         }
@@ -147,6 +140,31 @@ class TesInstrumentoPagoController extends Controller
         } catch (QueryException $e) {
             Log::error('Error guardar número de eCheq: ' . $e->getMessage());
             return response()->json(['message' => 'Error al guardar el número'], 500);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 409);
+        }
+    }
+
+    /**
+     * PUT /v1/tesoreria/instrumentos-pago/{idPago}/forma-pago
+     * Body: { id_forma_pago }
+     */
+    public function getCambiarFormaPago(Request $request, $idPago)
+    {
+        try {
+            $forma = $request->input('id_forma_pago');
+
+            if (!$forma) {
+                return response()->json(['message' => 'id_forma_pago es requerido'], 422);
+            }
+
+            return response()->json([
+                'message' => 'Forma de pago actualizada',
+                'data'    => $this->repository->cambiarFormaPago($idPago, $forma),
+            ], 200);
+        } catch (QueryException $e) {
+            Log::error('Error cambiar forma de pago: ' . $e->getMessage());
+            return response()->json(['message' => 'Error al cambiar la forma de pago'], 500);
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 409);
         }
@@ -254,6 +272,21 @@ class TesInstrumentoPagoController extends Controller
     }
 
     /**
+     * GET /v1/tesoreria/instrumentos-pago/emitidos?id_banco=
+     *
+     * eCheq ya emitidos: los que esperan acreditacion o pueden rechazarse.
+     */
+    public function getEmitidos(Request $request)
+    {
+        try {
+            return response()->json($this->repository->listarEmitidos($request->query('id_banco')), 200);
+        } catch (\Exception $e) {
+            Log::error('Error listar eCheq emitidos: ' . $e->getMessage());
+            return response()->json(['message' => 'Error al listar los eCheq emitidos'], 500);
+        }
+    }
+
+    /**
      * GET /v1/tesoreria/instrumentos-pago/pendientes-numero/excel?id_banco=
      */
     public function exportarExcelPendientes(Request $request)
@@ -278,18 +311,18 @@ class TesInstrumentoPagoController extends Controller
     public function exportarPdfPendientes(Request $request)
     {
         try {
-            $pagos = $this->repository->listarPendientesDeNumero($request->query('id_banco'));
+            $pagos = $this->repository->listarPendientesDeNumero($request->query('id_banco'))['sin_numero'];
 
             $grupos = $pagos
                 ->map(function ($p) {
                     return [
                         'banco'        => $p->bancoEmisor->descripcion_banco ?? 'SIN BANCO ASIGNADO',
                         'num_opa'      => $p->num_orden_pago,
-                        'beneficiario' => TesInstrumentoPagoRepository::nombreBeneficiario($p->opa),
+                        'beneficiario' => TesInstrumentoPagoRepository::nombreBeneficiario($p->pago->opa ?? null),
                         'numero_echeq' => $p->numero_echeq ?? '',
                         'monto_raw'    => (float) $p->monto_pago,
                         'monto'        => number_format((float) $p->monto_pago, 2, ',', '.'),
-                        'fecha_pago'   => $p->fecha_probable_pago,
+                        'fecha_pago'   => $p->fecha_emision_echeq,
                     ];
                 })
                 ->groupBy('banco');

@@ -27,15 +27,16 @@ class EcheqPendientesNumeroExport implements FromCollection, WithHeadings, Shoul
 
     public function collection()
     {
-        return $this->repository->listarPendientesDeNumero($this->idBanco)
+        // Solo los eCheq que ya estan definidos y esperan numero: el papel que va al banco.
+        return $this->repository->listarPendientesDeNumero($this->idBanco)['sin_numero']
             ->map(function ($p) {
                 return [
                     'banco'        => $p->bancoEmisor->descripcion_banco ?? 'SIN BANCO ASIGNADO',
                     'num_opa'      => $p->num_orden_pago,
-                    'beneficiario' => TesInstrumentoPagoRepository::nombreBeneficiario($p->opa),
+                    'beneficiario' => TesInstrumentoPagoRepository::nombreBeneficiario($p->pago->opa ?? null),
                     'numero_echeq' => $p->numero_echeq ?? '',
                     'monto'        => (float) $p->monto_pago,
-                    'fecha_pago'   => $p->fecha_probable_pago,
+                    'fecha_pago'   => $p->fecha_emision_echeq,
                 ];
             });
     }

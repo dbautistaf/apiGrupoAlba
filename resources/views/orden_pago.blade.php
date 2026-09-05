@@ -195,6 +195,21 @@
         </tr>
     </table>
 
+    {{-- Sello de version del comprobante: bien visible en el encabezado, no perdido adentro de
+         una card chica. Ambar mientras falta emitir/numerar; verde cuando ya es la version
+         definitiva para el proveedor. --}}
+    @if (!empty($version_comprobante))
+        <table style="margin-bottom: 10px;">
+            <tr>
+                <td style="background-color: {{ $version_comprobante === 'COMPROBANTE DEFINITIVO' ? '#388E3C' : '#b45309' }};
+                           color: #ffffff; text-align: center; padding: 7px 10px; font-weight: 800;
+                           font-size: 13px; letter-spacing: 0.6px; border-radius: 4px;">
+                    {{ $version_comprobante }}
+                </td>
+            </tr>
+        </table>
+    @endif
+
     <!-- Provider Details Card -->
     <div class="card" style="border-left: 3px solid #388E3C;">
         <div class="card-header text-blue">
@@ -294,12 +309,6 @@
                 <div class="card" style="border-top: 3px solid #388E3C; margin-bottom: 0;">
                     <div class="card-header" style="background-color: #f8fafc;">
                         Valores Entregados
-                        @if (!empty($version_comprobante))
-                            <span style="float: right; font-size: 8px; font-weight: bold;
-                                         color: #b45309; text-transform: uppercase;">
-                                {{ $version_comprobante }}
-                            </span>
-                        @endif
                     </div>
                     <table class="modern-table">
                         <thead>
@@ -316,6 +325,28 @@
                             {{-- Instrumentos del circuito nuevo (eCheq). Cuando el numero
                                  todavia no se cargo, sale una linea en blanco para completar a
                                  mano: es la version que va a Tesoreria para emitir. --}}
+                            {{-- Fechas ya planificadas (Confirmar OPA) pero todavia sin emitir: no
+                                 tienen monto ni forma de pago porque eso se define recien al
+                                 emitir cada una, en Carga de eCheq. --}}
+                            @foreach ($fechas_pendientes ?? [] as $fecha)
+                                <tr>
+                                    <td class="font-bold text-dark" style="font-size: 9px;">
+                                        Pendiente de emitir
+                                        <br>
+                                        <div style="margin-top: 3px;">
+                                            <span class="font-bold" style="font-size: 8px;">Fecha de Pago:</span>
+                                            <span class="text-blue" style="font-size: 8px;">{{ $fecha->fecha_probable_pago }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="text-center font-bold">{{ $fecha->orden_cuotas }}</td>
+                                    <td class="text-right font-bold text-dark">
+                                        <span style="display: inline-block; min-width: 40px;
+                                                     border-bottom: 1px solid #94a3b8;">&nbsp;</span>
+                                    </td>
+                                </tr>
+                                @php $totalFilas2++; @endphp
+                            @endforeach
+
                             @foreach ($instrumentos ?? [] as $inst)
                                 <tr>
                                     <td class="font-bold text-dark" style="font-size: 9px;">
@@ -328,11 +359,11 @@
                                         @endif
                                         <br>
                                         <span style="font-weight: normal; font-size: 8px; color: #64748b;">
-                                            {{ $inst?->bancoEmisor?->descripcion_banco ?? $inst?->cuenta?->nombre_cuenta }}
+                                            {{ $inst?->bancoEmisor?->descripcion_banco }}
                                         </span><br>
                                         <div style="margin-top: 3px;">
                                             <span class="font-bold" style="font-size: 8px;">Fecha de Pago:</span>
-                                            <span class="text-blue" style="font-size: 8px;">{{ $inst?->fecha_probable_pago }}</span>
+                                            <span class="text-blue" style="font-size: 8px;">{{ $inst?->fecha_emision_echeq }}</span>
                                             @if ($inst?->estadoInstrumento)
                                                 <span style="font-size: 8px; color: #64748b;">
                                                     &middot; {{ $inst->estadoInstrumento->descripcion_estado }}
