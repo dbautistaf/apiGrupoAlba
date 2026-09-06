@@ -650,6 +650,51 @@ class TestOrdenPagoRepository
     }
 
     /**
+     * Lo que realmente hay que pagarle al beneficiario por esta OPA.
+     *
+     * NO es lo mismo que `montoImputadoOpa()`. La imputación arrastra el **bruto** de la factura
+     * (`total_neto`) — es la convención de siempre del sistema: relevado el 2026-09-05, de las
+     * facturas con débito presentes en un detalle de OPA, 779 guardan el bruto y 0 el neto. Pero
+     * al prestador se le paga el bruto **menos el débito de liquidación**, que es lo que la
+     * grilla de Pagos ya venía mostrando como "Monto Neto OPA".
+     *
+     * Sin esta distinción pasaban dos cosas, las dos malas (ver
+     * `docs/circuito-pagos/revisar-debito-no-descontado.md`):
+     *
+     *   - Pagar lo correcto dejaba la orden trabada en PAGO PARCIAL para siempre, porque lo
+     *     pagado nunca alcanzaba el bruto.
+     *   - Para cerrar la orden había que pagar el bruto, es decir, pagar de más. En el caso que
+     *     lo destapó eran $1.060.351,04 de sobrepago sobre una orden de $78.960 reales.
+     *
+     * El `min()` es deliberado: una OPA nunca puede valer más que lo que la factura permite
+     * cobrar, ni más de lo que se le imputó. Cubre también las facturas sobre-imputadas de
+     * `reporte-danos-opa.md`, que antes inflaban el total.
+     *
+     * Para una OPA sin facturas (un ANTICIPO) devuelve 0, igual que `montoImputadoOpa()`.
+     */
+    public function montoPagableOpa($idOpa): float
+    {
+        $filas = DB::table('tb_tes_opa_factura as pf')
+            ->join('tb_facturacion_datos as f', 'f.id_factura', '=', 'pf.id_factura')
+            ->where('pf.id_orden_pago', $idOpa)
+            ->select('pf.monto_aplicado', 'f.total_neto', 'f.total_debitado_liquidacion')
+            ->get();
+
+        $total = 0.0;
+
+        foreach ($filas as $fila) {
+            $pagableFactura = max(
+                0.0,
+                (float) $fila->total_neto - (float) $fila->total_debitado_liquidacion
+            );
+
+            $total += min((float) $fila->monto_aplicado, $pagableFactura);
+        }
+
+        return round($total, 2);
+    }
+
+    /**
      * Total efectivamente pagado de una OPA: suma de sus pagos CONFIRMADOS.
      *
      * OJO con el monto: `monto_pago` viene NULL en buena parte de los pagos confirmados
@@ -751,13 +796,24 @@ class TestOrdenPagoRepository
             return self::ESTADO_OPA_RECHAZADO;
         }
 
-        $imputado = $this->montoImputadoOpa($idOpa);
+        // Se compara contra lo PAGABLE (imputado menos débito de liquidación), no contra lo
+        // imputado a secas: la imputación arrastra el bruto de la factura y comparar contra eso
+        // dejaba trabada en PAGO PARCIAL a toda orden que pagara lo que corresponde. (2026-09-05)
+        $imputado = $this->montoPagableOpa($idOpa);
         $pagado   = $this->montoCubiertoOpa($idOpa);
 
         if ($imputado > 0 && $pagado >= $imputado - 0.01) {
             $nuevo = self::ESTADO_OPA_PAGADO;
         } elseif ($pagado > 0.01) {
             $nuevo = self::ESTADO_OPA_PAGO_PARCIAL;
+        } elseif ($this->tieneAlgunPago($idOpa)) {
+            // Sin plata cobrada todavía, pero la orden YA tiene su boleta y su cronograma: eso
+            // es EN PROCESO, no PENDIENTE. Sin esta rama el recálculo devolvía la orden a
+            // PENDIENTE apenas se acreditaba o rechazaba cualquier abono, deshaciendo el estado
+            // que pone `findByCrearPago` al confirmarla — y con eso volvía el 409 de
+            // "esta orden ya tiene un pago generado" al reaparecer el botón Confirmar OPA.
+            // (2026-09-05)
+            $nuevo = self::ESTADO_OPA_EN_PROCESO;
         } else {
             $nuevo = self::ESTADO_OPA_PENDIENTE;
         }

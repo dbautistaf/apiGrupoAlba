@@ -378,7 +378,12 @@
                             @endforeach
 
                             @foreach ($pagos as $item)
-                                @foreach ($item->pagosParciales as $pagosP)
+                                {{-- Los pagosParciales del circuito nuevo (con id_estado_instrumento)
+                                     ya se listaron arriba en $instrumentos. Sin este filtro, un
+                                     eCheq salia dos veces: una vez por cada loop. Este bloque
+                                     queda solo para los pagosParciales VIEJOS, que no tienen
+                                     estado de instrumento. --}}
+                                @foreach ($item->pagosParciales->whereNull('id_estado_instrumento') as $pagosP)
                                 <tr>
                                     <td class="font-bold text-dark" style="font-size: 9px;">
                                        {{ $pagosP?->formaPago?->tipo_pago }}{{ $pagosP?->num_cheque ? ': '.$pagosP->num_cheque : '' }}<br>

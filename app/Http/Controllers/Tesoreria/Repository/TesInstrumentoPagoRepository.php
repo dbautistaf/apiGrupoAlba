@@ -177,10 +177,47 @@ class TesInstrumentoPagoRepository
             $opa = TesOrdenPagoEntity::find($boleta->id_orden_pago);
 
             // Lo ya emitido sobre esta orden, para saber cuánto queda.
+            //
+            // Los abonos RECHAZADOS y ANULADOS no cuentan: esa plata no salió (o volvió), así que
+            // no puede seguir ocupando lugar en el tope. Sin esta exclusión, rechazar un eCheq
+            // dejaba la orden imposible de volver a pagar.
             $yaEmitido = (float) TesPagosParciales::whereIn(
                 'id_pago',
                 TesPagoEntity::where('id_orden_pago', $opa->id_orden_pago)->pluck('id_pago')
-            )->sum('monto_pago');
+            )
+                ->where(function ($q) {
+                    $q->whereNull('id_estado_instrumento')
+                        ->orWhereNotIn('id_estado_instrumento', [self::RECHAZADO, self::ANULADO]);
+                })
+                ->sum('monto_pago');
+
+            // No se puede emitir por encima de lo que realmente hay que pagarle al beneficiario.
+            //
+            // El tope es el monto PAGABLE (lo imputado menos el débito de liquidación), no el
+            // `monto_orden_pago`, que arrastra el bruto de la factura. Sin este freno se podía
+            // cargar y confirmar abonos por el bruto: el caso que lo destapó tenía $1.139.311,04
+            // en abonos sobre una orden cuyo neto real era $78.960 — $1.060.351,04 de sobrepago,
+            // y lo único que avisaba era un saldo en rojo en la grilla, que no bloquea nada.
+            // (2026-09-05, ver docs/circuito-pagos/revisar-debito-no-descontado.md)
+            //
+            // Un ANTICIPO no tiene facturas imputadas: ahí el tope es su propio monto.
+            $tope = (new TestOrdenPagoRepository())->montoPagableOpa($opa->id_orden_pago);
+
+            if (self::aCentavos($tope) <= 0) {
+                $tope = (float) $opa->monto_orden_pago;
+            }
+
+            if (self::aCentavos($yaEmitido + $monto) > self::aCentavos($tope)) {
+                $disponible = max(0, $tope - $yaEmitido);
+
+                throw new \Exception(sprintf(
+                    'El pago se pasa de lo que hay que pagar en esta orden. '
+                        . 'A pagar: $%s. Ya emitido: $%s. Disponible: $%s.',
+                    number_format($tope, 2, ',', '.'),
+                    number_format($yaEmitido, 2, ',', '.'),
+                    number_format($disponible, 2, ',', '.')
+                ));
+            }
 
             $esEcheq = (int) $datos['id_forma_pago'] === self::FORMA_PAGO_ECHEQ;
 
@@ -401,6 +438,66 @@ class TesInstrumentoPagoRepository
     }
 
     /**
+     * Agrega a cada fila `monto_pagable` y `monto_disponible`, que es lo que la pantalla tiene que
+     * mostrar y ofrecer para cargar.
+     *
+     *   monto_pagable    = por cada factura de la orden, min(imputado, neto − débito)
+     *   monto_disponible = monto_pagable − lo ya emitido (sin contar rechazados ni anulados)
+     *
+     * Es el mismo criterio que aplica el freno de `emitirPagoDeFecha()`: la pantalla y la
+     * validación tienen que decir lo mismo, si no el operador carga un importe que después
+     * rebota.
+     *
+     * Se resuelve en dos consultas agrupadas y no una por fila: estos listados traen varias
+     * decenas de órdenes.
+     */
+    private function agregarMontosPagables($filas): void
+    {
+        $idsOpa = collect($filas)->pluck('id_orden_pago')->filter()->unique()->values();
+
+        if ($idsOpa->isEmpty()) {
+            return;
+        }
+
+        // Lo pagable por orden. LEAST/GREATEST replican el min()/max() de montoPagableOpa().
+        $pagables = DB::table('tb_tes_opa_factura as pf')
+            ->join('tb_facturacion_datos as f', 'f.id_factura', '=', 'pf.id_factura')
+            ->whereIn('pf.id_orden_pago', $idsOpa)
+            ->groupBy('pf.id_orden_pago')
+            ->select('pf.id_orden_pago', DB::raw(
+                'SUM(LEAST(pf.monto_aplicado, GREATEST(0, f.total_neto - COALESCE(f.total_debitado_liquidacion, 0)))) AS pagable'
+            ))
+            ->pluck('pagable', 'pf.id_orden_pago');
+
+        // Lo ya emitido por orden, excluyendo rechazados y anulados (esa plata no salió o volvió).
+        $emitidos = DB::table('tb_tes_pago_parcial as pp')
+            ->join('tb_tes_pago as p', 'p.id_pago', '=', 'pp.id_pago')
+            ->whereIn('p.id_orden_pago', $idsOpa)
+            ->where(function ($q) {
+                $q->whereNull('pp.id_estado_instrumento')
+                    ->orWhereNotIn('pp.id_estado_instrumento', [self::RECHAZADO, self::ANULADO]);
+            })
+            ->groupBy('p.id_orden_pago')
+            ->select('p.id_orden_pago', DB::raw('SUM(pp.monto_pago) AS emitido'))
+            ->pluck('emitido', 'p.id_orden_pago');
+
+        foreach ($filas as $fila) {
+            // Una orden sin facturas imputadas (un ANTICIPO) no tiene débito que descontar: su
+            // tope es su propio monto, igual que en el freno.
+            $pagable = (float) ($pagables[$fila->id_orden_pago] ?? 0);
+
+            if ($pagable <= 0) {
+                $pagable = (float) $fila->monto_orden_pago;
+            }
+
+            $emitido = (float) ($emitidos[$fila->id_orden_pago] ?? 0);
+
+            $fila->monto_pagable    = round($pagable, 2);
+            $fila->monto_disponible = round(max(0, $pagable - $emitido), 2);
+        }
+    }
+
+    /**
      * Pagos planificados que todavía no se emitieron, más los eCheq emitidos que esperan número.
      *
      * Son las dos cosas que Tesorería tiene pendientes de resolver sobre una orden ya confirmada:
@@ -408,12 +505,20 @@ class TesInstrumentoPagoRepository
      *
      * Las filas sin `id_pago_parcial` son plan puro: todavía no existe el instrumento.
      */
-    public function listarPendientesDeNumero($idBanco = null)
+    public function listarPendientesDeNumero($idBanco = null, $numeroOpa = null, $idRazon = null)
     {
         // 1) Fechas del plan sin pago emitido.
+        //
+        // Es una query cruda (DB::table), no Eloquent: no trae relaciones. Sin el leftJoin a
+        // proveedor/prestador, el front no tenía de dónde sacar el nombre del beneficiario y la
+        // vista "A emitir" mostraba todo como SIN BENEFICIARIO (hallado el 2026-09-05). Se anida
+        // en un objeto `proveedor`/`prestador` para que quede con la misma forma que usan
+        // `nombreBeneficiario()` del front y el resto de los listados de esta pantalla.
         $planificados = DB::table('tb_tes_fecha_probable_pago as fp')
             ->join('tb_tes_pago as p', 'p.id_pago', '=', 'fp.id_pago')
             ->join('tb_tes_orden_pago as o', 'o.id_orden_pago', '=', 'p.id_orden_pago')
+            ->leftJoin('tb_proveedor as prov', 'prov.cod_proveedor', '=', 'o.id_proveedor')
+            ->leftJoin('tb_prestador as pres', 'pres.cod_prestador', '=', 'o.id_prestador')
             ->whereNotExists(function ($q) {
                 $q->select(DB::raw(1))
                     ->from('tb_tes_pago_parcial as pp')
@@ -421,6 +526,7 @@ class TesInstrumentoPagoRepository
             })
             ->where('p.id_estado_orden_pago', '!=', TestOrdenPagoRepository::ESTADO_OPA_RECHAZADO)
             ->whereIn('o.id_estado_orden_pago', $this->estadosOpaViva())
+            ->tap(fn($q) => $this->filtrarPorOpaYRazon($q, $numeroOpa, $idRazon, 'o.num_orden_pago', 'o.id_orden_pago'))
             ->select([
                 'fp.id_fecha_probable',
                 'fp.fecha_probable_pago',
@@ -432,10 +538,30 @@ class TesInstrumentoPagoRepository
                 'o.tipo_factura',
                 'o.id_proveedor',
                 'o.id_prestador',
+                'prov.cuit as proveedor_cuit',
+                'prov.razon_social as proveedor_razon_social',
+                'pres.cuit as prestador_cuit',
+                'pres.razon_social as prestador_razon_social',
             ])
             ->orderBy('o.num_orden_pago')
             ->orderBy('fp.orden_cuotas')
-            ->get();
+            ->get()
+            ->map(function ($fila) {
+                $fila->proveedor = $fila->id_proveedor
+                    ? (object) ['cuit' => $fila->proveedor_cuit, 'razon_social' => $fila->proveedor_razon_social]
+                    : null;
+                $fila->prestador = $fila->id_prestador
+                    ? (object) ['cuit' => $fila->prestador_cuit, 'razon_social' => $fila->prestador_razon_social]
+                    : null;
+                return $fila;
+            });
+
+        // Cuánto se puede pagar realmente de cada orden: el bruto de la factura MENOS el débito
+        // de liquidación, y menos lo que ya se emitió. Sin esto la pantalla mostraba el total de
+        // la orden ($7.866) y el operador cargaba ese importe, que el freno rechazaba porque lo
+        // pagable eran $7.290. Mostrar el bruto y después rebotar el pago es hacerle perder el
+        // viaje. (2026-09-06)
+        $this->agregarMontosPagables($planificados);
 
         // 2) eCheq ya definidos, esperando el número del banco.
         $sinNumero = TesPagosParciales::query()
@@ -444,6 +570,7 @@ class TesInstrumentoPagoRepository
             ->where('tb_tes_pago_parcial.id_estado_instrumento', self::PENDIENTE_EMISION)
             ->when(!is_null($idBanco), fn($q) => $q->where('tb_tes_pago_parcial.id_banco_emisor', $idBanco))
             ->whereIn('o.id_estado_orden_pago', $this->estadosOpaViva())
+            ->tap(fn($q) => $this->filtrarPorOpaYRazon($q, $numeroOpa, $idRazon, 'o.num_orden_pago', 'o.id_orden_pago'))
             ->select([
                 'tb_tes_pago_parcial.*',
                 'o.id_orden_pago',
@@ -457,6 +584,41 @@ class TesInstrumentoPagoRepository
             ->get();
 
         return ['planificados' => $planificados, 'sin_numero' => $sinNumero];
+    }
+
+    /**
+     * Filtro compartido por N° de OPA y razón social (la entidad pagadora del grupo — Grupo
+     * Alba, Tripalium, Medicina Privada, etc. — NO el proveedor/prestador beneficiario) para los
+     * listados de Carga de eCheq.
+     *
+     * El N° de OPA se compara NUMÉRICAMENTE, no con LIKE: los correlativos viejos vienen con
+     * ceros a la izquierda ('OPA-0999') y los nuevos no ('OPA-14358'), así que "1435" haría
+     * matchear de más con un LIKE (ver `sql-fix-numeracion-opa.md`). El usuario puede tipear
+     * indistinto "OPA-1435", "1435" o "opa 1435".
+     *
+     * La razón social de la orden sale de sus facturas (`tb_tes_orden_pago_detalle` ->
+     * `tb_facturacion_datos.id_locatorio` -> `tb_razones_sociales`), no de una columna propia de
+     * la OPA: una orden de anticipo (sin facturas) no matchea contra ningún `id_razon`.
+     */
+    private function filtrarPorOpaYRazon($query, $numeroOpa, $idRazon, string $colNumOpa, string $colIdOrdenPago): void
+    {
+        if (!empty($numeroOpa)) {
+            $numero = preg_replace('/\D/', '', (string) $numeroOpa);
+
+            if ($numero !== '') {
+                $query->whereRaw("CAST(REPLACE({$colNumOpa}, 'OPA-', '') AS UNSIGNED) = ?", [(int) $numero]);
+            }
+        }
+
+        if (!empty($idRazon)) {
+            $query->whereExists(function ($q) use ($idRazon, $colIdOrdenPago) {
+                $q->select(DB::raw(1))
+                    ->from('tb_tes_orden_pago_detalle as od')
+                    ->join('tb_facturacion_datos as fd', 'fd.id_factura', '=', 'od.id_factura')
+                    ->whereColumn('od.id_orden_pago', $colIdOrdenPago)
+                    ->where('fd.id_locatorio', $idRazon);
+            });
+        }
     }
 
     /** Estados en los que una OP sigue viva y sus pagos pueden trabajarse. */
@@ -479,7 +641,7 @@ class TesInstrumentoPagoRepository
      * Se incluyen los ACREDITADOS de los últimos días para que quede a la vista lo recién
      * confirmado y se pueda rechazar si el eCheq vuelve después.
      */
-    public function listarEmitidos($idBanco = null)
+    public function listarEmitidos($idBanco = null, $numeroOpa = null, $idRazon = null)
     {
         return TesPagosParciales::query()
             ->select([
@@ -502,6 +664,7 @@ class TesInstrumentoPagoRepository
             ->join('tb_tes_orden_pago', 'tb_tes_orden_pago.id_orden_pago', '=', 'tb_tes_pago.id_orden_pago')
             ->whereIn('tb_tes_pago_parcial.id_estado_instrumento', [self::EMITIDO, self::ACREDITADO])
             ->when(!is_null($idBanco), fn($q) => $q->where('tb_tes_pago_parcial.id_banco_emisor', $idBanco))
+            ->tap(fn($q) => $this->filtrarPorOpaYRazon($q, $numeroOpa, $idRazon, 'tb_tes_orden_pago.num_orden_pago', 'tb_tes_orden_pago.id_orden_pago'))
             ->with(['bancoEmisor', 'estadoInstrumento', 'pago.opa.proveedor', 'pago.opa.prestador'])
             // Los que todavía esperan acreditación van primero: son los que requieren acción.
             ->orderBy('tb_tes_pago_parcial.id_estado_instrumento')

@@ -18,17 +18,22 @@ class EcheqPendientesNumeroExport implements FromCollection, WithHeadings, Shoul
 {
     protected $repository;
     protected $idBanco;
+    protected $numeroOpa;
+    protected $idRazon;
 
-    public function __construct(TesInstrumentoPagoRepository $repository, $idBanco = null)
+    public function __construct(TesInstrumentoPagoRepository $repository, $idBanco = null, $numeroOpa = null, $idRazon = null)
     {
-        $this->repository = $repository;
-        $this->idBanco    = $idBanco;
+        $this->repository  = $repository;
+        $this->idBanco     = $idBanco;
+        $this->numeroOpa   = $numeroOpa;
+        $this->idRazon     = $idRazon;
     }
 
     public function collection()
     {
         // Solo los eCheq que ya estan definidos y esperan numero: el papel que va al banco.
-        return $this->repository->listarPendientesDeNumero($this->idBanco)['sin_numero']
+        return $this->repository
+            ->listarPendientesDeNumero($this->idBanco, $this->numeroOpa, $this->idRazon)['sin_numero']
             ->map(function ($p) {
                 return [
                     'banco'        => $p->bancoEmisor->descripcion_banco ?? 'SIN BANCO ASIGNADO',

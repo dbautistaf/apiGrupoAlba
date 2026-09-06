@@ -74,6 +74,15 @@ class TesInstrumentoPagoController extends Controller
                 return response()->json(['message' => 'La forma de pago es requerida'], 422);
             }
 
+            // Un eCheq siempre se libra contra un banco: sin esto quedaba emitido con
+            // id_banco_emisor NULL y nunca se podía saber contra qué cuenta cobrarlo (encontrado
+            // el 2026-09-05 con un caso real en producción, OPA-1409).
+            $esEcheq = (int) $request->input('id_forma_pago') === TesInstrumentoPagoRepository::FORMA_PAGO_ECHEQ;
+
+            if ($esEcheq && !$request->filled('id_cuenta_bancaria') && !$request->filled('id_banco_emisor')) {
+                return response()->json(['message' => 'Indicá el banco emisor del eCheq'], 422);
+            }
+
             $abono = $this->repository->emitirPagoDeFecha($idFecha, [
                 'monto'              => $request->input('monto'),
                 'id_forma_pago'      => $request->input('id_forma_pago'),
@@ -259,11 +268,18 @@ class TesInstrumentoPagoController extends Controller
      * GET /v1/tesoreria/instrumentos-pago/pendientes-numero?id_banco=
      *
      * OPs vigentes con eCheq todavía sin número, agrupadas por banco emisor.
+     *
+     * `numero_opa` e `id_razon` (agregados el 2026-09-05, este ultimo corregido para filtrar
+     * por la entidad pagadora del grupo -no por proveedor/prestador- filtran las tres vistas.
      */
     public function getPendientesDeNumero(Request $request)
     {
         try {
-            $data = $this->repository->listarPendientesDeNumero($request->query('id_banco'));
+            $data = $this->repository->listarPendientesDeNumero(
+                $request->query('id_banco'),
+                $request->query('numero_opa'),
+                $request->query('id_razon')
+            );
             return response()->json($data, 200);
         } catch (\Exception $e) {
             Log::error('Error listar pendientes de número: ' . $e->getMessage());
@@ -272,14 +288,19 @@ class TesInstrumentoPagoController extends Controller
     }
 
     /**
-     * GET /v1/tesoreria/instrumentos-pago/emitidos?id_banco=
+     * GET /v1/tesoreria/instrumentos-pago/emitidos?id_banco=&numero_opa=&id_razon=
      *
      * eCheq ya emitidos: los que esperan acreditacion o pueden rechazarse.
      */
     public function getEmitidos(Request $request)
     {
         try {
-            return response()->json($this->repository->listarEmitidos($request->query('id_banco')), 200);
+            $data = $this->repository->listarEmitidos(
+                $request->query('id_banco'),
+                $request->query('numero_opa'),
+                $request->query('id_razon')
+            );
+            return response()->json($data, 200);
         } catch (\Exception $e) {
             Log::error('Error listar eCheq emitidos: ' . $e->getMessage());
             return response()->json(['message' => 'Error al listar los eCheq emitidos'], 500);
@@ -287,13 +308,18 @@ class TesInstrumentoPagoController extends Controller
     }
 
     /**
-     * GET /v1/tesoreria/instrumentos-pago/pendientes-numero/excel?id_banco=
+     * GET /v1/tesoreria/instrumentos-pago/pendientes-numero/excel?id_banco=&numero_opa=&id_razon=
      */
     public function exportarExcelPendientes(Request $request)
     {
         try {
             return Excel::download(
-                new EcheqPendientesNumeroExport($this->repository, $request->query('id_banco')),
+                new EcheqPendientesNumeroExport(
+                    $this->repository,
+                    $request->query('id_banco'),
+                    $request->query('numero_opa'),
+                    $request->query('id_razon')
+                ),
                 'echeq-pendientes-emision.xlsx'
             );
         } catch (\Exception $e) {
@@ -303,7 +329,7 @@ class TesInstrumentoPagoController extends Controller
     }
 
     /**
-     * GET /v1/tesoreria/instrumentos-pago/pendientes-numero/pdf?id_banco=
+     * GET /v1/tesoreria/instrumentos-pago/pendientes-numero/pdf?id_banco=&numero_opa=&id_razon=
      *
      * Es el papel que Pagos manda a Tesorería: sale agrupado por banco, con la columna del
      * número de eCheq en blanco para completar con lo que devuelva el banco.
@@ -311,7 +337,11 @@ class TesInstrumentoPagoController extends Controller
     public function exportarPdfPendientes(Request $request)
     {
         try {
-            $pagos = $this->repository->listarPendientesDeNumero($request->query('id_banco'))['sin_numero'];
+            $pagos = $this->repository->listarPendientesDeNumero(
+                $request->query('id_banco'),
+                $request->query('numero_opa'),
+                $request->query('id_razon')
+            )['sin_numero'];
 
             $grupos = $pagos
                 ->map(function ($p) {

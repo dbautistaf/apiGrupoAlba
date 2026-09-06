@@ -63,6 +63,19 @@ class TesPagosRepository
             ]);
         }
 
+        // La orden deja de estar PENDIENTE apenas tiene su cronograma: "PENDIENTE" es "todavia no
+        // se definio cuando se paga", y eso ya se resolvio. EN_PROCESO es el estado del catalogo
+        // que existia para esto y nunca se usaba (el comentario decia "el circuito nuevo no lo
+        // produce" -- resulta que si correspondia, solo que nadie lo estaba seteando). Sin esto
+        // la orden quedaba viendose PENDIENTE para siempre aunque ya tuviera boleta, y el boton
+        // "Confirmar OPA" invitaba a un segundo click que chocaba con "ya tiene un pago generado"
+        // (hallado el 2026-09-05, 68 ordenes reales en ese estado -> ver
+        // sql-backfill-estado-en-proceso.md). No se toca si la orden ya esta en otro estado (por
+        // ejemplo, si esto se llama sobre una orden ya PAGADA por error, no la hace retroceder).
+        TesOrdenPagoEntity::where('id_orden_pago', $params['id_orden_pago'])
+            ->where('id_estado_orden_pago', TestOrdenPagoRepository::ESTADO_OPA_PENDIENTE)
+            ->update(['id_estado_orden_pago' => TestOrdenPagoRepository::ESTADO_OPA_EN_PROCESO]);
+
         return $pago;
     }
 
