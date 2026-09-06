@@ -230,7 +230,11 @@ class TesInstrumentoPagoRepository
                 'id_forma_pago'         => $datos['id_forma_pago'],
                 'monto_pago'            => $monto,
                 'monto_opa'             => $opa->monto_orden_pago,
-                'monto_restante'        => max(0, (float) $opa->monto_orden_pago - ($yaEmitido + $monto)),
+                // Contra el monto PAGABLE, no contra `monto_orden_pago`: ese arrastra el bruto de
+                // la factura, así que al pagar el neto correcto quedaba un "restante" igual al
+                // débito. Es el número que el modal de Confirmar Pago muestra como "Monto
+                // Restante Actual", y decía $576 sobre una orden ya saldada. (2026-09-06)
+                'monto_restante'        => max(0, $tope - ($yaEmitido + $monto)),
                 'id_usuario'            => $this->user->cod_usuario ?? null,
                 // El eCheq espera que el banco le asigne número; una transferencia no.
                 'id_estado_instrumento' => $esEcheq ? self::PENDIENTE_EMISION : self::EMITIDO,
@@ -239,6 +243,11 @@ class TesInstrumentoPagoRepository
                     $datos['id_cuenta_bancaria'] ?? $boleta->id_cuenta_bancaria ?? null,
                     $datos['id_banco_emisor'] ?? null
                 ),
+                // La cuenta de origen se guarda EN EL ABONO, no en la boleta: cada pago de una
+                // misma orden puede salir de una cuenta distinta. Hasta el 2026-09-06 esto vivía
+                // en `tb_tes_pago` y obligaba a que toda la orden se pagara desde una sola.
+                // Si no se indica, se hereda la de la boleta para no perder el dato.
+                'id_cuenta_bancaria'    => $datos['id_cuenta_bancaria'] ?? $boleta->id_cuenta_bancaria ?? null,
             ]);
         });
     }
@@ -580,7 +589,7 @@ class TesInstrumentoPagoRepository
                 'o.id_proveedor',
                 'o.id_prestador',
             ])
-            ->with(['bancoEmisor', 'formaPago', 'pago.opa.proveedor', 'pago.opa.prestador'])
+            ->with(['bancoEmisor', 'cuentaBancaria', 'formaPago', 'pago.opa.proveedor', 'pago.opa.prestador'])
             ->get();
 
         return ['planificados' => $planificados, 'sin_numero' => $sinNumero];
@@ -652,6 +661,7 @@ class TesInstrumentoPagoRepository
                 'tb_tes_pago_parcial.fecha_emision_echeq',
                 'tb_tes_pago_parcial.fecha_confirma_pago',
                 'tb_tes_pago_parcial.id_banco_emisor',
+                'tb_tes_pago_parcial.id_cuenta_bancaria',
                 'tb_tes_pago_parcial.id_estado_instrumento',
                 'tb_tes_pago_parcial.motivo_rechazo',
                 'tb_tes_orden_pago.id_orden_pago',
@@ -665,7 +675,7 @@ class TesInstrumentoPagoRepository
             ->whereIn('tb_tes_pago_parcial.id_estado_instrumento', [self::EMITIDO, self::ACREDITADO])
             ->when(!is_null($idBanco), fn($q) => $q->where('tb_tes_pago_parcial.id_banco_emisor', $idBanco))
             ->tap(fn($q) => $this->filtrarPorOpaYRazon($q, $numeroOpa, $idRazon, 'tb_tes_orden_pago.num_orden_pago', 'tb_tes_orden_pago.id_orden_pago'))
-            ->with(['bancoEmisor', 'estadoInstrumento', 'pago.opa.proveedor', 'pago.opa.prestador'])
+            ->with(['bancoEmisor', 'cuentaBancaria', 'estadoInstrumento', 'pago.opa.proveedor', 'pago.opa.prestador'])
             // Los que todavía esperan acreditación van primero: son los que requieren acción.
             ->orderBy('tb_tes_pago_parcial.id_estado_instrumento')
             ->orderBy('tb_tes_pago_parcial.fecha_emision_echeq')

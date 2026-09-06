@@ -124,6 +124,10 @@ class TesPagosRepository
             'comprobantes',
             'pagosParciales',
             'pagosParciales.formaPago',
+            // La cuenta de origen es del abono desde 2026_09_06_100000: el modal de Confirmar
+            // Pago la muestra en vez de volver a preguntarla.
+            'pagosParciales.cuentaBancaria',
+            'pagosParciales.bancoEmisor',
             'fechaprobablepagos',
             'detalleopa.detallefc',
             'detalleopa.detallefc.razonSocial'
@@ -212,6 +216,26 @@ class TesPagosRepository
         return $jquery->get();
     }
 
+    /**
+     * Abonos de una boleta que representan plata que efectivamente sale.
+     *
+     * Excluye RECHAZADOS (5) y ANULADOS (6): esa plata no salió o volvió, así que no corresponde
+     * debitarla de ninguna cuenta. Mismo criterio que el freno de sobrepago de
+     * `emitirPagoDeFecha()`.
+     */
+    public function findByPagosParcialesVivos($idPago)
+    {
+        return TesPagosParciales::where('id_pago', $idPago)
+            ->where(function ($q) {
+                $q->whereNull('id_estado_instrumento')
+                    ->orWhereNotIn('id_estado_instrumento', [
+                        TesInstrumentoPagoRepository::RECHAZADO,
+                        TesInstrumentoPagoRepository::ANULADO,
+                    ]);
+            })
+            ->get();
+    }
+
     public function findByConfirmarPago($params)
     {
 
@@ -253,7 +277,13 @@ class TesPagosRepository
             $estado = 5;
         }
 
-        $pago->id_cuenta_bancaria = $params->id_cuenta_bancaria;
+        // El string vacío no es un id: la columna es int y MySQL lo rechaza con
+        // "1366 Incorrect integer value". Llega vacío cuando la orden ya tiene sus pagos emitidos
+        // y el modal no pide la cuenta (la define cada abono desde 2026_09_06_100000), o cuando
+        // el campo quedó sin completar en el circuito viejo. (2026-09-06)
+        $pago->id_cuenta_bancaria = $params->id_cuenta_bancaria !== '' && $params->id_cuenta_bancaria !== null
+            ? $params->id_cuenta_bancaria
+            : null;
         $pago->fecha_confirma_pago = $this->fechaActual;
         $pago->id_forma_pago = 0;
         $pago->monto_pago = $params->anticipo == '1' ? $params->monto_anticipado : $params->monto_pago;

@@ -32,6 +32,9 @@ class TesPagosParciales extends Model
         'numero_echeq',
         'fecha_emision_echeq',
         'id_banco_emisor',
+        // Cuenta de origen del pago. Vivia en la boleta (una sola para toda la orden), lo que
+        // impedia pagar una misma orden desde dos bancos distintos. Ver 2026_09_06_100000.
+        'id_cuenta_bancaria',
         'motivo_rechazo',
         'fecha_rechazo',
     ];
@@ -55,5 +58,11 @@ class TesPagosParciales extends Model
     public function bancoEmisor()
     {
         return $this->hasOne(TesEntidadesBancariasEntity::class, 'id_entidad_bancaria', 'id_banco_emisor');
+    }
+
+    /** Cuenta de origen de ESTE pago — no la de la boleta. Ver 2026_09_06_100000. */
+    public function cuentaBancaria()
+    {
+        return $this->hasOne(TesCuentasBancariasEntity::class, 'id_cuenta_bancaria', 'id_cuenta_bancaria');
     }
 }

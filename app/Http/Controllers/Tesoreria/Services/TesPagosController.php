@@ -235,9 +235,47 @@ class TesPagosController extends Controller
             }
 
             // @REGISTRAMOS EL RETIRO DE LA CUENTA BANCARIA
-            $cuenta->findByRetiroCuenta($params->id_cuenta_bancaria, $monto_total);
-            // @REGISTRAMOS EL MOVIMIENTO DE LA CUENTA BANCARIA
-            $cuenta->findByRegistrarMovimiento($params->id_cuenta_bancaria, $monto_total, 'EGRESO', $params->id_pago, null, 'OPA');
+            //
+            // Se retira de la cuenta de CADA abono, no del total contra una sola. Desde
+            // 2026_09_06_100000 cada pago tiene su propia cuenta de origen: si una orden se pagó
+            // con $100 de Macro y $200 de BBVA, hay que sacar $100 de una y $200 de la otra, no
+            // $300 de cualquiera. Antes se retiraba todo de `$params->id_cuenta_bancaria`, que
+            // además ahora puede venir en null cuando el modal ya no la pide.
+            //
+            // Los abonos sin cuenta propia (emitidos antes del cambio) caen a la cuenta que vino
+            // en el request, que es el comportamiento viejo. Si no hay ninguna de las dos, no se
+            // mueve saldo: no se puede debitar una cuenta que no se sabe cuál es.
+            $montosPorCuenta = [];
+
+            foreach ($pago->findByPagosParcialesVivos($params->id_pago) as $abono) {
+                $idCuentaAbono = $abono->id_cuenta_bancaria ?: $params->id_cuenta_bancaria;
+
+                // Sin cuenta no se puede debitar: la plata sale igual en el banco, pero el saldo
+                // del sistema no lo reflejaría y la diferencia aparecería después, sin rastro de
+                // por qué. Se corta con un mensaje en vez de dejarlo pasar en silencio.
+                if (empty($idCuentaAbono)) {
+                    DB::rollBack();
+                    return response()->json([
+                        'message' => 'Uno de los pagos de esta orden no tiene cuenta de origen, '
+                            . 'así que no se puede descontar el saldo. Indicá la cuenta bancaria '
+                            . 'para confirmar el pago.'
+                    ], 422);
+                }
+
+                $montosPorCuenta[$idCuentaAbono] =
+                    ($montosPorCuenta[$idCuentaAbono] ?? 0) + (float) $abono->monto_pago;
+            }
+
+            // Un anticipo no tiene abonos: ahí se conserva el retiro por el total.
+            if (empty($montosPorCuenta) && !empty($params->id_cuenta_bancaria)) {
+                $montosPorCuenta[$params->id_cuenta_bancaria] = $monto_total;
+            }
+
+            foreach ($montosPorCuenta as $idCuentaBancaria => $montoCuenta) {
+                $cuenta->findByRetiroCuenta($idCuentaBancaria, $montoCuenta);
+                // @REGISTRAMOS EL MOVIMIENTO DE LA CUENTA BANCARIA
+                $cuenta->findByRegistrarMovimiento($idCuentaBancaria, $montoCuenta, 'EGRESO', $params->id_pago, null, 'OPA');
+            }
 
             // ============================================================
             // CREAR ASIENTO CONTABLE AUTOMÁTICO DE PAGO
