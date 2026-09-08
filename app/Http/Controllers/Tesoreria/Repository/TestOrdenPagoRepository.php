@@ -399,13 +399,22 @@ class TestOrdenPagoRepository
             return ['anulada' => false, 'message' => 'La factura no tiene una orden de pago vigente.', 'opa' => null];
         }
 
-        if ($this->findByOpaTienePagosVivos($opa->id_orden_pago)) {
-            return [
-                'anulada' => false,
-                'opa' => $opa,
-                'message' => 'No se puede anular: la orden de pago ' . $opa->num_orden_pago
-                    . ' ya tiene pagos asociados. Primero hay que anular esos pagos.'
-            ];
+        // Si la OPA tiene pagos vivos, los anulamos automáticamente, generando contraasiento si están confirmados
+        if ($this->tienePagosVivos($opa->id_orden_pago)) {
+            $pago = TesPagoEntity::where('id_orden_pago', $opa->id_orden_pago)
+                ->where('id_estado_orden_pago', '!=', self::ESTADO_OPA_RECHAZADO)
+                ->first();
+            if ($pago) {
+                $historialRepo = app(\App\Http\Controllers\Tesoreria\Repository\AsientosPagoHistorialRepository::class);
+                if ($historialRepo->pagoTieneAsientos($pago->id_pago)) {
+                    $historialRepo->procesarAnulacionPago($pago->id_pago, 'Anulado automáticamente al anular la orden de pago');
+                }
+                
+                $pago->id_estado_orden_pago = self::ESTADO_OPA_RECHAZADO;
+                $pago->motivo_rechazo = 'Anulado automáticamente al anular la orden de pago.';
+                $pago->fecha_rechazo = $this->fechaActual;
+                $pago->save();
+            }
         }
 
         // Si la OPA agrupa varias facturas, desagrupar esta a una OPA propia antes de rechazar,
@@ -522,6 +531,14 @@ class TestOrdenPagoRepository
     }
 
     /**
+     * Indica si una OPA tiene pagos ya confirmados en el banco (estado 5).
+     */
+    public function tienePagosVivosConfirmados($idOpa): bool
+    {
+        return false; // El negocio ahora permite modificar incluso confirmados.
+    }
+
+    /**
      * Genera una OPA a partir de una o varias facturas seleccionadas.
      *
      * Hasta el 2026-08-13 asumía que toda factura seleccionada YA tenía su OPA (creada
@@ -557,7 +574,7 @@ class TestOrdenPagoRepository
             ->whereIn('id_orden_pago', function ($q) {
                 $q->select('id_orden_pago')
                     ->from('tb_tes_orden_pago')
-                    ->where('id_estado_orden_pago', self::ESTADO_OPA_PENDIENTE);
+                    ->whereIn('id_estado_orden_pago', [self::ESTADO_OPA_PENDIENTE, self::ESTADO_OPA_EN_PROCESO, 5]);
             })
             ->get();
         $idOrdenesExistentes = $detalleExistente->pluck('id_orden_pago')->unique()->values()->toArray();
@@ -569,7 +586,7 @@ class TestOrdenPagoRepository
             ->whereIn('id_orden_pago', function ($q) {
                 $q->select('id_orden_pago')
                     ->from('tb_tes_orden_pago')
-                    ->whereNotIn('id_estado_orden_pago', [self::ESTADO_OPA_PENDIENTE, self::ESTADO_OPA_RECHAZADO]);
+                    ->whereNotIn('id_estado_orden_pago', [self::ESTADO_OPA_PENDIENTE, self::ESTADO_OPA_EN_PROCESO, 5, self::ESTADO_OPA_RECHAZADO]);
             })
             ->get();
         if ($opasNoAgrupables->isNotEmpty()) {
@@ -588,9 +605,9 @@ class TestOrdenPagoRepository
         // No tocar OPAs con pagos vivos: más abajo se las borra físicamente y el pago quedaría
         // sin orden de pago que lo respalde. (2026-08-11)
         foreach ($idOrdenesExistentes as $idOrdenExistente) {
-            if ($this->tienePagosVivos($idOrdenExistente)) {
+            if ($this->tienePagosVivosConfirmados($idOrdenExistente)) {
                 throw new \Exception(
-                    "No se puede agrupar: la orden de pago {$idOrdenExistente} ya tiene pagos asociados."
+                    "No se puede agrupar: la orden de pago {$idOrdenExistente} ya tiene pagos confirmados."
                 );
             }
         }
@@ -762,10 +779,10 @@ class TestOrdenPagoRepository
             ];
         }
 
-        if ($this->tienePagosVivos($opa->id_orden_pago)) {
+        if ($this->tienePagosVivosConfirmados($opa->id_orden_pago) || $this->tienePagosVivosConfirmados($getOpa->id_orden_pago)) {
             return [
                 'success' => false,
-                'message' => 'No se puede agrupar esta factura: su orden de pago ya tiene pagos asociados.'
+                'message' => 'No se puede agrupar esta factura: la orden de pago ya tiene pagos confirmados.'
             ];
         }
 
@@ -800,6 +817,26 @@ class TestOrdenPagoRepository
 
             // El monto se recalcula desde el detalle en vez de acumularse con `+=`. (2026-08-11)
             $this->recalcularMontoDesdeDetalle($getOpa->id_orden_pago);
+
+            // Sincronizar pagos si existen (ambas OPAs pueden tener pagos no confirmados)
+            if ($this->tienePagosVivos($opa->id_orden_pago) && $quedanEnOrigen > 0) {
+                $pago = TesPagoEntity::where('id_orden_pago', $opa->id_orden_pago)->where('id_estado_orden_pago', '!=', self::ESTADO_OPA_RECHAZADO)->first();
+                if ($pago) {
+                    $nuevoMonto = TesOrdenPagoEntity::find($opa->id_orden_pago)->monto_orden_pago;
+                    $pago->monto_pago = $nuevoMonto;
+                    $pago->monto_opa = $nuevoMonto;
+                    $pago->save();
+                }
+            }
+            if ($this->tienePagosVivos($getOpa->id_orden_pago)) {
+                $pagoGet = TesPagoEntity::where('id_orden_pago', $getOpa->id_orden_pago)->where('id_estado_orden_pago', '!=', self::ESTADO_OPA_RECHAZADO)->first();
+                if ($pagoGet) {
+                    $nuevoMontoGet = TesOrdenPagoEntity::find($getOpa->id_orden_pago)->monto_orden_pago;
+                    $pagoGet->monto_pago = $nuevoMontoGet;
+                    $pagoGet->monto_opa = $nuevoMontoGet;
+                    $pagoGet->save();
+                }
+            }
 
             return $detalleCreado;
         });
@@ -865,11 +902,25 @@ class TestOrdenPagoRepository
         // If the original OPA has no more details, delete it. If it has 1 detail left, mark it as unida=0
         $remainingDetails = TesOrdenPagoDetalleEntity::where('id_orden_pago', $opa->id_orden_pago)->get();
         if ($remainingDetails->count() == 0) {
-            // Guarda: no borrar físicamente una OPA con pagos, el pago quedaría sin respaldo. (2026-08-11)
-            if ($this->tienePagosVivos($opa->id_orden_pago)) {
+            // Guarda: no borrar físicamente una OPA con pagos confirmados.
+            if ($this->tienePagosVivosConfirmados($opa->id_orden_pago)) {
                 throw new \Exception(
-                    "No se puede desagrupar: la orden de pago {$opa->id_orden_pago} quedaría vacía y tiene pagos asociados."
+                    "No se puede desagrupar: la orden de pago {$opa->id_orden_pago} quedaría vacía y tiene pagos confirmados asociados."
                 );
+            }
+            // Si tiene pagos, anularlos automáticamente con contraasiento si es necesario
+            if ($this->tienePagosVivos($opa->id_orden_pago)) {
+                $pago = TesPagoEntity::where('id_orden_pago', $opa->id_orden_pago)->where('id_estado_orden_pago', '!=', self::ESTADO_OPA_RECHAZADO)->first();
+                if ($pago) {
+                    $historialRepo = app(\App\Http\Controllers\Tesoreria\Repository\AsientosPagoHistorialRepository::class);
+                    if ($historialRepo->pagoTieneAsientos($pago->id_pago)) {
+                        $historialRepo->procesarAnulacionPago($pago->id_pago, 'Anulado automáticamente al vaciar OPA origen');
+                    }
+                    $pago->id_estado_orden_pago = self::ESTADO_OPA_RECHAZADO;
+                    $pago->motivo_rechazo = 'Anulado automáticamente al quedar vacía la OPA origen';
+                    $pago->fecha_rechazo = $this->fechaActual;
+                    $pago->save();
+                }
             }
             $opa->delete();
         } else {
@@ -879,6 +930,17 @@ class TestOrdenPagoRepository
                 $firstDetalle->save();
             }
             $this->recalcularMontoDesdeDetalle($opa->id_orden_pago);
+            
+            // Sincronizar el pago no confirmado con el nuevo monto reducido
+            if ($this->tienePagosVivos($opa->id_orden_pago)) {
+                $pago = TesPagoEntity::where('id_orden_pago', $opa->id_orden_pago)->where('id_estado_orden_pago', '!=', self::ESTADO_OPA_RECHAZADO)->first();
+                if ($pago) {
+                    $nuevoMonto = TesOrdenPagoEntity::find($opa->id_orden_pago)->monto_orden_pago;
+                    $pago->monto_pago = $nuevoMonto;
+                    $pago->monto_opa = $nuevoMonto;
+                    $pago->save();
+                }
+            }
         }
 
         return $newopa;
