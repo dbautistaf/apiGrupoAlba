@@ -105,10 +105,36 @@ class LiquidacionesFacturaRepository
         }
 
         if (!empty($params->tipo_hospital)) {
-            $wherePadron .= " AND fd.tipo_hospital = '" . $params->tipo_hospital . "'";
+            if ($params->tipo_hospital === 'PRIVADO') {
+                $query->where(function ($q) {
+                    $q->whereExists(function ($sub) {
+                        $sub->select(DB::raw(1))
+                            ->from('tb_facturacion_datos as fd_cabecera')
+                            ->whereColumn('vw_liquidacion_factura_unica.id_factura', 'fd_cabecera.id_factura')
+                            ->where(function ($sub2) {
+                                $sub2->where('fd_cabecera.tipo_hospital', 'PRIVADO')
+                                     ->orWhereNull('fd_cabecera.tipo_hospital')
+                                     ->orWhere('fd_cabecera.tipo_hospital', '');
+                            });
+                    })->orWhereNotExists(function ($sub) {
+                        $sub->select(DB::raw(1))
+                            ->from('tb_facturacion_datos as fd_cabecera')
+                            ->whereColumn('vw_liquidacion_factura_unica.id_factura', 'fd_cabecera.id_factura');
+                    });
+                });
+                $wherePadron .= " AND (fd.tipo_hospital = 'PRIVADO' OR fd.tipo_hospital IS NULL OR fd.tipo_hospital = '')";
+            } else {
+                $query->whereExists(function ($sub) use ($params) {
+                    $sub->select(DB::raw(1))
+                        ->from('tb_facturacion_datos as fd_cabecera')
+                        ->whereColumn('vw_liquidacion_factura_unica.id_factura', 'fd_cabecera.id_factura')
+                        ->where('fd_cabecera.tipo_hospital', $params->tipo_hospital);
+                });
+                $wherePadron .= " AND fd.tipo_hospital = '" . $params->tipo_hospital . "'";
+            }
         }
 
-        $facturas = $query->pluck('id_factura')->toArray();
+        $facturas = $query->distinct()->pluck('vw_liquidacion_factura_unica.id_factura')->toArray();
 
         if (count($facturas) == 0) {
             return [];
